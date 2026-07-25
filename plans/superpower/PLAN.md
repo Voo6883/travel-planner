@@ -398,8 +398,48 @@ public interface ResearchPort {
 | **No magic numbers/strings** | Named constants or enum |
 | **Javadoc on public API** | Service public methods + domain ports — one-line *what*, not *how* |
 | **Max method length ~40 lines** | Split into private helpers or domain algorithm class |
+| **Max line length 120 chars** | No extremely long lines — enforced in CI (Checkstyle `LineLength`); soft target 100 |
 
-##### C. Layer boundaries (summary)
+##### B4. Visibility & reusable flows (LOCKED)
+
+Control the **public surface** of every class. Reusable logic is **extracted**, not copy-pasted.
+
+| Visibility | Use for | Example |
+|---|---|---|
+| **`public`** | Service use-case entry points, domain port interfaces, API-facing types | `ResearchService.runResearch(...)` |
+| **`protected`** | Shared steps in a **class hierarchy** only (subclass extension) — rare in hexagonal layout | `AbstractBookingService.validateQuote(...)` |
+| **package-private** (no modifier) | Helpers shared **within the same package** — prefer private when possible | `application/booking/` internal coordinator |
+| **`private`** | Single-use helpers, extracted reusable steps inside one class | `buildResearchQuery(...)`, `assertUserOwnsTrip(...)` |
+
+| Rule | Detail |
+|---|---|
+| **Extract, don't duplicate** | Same flow appears twice → `private` method or small package-private helper class |
+| **Minimal public API** | Only service public methods and port interfaces are `public`; everything else `private` unless subclassing requires `protected` |
+| **No public helpers** | Do not expose `public void helperX()` on services for "convenience" — keep helpers `private` |
+| **Controllers stay thin** | No reusable business flow in controllers — extract to service `private` methods |
+
+```java
+// ✅ Reusable flow extracted as private helper — public entry stays thin
+@Service
+@RequiredArgsConstructor
+public class ResearchService {
+    public RankedRecommendations runResearch(ResearchQuery query, UserContext user) {
+        Trip trip = loadTripForUser(query.tripId(), user);
+        return executeResearch(trip, query);
+    }
+
+    private RankedRecommendations executeResearch(Trip trip, ResearchQuery query) {
+        // shared steps — not duplicated across methods
+    }
+
+    private Trip loadTripForUser(UUID tripId, UserContext user) { ... }
+}
+
+// ❌ duplicated validation in two public methods — extract private helper instead
+// ❌ public void validateTrip(...) helper exposed on service
+```
+
+##### B5. Layer boundaries (summary)
 
 | Layer | Package | Does | Does NOT |
 |---|---|---|---|
@@ -424,11 +464,59 @@ Dependencies point **inward only**: `api → application → domain`.
 - All business logic and orchestration lives here.
 - Inject **port interfaces** (`LlmPort`, `TripRepository` as port) — not concrete adapters.
 - **Constructor injection only** — `@RequiredArgsConstructor` + `final` fields; no field `@Autowired`.
-- `@Transactional` on write use-cases; `@Transactional(readOnly = true)` on queries.
+- **Transactions** — see **§E2**; `@Transactional` on write use-cases; `@Transactional(readOnly = true)` on queries.
 - **Return domain objects** — controller maps domain → response DTO via MapStruct (locked pattern).
 - Unit-test with mocked ports.
 
-##### E2. Annotations & validation (backend)
+##### E2. Database transactions — commit, rollback & deadlock safety (LOCKED)
+
+Every write use-case that touches the DB runs inside a **single transactional boundary**
+in the **service layer** — never in controllers or adapters.
+
+| Rule | Detail |
+|---|---|
+| **Commit on success** | Method completes without exception → Spring commits automatically |
+| **Rollback on any failure** | Use `@Transactional(rollbackFor = Exception.class)` on write methods — checked and unchecked exceptions both roll back |
+| **No partial writes** | Multi-table updates in one use-case share one `@Transactional` method — all commit or all roll back |
+| **No IO inside transactions** | LLM calls, HTTP supplier calls, and web search run **outside** `@Transactional` — persist only after validated results |
+| **Read-only queries** | `@Transactional(readOnly = true)` — no writes, reduces lock footprint |
+
+**Deadlock prevention (mandatory):**
+
+| Mechanism | Detail |
+|---|---|
+| **Short transactions** | Hold DB locks only for persist/validate — not during external API or LLM waits |
+| **Consistent lock order** | Multi-table writes always touch tables in the same order (e.g. `trip` → `trip_brief` → `booking`) — document order per aggregate |
+| **Optimistic locking** | `@Version` on aggregates with concurrent edits (`trip`, `trip_brief`, `booking`) — conflicts return `conflict` error (§6.1) |
+| **Retry on deadlock** | `@Retryable` on service method for `CannotAcquireLockException` / PostgreSQL `40P01` — max **3** attempts, exponential backoff |
+| **Avoid `SELECT FOR UPDATE`** unless required — prefer optimistic locking first |
+| **Idempotent writes** | Booking confirm uses `Idempotency-Key` (§6.1) — safe retry after deadlock |
+
+```java
+// ✅ Write use-case — rollback on any error; short transaction; no LLM inside
+@Transactional(rollbackFor = Exception.class)
+@Retryable(retryFor = CannotAcquireLockException.class, maxAttempts = 3, backoff = @Backoff(delay = 100))
+public TripBrief saveBrief(SaveTripBriefCommand command, UserContext user) {
+    Trip trip = tripPort.findByIdAndUserId(command.tripId(), user.userId())
+        .orElseThrow(() -> new TripNotFoundException(command.tripId()));
+    TripBrief brief = tripBriefFactory.fromCommand(command);  // pure validation
+    return tripBriefPort.save(trip.getId(), brief);
+}
+
+// ✅ LLM extraction OUTSIDE transaction — then persist in short @Transactional block
+public TripBrief extractAndSaveBrief(ExtractBriefCommand command, UserContext user) {
+    TripBrief extracted = intakeAgent.extract(command);       // no @Transactional here
+    return saveBrief(new SaveTripBriefCommand(command.tripId(), extracted), user);
+}
+
+// ❌ @Transactional method that calls llmClient.complete(...) — holds connection during LLM wait
+// ❌ catch Exception and swallow — prevents rollback
+```
+
+**Integration tests:** Testcontainers tests for booking/trip writes verify rollback on forced
+failure and optimistic-lock conflict paths.
+
+##### E3. Annotations & validation (backend)
 
 Spring/Jakarta **annotations and decorators are encouraged** where they reduce boilerplate:
 
@@ -437,7 +525,7 @@ Spring/Jakarta **annotations and decorators are encouraged** where they reduce b
 | REST routing | `@RestController`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping` |
 | Request validation | `@Valid`, `@NotNull`, `@Size`, `@Min` on DTO records |
 | Auth user | `@AuthenticationPrincipal UserContext user` |
-| Transactions | `@Transactional`, `@Transactional(readOnly = true)` |
+| Transactions | `@Transactional(rollbackFor = Exception.class)`, `@Transactional(readOnly = true)`, `@Retryable` (deadlock) |
 | Exception mapping | `@ControllerAdvice`, `@ExceptionHandler` |
 | DI | `@Service`, `@Component`, `@RequiredArgsConstructor` |
 
@@ -469,6 +557,17 @@ Validation at **DTO boundary** via annotations; **business invariants** in domai
 - **Audit columns** on all mutable tables: `created_at`, `updated_at` (`timestamptz`, UTC).
 - **Primary keys:** UUID v4 — column `id UUID PRIMARY KEY`.
 - **Timestamps:** always `timestamptz`, stored UTC; display in user's locale on frontend.
+- **Optimistic locking:** `@Version` column on mutable aggregates — see §E2.
+- **Transaction ownership:** repositories/adapters participate in the service's transaction;
+  do not open nested `@Transactional` with different propagation unless documented in ADR.
+
+##### H2. Transaction & deadlock checklist (persistence)
+
+- [ ] Write use-case has `@Transactional(rollbackFor = Exception.class)`
+- [ ] No LLM or external HTTP inside `@Transactional` method
+- [ ] Multi-table write order documented and consistent
+- [ ] Concurrent-edit entities have `@Version`
+- [ ] Deadlock retry configured where multi-row writes occur
 
 ##### I. DTOs & mapping
 
@@ -520,6 +619,9 @@ Test files: `{class-under-test}Test.java` (e.g. `ResearchServiceTest.java`).
 3. **Never return JPA entities from controllers**.
 4. **Follow package structure** — new feature → `application/<feature>/` + `api/controller/` + ports in `domain/port/`.
 5. **Self-check against §4.0.1 layer table** before finishing.
+6. **Line length ≤120** — break long expressions; extract variables (§4.0.2-B3).
+7. **Transactions** — `rollbackFor = Exception.class`; no LLM/HTTP inside `@Transactional` (§4.0.2-E2).
+8. **Visibility** — reusable flow as `private` helper; minimal `public` surface (§4.0.2-B4).
 
 ### 4.0.3 Data structures & algorithms (when needed)
 
@@ -732,7 +834,21 @@ function fetchResearch(tripId: string, userId: string, budget: number, locale: s
 - **Comments explain why**, not what.
 - **Field parity** — OpenAPI schema ↔ backend DTO ↔ frontend request interface (codegen where possible).
 - **Max file length ~300 lines** — split when exceeded.
+- **Max line length 120 characters** — no extremely long lines; enforced in CI (Checkstyle / ESLint `max-len`); soft target 100.
 - **No commented-out code** in PRs; `TODO(username): description` only with ticket reference.
+
+#### Visibility & reusable flows (shared intent — LOCKED)
+
+| Backend (Java) | Frontend (TypeScript) |
+|---|---|
+| `public` — service entry, ports | `export` — feature public API via `index.ts` |
+| `protected` — subclass hooks only | N/A — use composition, not inheritance |
+| `private` — helpers, extracted steps | non-exported functions in module — not in `index.ts` |
+| package-private — same-package helpers | — |
+
+**Rule:** duplicated flow → extract reusable helper with **smallest visibility** (`private` /
+non-exported). Never widen visibility "for tests" — test via public entry point or
+package-visible test fixtures.
 
 #### ≤3 params — exceptions (LOCKED)
 
@@ -1172,7 +1288,25 @@ export function ResearchPanel({ tripId }: ResearchPanelProps) {
 ##### B3. Human-readable code
 
 Same principles as backend §4.0.2-B3 / §4.0.4 — name by intent, early returns, no magic
-strings (use i18n keys or constants), ~40 lines max per function, one abstraction level.
+strings (use i18n keys or constants), ~40 lines max per function, one abstraction level,
+**max line length 120 characters** (ESLint `max-len`, soft target 100).
+
+##### B4. Visibility & reusable flows (frontend — LOCKED)
+
+| Rule | Detail |
+|---|---|
+| **Public API via `index.ts`** | Only hooks/components listed in `features/<name>/index.ts` are public |
+| **Module-private helpers** | Sorting, mapping, debounce logic → non-exported functions in `hooks/` or `lib/utils/` |
+| **Extract duplicated UI flow** | Same loading/error/save pattern → shared hook in `features/*/hooks/` or `components/ui/` |
+| **No export for internals** | Form field components, internal utils — not exported from feature barrel |
+
+```typescript
+// features/intake/hooks/use-save-brief.ts — exported via index.ts
+export function useSaveBrief(params: UseSaveBriefParams) { ... }
+
+// features/intake/hooks/use-save-brief.ts — module-private helper
+function mapFormToRequest(values: TripBriefFormValues): SaveTripBriefRequest { ... }
+```
 
 ##### C. Imports & module boundaries
 
@@ -1402,6 +1536,8 @@ return <RecommendationList items={data.items} />;
 5. **Forms always use `onValuesChange`** — reject diffs that use uncontrolled inputs or per-field `useState`.
 6. **Export via `index.ts`** — new public components/hooks must be re-exported.
 7. **Self-check against §4.2.2 layer table** before finishing.
+8. **Line length ≤120** — break long JSX/props; extract variables (§4.2.6-B3).
+9. **Helpers non-exported** — reusable logic stays module-private unless added to `index.ts` (§4.2.6-B4).
 
 #### 4.2.7 Data flow (reference)
 
@@ -1910,6 +2046,8 @@ CI pipeline runs on PR.
 | Auth (JWT cookie) | Login/logout/me endpoints (§4.0.5) |
 | MapStruct | Mapper config + example controller→response flow |
 | Trip scaffold | `GET/POST /api/v1/trips` — thin controller, service unit test |
+| Transactions | `@Transactional(rollbackFor = Exception.class)` pattern + Spring Retry for deadlocks (§4.0.2-E2) |
+| Checkstyle | `LineLength` max 120 in Gradle config |
 
 **Sprint 2 — AI + frontend platform**
 
@@ -2058,6 +2196,11 @@ Copy into PR description; all items must pass:
 - [ ] **Admin audit** — password reset / user changes logged to `audit_event` (§4.0.6)
 - [ ] **No secrets** — API keys only via env/config; nothing committed
 - [ ] **Stub adapters** — if vendor undecided, port + `Stub*Adapter` ships (§4.0.7)
+- [ ] **Line length** — no line > 120 chars; Checkstyle / ESLint `max-len` passes (§4.0.2-B3, §4.0.4)
+- [ ] **Visibility** — reusable logic extracted as `private` / non-exported helper; no widened public API (§4.0.2-B4)
+- [ ] **Transactions** — write use-cases use `@Transactional(rollbackFor = Exception.class)`; rollback on failure, commit on success (§4.0.2-E2)
+- [ ] **No IO in transactions** — LLM and external HTTP calls outside `@Transactional` boundary
+- [ ] **Deadlock safety** — consistent table lock order, `@Version` on concurrent entities, `@Retryable` where needed (§4.0.2-E2)
 
 ### 12.4 Feature definition of done (per C1–C5 story)
 
@@ -2106,13 +2249,15 @@ at-a-glance checklist for humans and AI.
 | X3 | **camelCase** functions/methods |
 | X4 | **kebab-case** files (frontend) & URLs/API paths |
 | X5 | **snake_case** i18n files/keys & DB columns |
-| X6 | **Clear, human-readable code** — name by intent; ~40 lines/method max |
+| X6 | **Clear, human-readable code** — name by intent; ~40 lines/method max; **≤120 chars/line** |
 | X7 | **User-based auth** — no tenant; scope all data by `user_id` (§4.0.5) |
 | X8 | **Annotations OK** — Spring/Jakarta backend; interfaces + zod frontend |
 | X9 | **Prerequisites** — `npm run prereq` before dev; install missing tools (§4.0.0) |
 | X10 | **Docker** — full stack via `docker compose up` (§4.0.0) |
 | X11 | **Gradle** — backend builds via committed wrapper (§1) |
 | X12 | **Stub-first** — port + stub before live vendor adapter (§4.0.7) |
+| X13 | **Visibility** — reusable flow extracted; `public`/`private` (BE) or `export`/module-private (FE) (§4.0.2-B4, §4.0.4) |
+| X14 | **Transactions** — rollback on failure, commit on success; deadlock prevention (§4.0.2-E2) |
 
 ### 13.1 Backend coding rules
 
@@ -2148,6 +2293,11 @@ at-a-glance checklist for humans and AI.
 | B28 | **Admin audit** — all admin mutations → `audit_event` |
 | B29 | **Gradle** — build via committed wrapper; Java 21 toolchain (§1, ADR 001) |
 | B30 | **Stub adapters** — ship `Stub*Adapter` when vendor undecided (§4.0.7) |
+| B31 | **Line length ≤120** — Checkstyle `LineLength`; no extremely long lines (§4.0.2-B3) |
+| B32 | **Visibility** — `public` entry only; reusable steps `private`/`protected` (§4.0.2-B4) |
+| B33 | **Transactions** — `rollbackFor = Exception.class`; commit on success (§4.0.2-E2) |
+| B34 | **No IO in `@Transactional`** — LLM/HTTP outside transaction boundary |
+| B35 | **Deadlock prevention** — lock order, `@Version`, `@Retryable` on `40P01` (§4.0.2-E2) |
 
 ### 13.2 Frontend coding rules
 
@@ -2184,6 +2334,8 @@ at-a-glance checklist for humans and AI.
 | F29 | **Route files** — `loading.tsx` / `error.tsx` where applicable |
 | F30 | **Admin UI** — `(admin)` routes; `features/admin/`; guard `ROLE_ADMIN` (§4.0.6) |
 | F31 | **`cn()` helper** — use for all conditional Tailwind class merging |
+| F32 | **Line length ≤120** — ESLint `max-len`; soft target 100 (§4.2.6-B3) |
+| F33 | **Module visibility** — public API only via `index.ts`; helpers non-exported (§4.2.6-B4) |
 
 ### 13.3 API contract rules (shared)
 
@@ -2244,7 +2396,7 @@ lint → build → test → contract → docker → smoke
 
 | Stage | Backend | Frontend | Gate |
 |---|---|---|---|
-| **lint** | Checkstyle/Spotless (Gradle) | ESLint + TypeScript `tsc --noEmit` | Fail on error |
+| **lint** | Checkstyle/Spotless (`LineLength` 120) | ESLint + `max-len` 120 + TypeScript `tsc --noEmit` | Fail on error |
 | **build** | `./gradlew build -x test` | `npm run build` | Compile success |
 | **test** | `./gradlew test` | `npm run test` (Vitest) | All pass |
 | **contract** | OpenAPI validate | `npm run codegen` + git diff check | No drift |
