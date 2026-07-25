@@ -23,7 +23,8 @@
 | Controller | `<Feature>Controller` | `PackingListController` |
 | Frontend folder | `features/<feature>/` | `features/packing/` |
 | i18n file | `locales/en/<feature>.json` | `packing.json` |
-| OpenAPI tag | `<feature>` | `packing` |
+| GraphQL types | `<feature>` in `graphql/<feature>.graphqls` | `packing.graphqls` |
+| OpenAPI tag | `<feature>` (REST-only endpoints only) | `packing` |
 | Flyway | `V{n}__create_<feature>_table.sql` | `V10__create_packing_list_table.sql` |
 
 ---
@@ -31,11 +32,12 @@
 ## Step 1 — Plan & contract
 
 1. Add story to [`plans/BACKLOG.md`](../plans/BACKLOG.md) (or confirm ticket).
-2. Add OpenAPI paths under `/api/v1/` with tag `<feature>`.
-3. Register new error codes in `api/openapi/errors.yaml` (`snake_case`).
-4. Run `npm run codegen`.
+2. Add GraphQL types, queries, mutations in `resources/graphql/<feature>.graphqls`.
+3. Add REST paths under `/api/v1/` **only** if transport requires (SSE, 202, OAuth).
+4. Register new error codes (`snake_case`) — shared across GraphQL and REST.
+5. Run `npm run codegen`.
 
-**Gate:** Generated TS client includes new types; CI contract job would pass.
+**Gate:** Generated TS clients include new types; CI contract job would pass.
 
 ---
 
@@ -83,13 +85,15 @@ db/migration/V{n}__create_packing_list_table.sql
 ## Step 5 — API layer
 
 ```
-api/controller/PackingListController.java    # ≤10 lines per endpoint
-api/dto/packing/
-api/mapper/PackingListMapper.java
+api/graphql/PackingListResolver.java         # ≤10 lines per query/mutation
+api/graphql/input/CreatePackingListInput.java
+api/graphql/PackingListGraphQlMapper.java
+api/controller/PackingListController.java    # REST-only if needed (e.g. export SSE)
+api/dto/packing/                           # REST DTOs if applicable
 ```
 
-- Controller injects `PackingListService` only.
-- Map domain → response DTO via MapStruct.
+- Resolver/controller injects `PackingListService` only.
+- Map domain → GraphQL types via dedicated mapper (not JPA entities).
 
 ---
 
@@ -116,7 +120,8 @@ features/packing/
   schemas/packing.schema.ts
   types.ts
   index.ts
-lib/api/packing-api.ts
+lib/graphql/packing-queries.ts
+lib/rest/packing-rest.ts                     # only if REST endpoint needed
 lib/query/query-keys.ts                      # add packing: { ... }
 locales/en/packing.json
 app/(planner)/trips/[tripId]/packing/page.tsx   # thin page
@@ -168,9 +173,9 @@ npm run codegen && git diff --exit-code apps/frontend/src/generated/
 | Add `generatePackingList()` to `TripService` | New `PackingListService` |
 | Import LangChain4j in `application/` | `ai/langchain4j/` adapter |
 | Edit `V3__create_trip.sql` | New `V{n}__...` migration |
-| Hand-write TS types | OpenAPI → codegen |
+| Hand-write TS types | GraphQL + OpenAPI → codegen |
 | Import `features/research` from `features/packing` | Shared UI in `components/ui/` |
-| Skip OpenAPI before coding | Contract first |
+| Skip schema/OpenAPI before coding | Contract first (ADR 005) |
 
 ---
 

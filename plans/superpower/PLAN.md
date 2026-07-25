@@ -32,7 +32,7 @@
 | Frontend layering | **Page = routing only; Feature = UI logic; API = generated client** (§4.2.6) |
 | Frontend styling | **Tailwind CSS + Ant Design** — Tailwind overrides Ant; unified design tokens (§4.2.9) |
 | Database | **PostgreSQL** (+ pgvector for embeddings) |
-| Typing discipline | **Strict everywhere** — typed domain model, validated DTOs, OpenAPI→TS codegen, JSON-schema-bound LLM output (§6) |
+| Typing discipline | **Strict everywhere** — typed domain model, validated DTOs, **GraphQL schema + OpenAPI** codegen, JSON-schema-bound LLM output (§6) |
 | Architecture | **OOP + clean/hexagonal layering** (§4) |
 | Backend layering | **Controller = routing only; Service = business logic** (§4.0.1, §12) |
 | **Algorithms** | **Use DSA when measured need or clear correctness goal** — pure code in `domain/algorithm/` (§4.0.3) |
@@ -50,7 +50,7 @@
 | **Runtime** | **Docker Compose** — full stack runnable in containers (§4.0.0) |
 | **Configuration** | **Single root `.env`** — all credentials & config; `.env.example` is the template (§4.0.0.2) |
 | **Pre-dev gate** | **Check prerequisites** before coding — install if missing (§4.0.0) |
-| **API** | Versioned **`/api/v1/`** · CRUD (**GET/POST/PUT/DELETE** — no PATCH) · standard error envelope (§6.1) |
+| **API** | **Hybrid:** GraphQL (`POST /graphql`) for client data reads/mutations · REST (`/api/v1/`) for auth, SSE chat, async 202, health, booking confirm (§6, ADR 005) |
 | **Annotations** | **Allowed** — Spring/Jakarta validation on backend; typed interfaces + zod on frontend (§4.0.2) |
 | Money | `Money` value object (`BigDecimal` + `Currency`) — **never** float/double |
 
@@ -126,14 +126,14 @@ that gate feature delivery:
 
 When `TripBrief` is incomplete, API returns typed **`ClarificationNeeded`** with
 `questions[]` → `trip.status=CLARIFICATION_NEEDED`. User answers via
-`PUT /api/v1/trips/{tripId}/brief/clarification`. C2 blocked until `BRIEF_COMPLETE`.
+GraphQL `answerClarification` mutation or chat tool. C2 blocked until `BRIEF_COMPLETE`.
 
 #### C2 — async research + destination selection
 
 - `POST .../research/run` → `202` + `job_id` (agent up to 90s — §14); poll
   `GET .../research/jobs/{jobId}`.
 - On complete: `RESEARCH_READY` + optional **research-complete email** (Resend).
-- User **must select** one recommendation: `POST .../selected-recommendation` →
+- User **must select** one recommendation: GraphQL `selectRecommendation` mutation →
   `DESTINATION_SELECTED` before C3.
 
 #### Auth P1 (Phase 1)
@@ -387,22 +387,28 @@ travel-planner/                    # monorepo root — shared docs, docker, scri
 |---|---|
 | **One stack per folder** | No Java/Spring in `apps/frontend/`; no React/Next.js in `apps/backend/` |
 | **No cross-imports** | Frontend never imports backend source; backend never imports frontend source |
-| **API boundary only** | Integration via **`/api/v1/`** + OpenAPI codegen → `apps/frontend/src/generated/` |
+| **API boundary only** | **GraphQL** (`POST /graphql`) for data · **REST** (`/api/v1/`) for operational endpoints · dual codegen → `apps/frontend/src/generated/` (§6) |
 | **Separate Docker images** | `docker/frontend/Dockerfile` · `docker/backend/Dockerfile` |
 | **Separate CI jobs** | Lint/test/build frontend and backend independently; both required on PR |
-| **OpenAPI lives in backend** | `apps/backend/src/main/java/.../api/openapi/` — single contract source |
+| **OpenAPI lives in backend** | `apps/backend/src/main/java/.../api/openapi/` — contract for **REST-only** endpoints (auth, SSE, jobs, health) |
+| **GraphQL schema lives in backend** | `apps/backend/src/main/resources/graphql/` — contract for **client data** queries/mutations (ADR 005) |
 | **Root is orchestration only** | `package.json` at repo root runs scripts; no app business logic at root |
 
 ```
 apps/frontend/                         apps/backend/
 ├── src/app/                           ├── src/main/java/com/travelplanner/
 ├── src/features/                      │   ├── domain/
-├── src/generated/api/  ◄── codegen ───│   ├── application/
-├── package.json                       │   ├── api/
-└── next.config.ts                     │   └── infrastructure/
-                                       ├── src/main/resources/db/migration/
+├── src/generated/                     │   ├── application/
+│   ├── graphql/  ◄── gql codegen ────│   ├── api/
+│   └── rest/     ◄── openapi codegen │   │   ├── graphql/   (resolvers)
+└── package.json                       │   │   ├── controller/ (REST ops)
+                                       │   │   └── openapi/
+                                       │   └── infrastructure/
+                                       ├── src/main/resources/graphql/
+                                       │   └── schema.graphqls
                                        └── build.gradle.kts
-              HTTP /api/v1/  ──────────────────►
+       GraphQL POST /graphql  ─────────►  (data reads + mutations)
+       REST /api/v1/          ─────────►  (auth · SSE · 202 · health)
 ```
 
 | App | Runtime | Enforcement |
@@ -478,10 +484,10 @@ and `apps/backend` receive the same variables without per-app env files.
 **Monorepo rules:**
 - Run **`npm run prereq`** before first dev session (§4.0.0).
 - Full stack via **`docker compose up`** (§4.0.0).
-- OpenAPI spec lives in `apps/backend` and is the **single contract source** for both apps.
-- Codegen runs from the repo root (`openapi → apps/frontend/src/generated/...`).
+- GraphQL schema + OpenAPI spec live in `apps/backend` — **dual contract sources** (§6, ADR 005).
+- Codegen runs from the repo root (`graphql-codegen` + `openapi-codegen` → `apps/frontend/src/generated/`).
 - Shared scripts (dev, test, migrate, codegen) are invoked from root `package.json` or a `Makefile`.
-- Do **not** copy DTO shapes by hand into the frontend — always regenerate from OpenAPI.
+- Do **not** copy DTO shapes by hand into the frontend — always regenerate from schema or OpenAPI.
 
 ### 4.0.1 Backend layer discipline — Controller vs Service (LOCKED)
 
@@ -491,27 +497,32 @@ the **Service layer** (`application/` use-cases).
 
 | Layer | Package | Allowed | Forbidden |
 |---|---|---|---|
-| **Controller** | `api/controller/` | HTTP mapping, auth/permission checks, request DTO binding, delegate to service, map service result → response DTO, HTTP status codes | Business rules, DB access, LLM calls, supplier API calls, branching logic beyond input validation |
+| **Controller / Resolver** | `api/controller/`, `api/graphql/` | HTTP/GraphQL mapping, auth checks, delegate to service | Business rules, DB, LLM |
 | **Service** | `application/` | Use-case orchestration, domain invariants, calling ports (LLM, search, booking), transaction boundaries, composing domain objects | HTTP concerns (`ResponseEntity`, status codes), framework web types |
 | **Domain** | `domain/` | Pure model + port interfaces | Any framework or vendor import |
 | **Infrastructure** | `infrastructure/`, `ai/` | Port implementations, persistence, external APIs | Business rules that belong in domain/application |
 
 ```java
-// ✅ Controller — routing only; kebab-case URL; ≤3 service args via DTOs
-@PostMapping("/api/v1/trips/{tripId}/ranked-recommendations")
-public ResearchResponse research(@PathVariable UUID tripId,
-        @Valid @RequestBody ResearchRequest req,
-        @AuthenticationPrincipal UserContext user) {
-    return researchMapper.toResponse(
-        researchService.runResearch(req.toQuery(tripId), user));
+// ✅ GraphQL resolver — routing only; ≤10 lines; delegate to service
+@QueryMapping
+public Trip trip(@Argument UUID id, @AuthenticationPrincipal UserContext user) {
+    return tripGraphQlMapper.toGraphQl(
+        tripQueryService.getTrip(new GetTripQuery(id), user));
 }
 
-// ❌ Controller — business logic belongs in ResearchService, not here
-@PostMapping("/api/v1/trips/{id}/research")
-public ResearchResponse research(@PathVariable UUID id, @RequestBody ResearchRequest req) {
-    var trip = tripRepo.findById(id).orElseThrow();
-    if (trip.getBudget().isLessThan(req.getMaxSpend())) { ... }  // NO
-    return llmClient.complete(...);                                // NO
+// ✅ REST controller — operational endpoint (async 202)
+@PostMapping("/api/v1/trips/{tripId}/research/run")
+public ResponseEntity<ResearchJobResponse> startResearch(@PathVariable UUID tripId,
+        @AuthenticationPrincipal UserContext user) {
+    return ResponseEntity.accepted().body(
+        researchMapper.toJobResponse(researchService.enqueue(tripId, user)));
+}
+
+// ❌ Resolver — business logic belongs in ResearchService, not here
+@MutationMapping
+public Trip selectRecommendation(@Argument SelectRecommendationInput input) {
+    if (input.recommendationId() == null) { ... }  // NO — validate in service
+    return tripRepo.save(...);                     // NO — no repo in resolver
 }
 ```
 
@@ -523,13 +534,12 @@ counts as **3** — the maximum for controller methods. Path id is not a separat
 argument; bind into `*Query` inside the mapper when possible.
 
 ```java
-// ✅ 3 params max at controller boundary
-@PostMapping("/api/v1/trips/{tripId}/ranked-recommendations")
-public ResearchResponse research(@PathVariable UUID tripId,
-        @Valid @RequestBody ResearchRequest req,
+// ✅ 3 params max at resolver/controller boundary
+@MutationMapping
+public Trip updateTripBrief(@Argument UpdateTripBriefInput input,
         @AuthenticationPrincipal UserContext user) {
-    return researchMapper.toResponse(
-        researchService.runResearch(req.toQuery(tripId), user));
+    return tripBriefGraphQlMapper.toGraphQl(
+        tripBriefService.updateBrief(input.toCommand(), user));
 }
 ```
 
@@ -967,9 +977,11 @@ com.travelplanner
 │   ├── knowledge/          #   KnowledgePort adapter: JPA + pgvector RAG (§4.1.0)
 │   └── history/            #   price_history, seasonality repositories
 │
-├── api/                    # REST layer
-│   ├── controller/  dto/  mapper/   # DTOs are separate from domain; MapStruct maps between
-│   └── openapi/            #   spec = source of truth for the TS client
+├── api/                    # HTTP layer
+│   ├── graphql/            #   resolvers — @QueryMapping / @MutationMapping (§6.2)
+│   ├── controller/         #   REST — auth, SSE, async 202, health, booking confirm
+│   ├── dto/  mapper/       #   REST DTOs; MapStruct to domain
+│   └── openapi/            #   REST-only spec
 │
 └── config/                 # Spring config, provider routing, secrets wiring
 ```
@@ -1119,7 +1131,7 @@ application/auth/
 | **Roles** | `ROLE_USER` (default) · `ROLE_ADMIN` |
 | **Token transport** | Self-issued **JWT** in **httpOnly, Secure, SameSite=Lax** cookie (`tp_session`) |
 | **Session APIs** | `POST /auth/logout` · `GET /auth/me` · `POST /auth/refresh` (optional v1.1) |
-| **Frontend** | `credentials: 'include'` in `lib/api/client.ts` |
+| **Frontend** | `credentials: 'include'` in `lib/graphql/client.ts` and `lib/rest/client.ts` |
 
 #### Local login (email **or** username)
 
@@ -1596,7 +1608,7 @@ apps/frontend/src/
 │   ├── schemas/
 │   ├── types.ts
 │   └── index.ts                          # public exports only
-├── lib/api/<feature>-api.ts
+├── lib/graphql/<feature>-queries.ts       # + lib/rest/ if operational endpoint
 ├── locales/en/<feature>.json             # + ms/ when translated
 └── app/(planner)/trips/[tripId]/<feature>/page.tsx   # thin page only
 ```
@@ -1651,7 +1663,7 @@ to `TravelResearchAgent` loop logic.
 - [ ] Adapters (stub first) + Flyway `V{n}__...`
 - [ ] `XController` (thin)
 - [ ] `features/x/` + page + i18n namespace
-- [ ] `queryKeys.x` + `lib/api/x-api.ts`
+- [ ] `queryKeys.x` + `lib/graphql/x-queries.ts` (and `lib/rest/` if operational endpoint)
 - [ ] Feature flag entry (if post-v1 or risky)
 - [ ] ArchUnit test: `domain` does not depend on `api` (§4.0.9)
 - [ ] §12.3 + §12.4 DoD
@@ -1895,18 +1907,18 @@ TripBrief ──► TravelResearchAgent
 **Async execution (UC-C2-01/02):** Research runs as a **background job** — not on the HTTP
 thread. See [`USE-CASES.md`](../USE-CASES.md).
 
-| API | Response |
-|---|---|
-| `POST .../research/run` | `202` `{ job_id }` → `trip.status=RESEARCH_QUEUED` |
-| `GET .../research/jobs/{jobId}` | `{ status, progress_pct?, error_code? }` |
-| `GET .../ranked-recommendations` | `200` when `RESEARCH_READY`; else `409 research_not_ready` |
-| `GET .../destinations/{destinationId}/guide` | Full `traveler_guide` + areas + top POIs — for detail drawer / chat context |
+| API | Transport | Response |
+|---|---|---|
+| `POST .../research/run` | REST | `202` `{ job_id }` → `trip.status=RESEARCH_QUEUED` |
+| `researchJob(tripId, jobId)` | GraphQL query | `{ status, progressPct, errorCode }` |
+| `trip(id) { recommendations }` | GraphQL query | When `RESEARCH_READY`; else GraphQL error `research_not_ready` |
+| `destinationGuide(destinationId)` | GraphQL query | Full `traveler_guide` + areas + top POIs |
 
 On job complete: `RESEARCH_READY`; optional **research-complete email** (§4.0.10).
 
 **Destination selection (UC-C2-06):** User picks one recommendation before C3:
 
-`POST .../selected-recommendation` `{ recommendation_id }` → `DESTINATION_SELECTED`.
+GraphQL `selectRecommendation` mutation → `DESTINATION_SELECTED`.
 
 Each recommendation includes `traveler_guide` + `source_refs[]` for grounding (UI + C3 POI linkage).
 
@@ -2138,7 +2150,7 @@ folders and do not map cleanly to C1–C5.
 | Forms | Ant Design `Form` with **`onValuesChange`** for controlled, incremental updates |
 | Data fetching | **TanStack Query (React Query)** — cache, loading/error states, mutations |
 | **i18n** | **next-intl** — all user-facing strings via `t()`; no hardcoded copy (§4.2.10) |
-| API types | **Generated only** from OpenAPI (`src/generated/api/`) — never hand-written DTOs |
+| API types | **Generated only** — GraphQL Codegen (`generated/graphql/`) for data; OpenAPI (`generated/rest/`) for auth/chat/jobs — never hand-written DTOs |
 | Runtime validation | **Zod** at the API boundary (validate responses before UI consumes) |
 | Styling | **Tailwind CSS** (layout + Ant overrides) + **Ant Design** (components) — unified tokens (§4.2.9) |
 | State | Server state → React Query; UI/ephemeral state → React `useState`/`useReducer`; no Redux unless a later need is proven |
@@ -2151,10 +2163,10 @@ Mirrors backend §4.0.1 — keep each layer thin and single-purpose.
 |---|---|---|---|
 | **Page / Route** | `app/**/page.tsx` | Compose feature components, load params, set metadata | Direct `fetch`, business rules, form field logic, Ant Design form state |
 | **Feature module** | `features/<name>/` | Screen composition, hooks, form schemas, feature-specific components | Cross-feature imports (use shared `components/` instead) |
-| **API client** | `lib/api/` | Thin wrappers over generated client, auth headers, base URL, error mapping | UI rendering, React hooks |
+| **API client** | `lib/graphql/` + `lib/rest/` | Thin wrappers over generated clients, auth cookies, error mapping | UI rendering, React hooks |
 | **Hooks** | `features/*/hooks/` or `hooks/` | React Query queries/mutations, derived UI state | Raw fetch bypassing generated types |
 | **Components (shared)** | `components/ui/`, `components/layout/` | Reusable presentational pieces | Feature-specific business logic |
-| **Generated** | `generated/api/` | Auto-generated — **do not edit** | Any manual changes |
+| **Generated** | `generated/graphql/`, `generated/rest/` | Auto-generated — **do not edit** | Any manual changes |
 
 ```tsx
 // ✅ Page — routing & composition only
@@ -2268,7 +2280,7 @@ Parent holds debounced save via `useSaveBrief` mutation — form does not call A
 
 **Data flow:**
 ```
-Page → Feature component → hook (React Query) → lib/api/research-api.ts → generated client → Spring Boot
+Page → Feature component → hook (React Query) → lib/graphql/ → POST /graphql → Spring Boot
                 ↑                                                              ↓
            Ant Design UI                                               zod validate response
 ```
@@ -2469,9 +2481,9 @@ export function TripBriefForm({ initialValues, onValuesChange }: TripBriefFormPr
 | **React Query for all server state** | Queries + mutations — no manual `useState` + `useEffect` fetch |
 | **Query keys** | Defined in `lib/query/query-keys.ts` — no inline string arrays |
 | **One concern per hook** | `useResearchQuery` (read) separate from `useRunResearchMutation` (write) |
-| **API access** | Hooks call `lib/api/<resource>-api.ts` — the only layer that touches generated client |
-| **Zod at boundary** | Validate API response with zod in `lib/api/` before returning to hook |
-| **Error mapping** | Map `ApiErrorResponse.code` → i18n key in `lib/api/` — hooks display translated message |
+| **API access** | Hooks call `lib/graphql/` or `lib/rest/` — only layers that touch generated clients |
+| **Zod at boundary** | Validate API response with zod in `lib/graphql/` / `lib/rest/` before returning to hook |
+| **Error mapping** | Map `extensions.code` / `ApiErrorResponse.code` → i18n key — hooks display translated message |
 | **Stale time** | Default `60s` queries; `0` for polling screens (research/chat) — set in `lib/query/client.ts` |
 | **Retry** | 2 retries on network error; **no retry** on 4xx |
 | **Debounce** | Form auto-save: **300ms** debounce on `onValuesChange` before mutation |
@@ -2490,25 +2502,28 @@ export const queryKeys = {
 };
 ```
 
-##### H. API layer (`lib/api/`)
+##### H. API layer (`lib/graphql/` + `lib/rest/`)
 
 | Rule | Detail |
 |---|---|
-| **Single entry** | `lib/api/client.ts` — base URL, auth header, `X-Request-Id`, error parsing |
-| **Per-resource files** | `trip-api.ts`, `research-api.ts`, … — kebab-case; one function per endpoint |
-| **Generated client only** | Wrap generated functions; base path `/api/v1` |
+| **GraphQL entry** | `lib/graphql/client.ts` — `/graphql`, credentials, error parsing (`extensions.code`) |
+| **REST entry** | `lib/rest/client.ts` — `/api/v1`, auth, SSE helpers, `Idempotency-Key` |
+| **Per-resource files** | `trip-queries.ts`, `auth-rest.ts`, `chat-sse.ts` — kebab-case |
+| **Generated clients only** | GraphQL documents → `generated/graphql/`; REST → `generated/rest/` |
 | **No React** | Pure async functions — zero hooks, zero JSX |
-| **Return typed data** | Parse with zod; throw typed `ApiError` with `code` on failure |
-| **Error envelope** | Parse `{ code, message, details }` from §6.1 — map `code` to i18n |
+| **Return typed data** | Parse with zod where needed; throw typed `ApiError` with `code` on failure |
+| **Error codes** | GraphQL `extensions.code` and REST `{ code }` → same i18n keys (§6.1, §6.2) |
 
 ```tsx
-// lib/api/research-api.ts — 1 param; camelCase function; kebab-case file
-import { getRankedRecommendations } from '@/generated/api';
-import { rankedRecommendationsSchema } from './schemas/research.schema';
+// lib/graphql/trip-queries.ts
+import { GetTripDashboardDocument } from '@/generated/graphql';
+import { graphqlClient } from './client';
 
-export async function fetchResearch(request: FetchResearchRequest) {
-  const raw = await getRankedRecommendations({ path: { tripId: request.tripId } });
-  return rankedRecommendationsSchema.parse(raw);
+export async function fetchTripDashboard(request: FetchTripDashboardRequest) {
+  const result = await graphqlClient.request(GetTripDashboardDocument, {
+    tripId: request.tripId,
+  });
+  return result.trip;
 }
 ```
 
@@ -2546,7 +2561,7 @@ See **§4.2.9** for the full styling stack and unified design patterns.
 | **Barrel `index.ts`** | Re-export public API only — no logic; avoid circular barrels |
 | **Test files** | Co-located `*.test.ts` / `*.test.tsx` (e.g. `research-api.test.ts`) |
 | **Env files** | **Root `.env` only** (§4.0.0.2) — no `apps/frontend/.env.local`; `.env.example` is the template |
-| **Required env** | `NEXT_PUBLIC_API_BASE_URL` → backend `/api/v1` |
+| **Required env** | `NEXT_PUBLIC_API_BASE_URL` → backend host (GraphQL `/graphql` + REST `/api/v1`) |
 
 ##### K. Error, loading, and empty states
 
@@ -2572,7 +2587,7 @@ return <RecommendationList items={data.items} />;
 | **Markdown render** | Sanitize LLM HTML (DOMPurify) before render — prevent XSS |
 | **a11y** | Ant Design components + `aria-label={t('...')}` on icon-only buttons |
 | **Ant Design locale** | Sync `ConfigProvider locale` with next-intl active locale |
-| **Auth header** | Attach session/JWT in `lib/api/client.ts` — all requests user-scoped (§4.0.5) |
+| **Auth header** | Attach session cookie via `credentials: 'include'` in graphql/rest clients — user-scoped (§4.0.5) |
 
 ##### L. Security & env
 
@@ -2586,7 +2601,7 @@ return <RecommendationList items={data.items} />;
 | Target | Tool | Rule |
 |---|---|---|
 | Zod schemas | Vitest | Validate sample payloads + reject bad shapes |
-| `lib/api/` functions | Vitest + MSW | Mock HTTP; assert zod parse |
+| `lib/graphql/`, `lib/rest/` | Vitest + MSW | Mock HTTP; assert zod parse |
 | Hooks | `@testing-library/react` | Wrap in QueryClientProvider |
 | Components | RTL | Test loading/error/empty/render paths |
 | E2E (Phase 2+) | Playwright | intake → research → itinerary |
@@ -2594,7 +2609,7 @@ return <RecommendationList items={data.items} />;
 ##### N. AI-generated frontend code — extra rules
 
 1. **Place code in the correct feature** — C2 code goes in `features/research/`, not `app/`.
-2. **Never create `services/` folder** — API functions go in `lib/api/`.
+2. **Never create `services/` folder** — API functions go in `lib/graphql/` or `lib/rest/`.
 3. **Never skip the hook layer** — page → component → hook → api, always.
 4. **Never hand-write API types** — run codegen if a type is missing.
 5. **Forms always use `onValuesChange`** — reject diffs that use uncontrolled inputs or per-field `useState`.
@@ -2606,7 +2621,7 @@ return <RecommendationList items={data.items} />;
 #### 4.2.7 Data flow (reference)
 
 ```
-Page → Feature component → hook (React Query) → lib/api/<resource>-api.ts → /api/v1/ → Spring Boot
+Page → Feature component → hook (React Query) → lib/graphql/ or lib/rest/ → Spring Boot
                 ↑                                                              ↓
            Ant Design UI                                    { code, message, details } → i18n
 ```
@@ -2932,8 +2947,8 @@ One contract, enforced at every boundary:
 
 1. **Domain:** value objects (`Money`, `DateRange`, `GeoLocation`), enums for fixed
    sets, invariants in constructors. No primitive obsession, no nullable-by-default.
-2. **API contract:** **OpenAPI spec is the source of truth** → generate the Next.js
-   TypeScript client (`openapi-typescript`/`orval`). Frontend and backend cannot drift.
+2. **API contract:** **GraphQL schema** (data reads/mutations) + **OpenAPI** (REST-only
+   operational endpoints) → generate TypeScript clients. Frontend and backend cannot drift.
 3. **LLM I/O:** JSON Schema derived from the same DTOs; LangChain4j binds model output
    to typed objects; `Guardrails` validates before anything is persisted or acted on.
 4. **DB:** Flyway migrations, `NOT NULL` by default, `numeric` for money, `timestamptz`
@@ -2941,25 +2956,30 @@ One contract, enforced at every boundary:
 5. **Frontend:** TypeScript `strict: true`; only the generated types cross the wire;
    runtime validation (zod) on responses at the edge; feature-module layering (§4.2).
 
-### 6.1 API contract & HTTP conventions (LOCKED)
+### 6.1 REST conventions — operational endpoints (LOCKED)
+
+REST is used for **non-GraphQL transports** only: auth (OAuth redirects), SSE chat,
+async `202` job kickoff, health probes, booking confirm with `Idempotency-Key`.
+Data reads and mutations use GraphQL (§6.2, ADR 005).
 
 #### Versioning
 
-- All REST endpoints under **`/api/v1/`** — e.g. `/api/v1/trips`, `/api/v1/trips/{tripId}/ranked-recommendations`.
+- All REST endpoints under **`/api/v1/`** — e.g. `/api/v1/auth/login`, `/api/v1/trips/{tripId}/research/run`.
 - Breaking changes → increment to `/api/v2/`; v1 supported until frontend migrates.
-- OpenAPI spec tagged with version; codegen includes `/api/v1` base path.
+- OpenAPI spec tagged with version; REST codegen includes `/api/v1` base path.
 
 #### HTTP verbs — CRUD only (no PATCH)
 
 | Operation | Verb | Example |
 |---|---|---|
-| Read one / list | **GET** | `GET /api/v1/trips/{tripId}` |
-| Create | **POST** | `POST /api/v1/trips` |
-| Full replace / update | **PUT** | `PUT /api/v1/trips/{tripId}/brief` |
-| Delete | **DELETE** | `DELETE /api/v1/trips/{tripId}` |
+| Read one / list | **GET** | `GET /api/v1/health` |
+| Create / action | **POST** | `POST /api/v1/trips/{tripId}/research/run` |
+| Full replace / update | **PUT** | `PUT /api/v1/auth/password` |
+| Delete | **DELETE** | `DELETE /api/v1/auth/me` |
 
 - **Do not use PATCH** — partial updates use **PUT** with full resource body, or a dedicated
   POST action endpoint (e.g. `POST /api/v1/trips/{tripId}/research/run`).
+- **Data CRUD** (trips, brief, itinerary) → **GraphQL mutations** (§6.2), not REST.
 - URL segments: **kebab-case** — `ranked-recommendations`, `price-history`.
 - Resource names: **plural nouns** — `/trips`, `/bookings`.
 
@@ -2999,7 +3019,7 @@ public class TripNotFoundException extends DomainException {
 }
 ```
 
-Frontend: `lib/api/` maps `ApiErrorResponse.code` → i18n key in `common.errors.{code}`.
+Frontend: `lib/graphql/` and `lib/rest/` map error `code` → i18n key in `common.errors.{code}`.
 
 #### Pagination (list endpoints)
 
@@ -3026,6 +3046,192 @@ Response wrapper:
 
 - Booking confirm: client sends **`Idempotency-Key: {uuid}`** header.
 - Backend deduplicates within 24h — returns same result on retry.
+
+### 6.2 GraphQL conventions — client data API (LOCKED)
+
+GraphQL is the **primary client API** for reads and data mutations. See
+[ADR 005](../../docs/adr/005-graphql-hybrid-api.md).
+
+#### Endpoint & transport
+
+| Item | Value |
+|---|---|
+| URL | `POST /graphql` (same origin; cookie auth) |
+| Content-Type | `application/json` |
+| Auth | JWT `tp_session` httpOnly cookie — same as REST (§4.0.5) |
+| Introspection | Enabled `dev`/`docker`; **disabled** `prod` |
+| Dev UI | GraphiQL at `/graphiql` (dev profile only) |
+
+#### Schema layout
+
+```
+apps/backend/src/main/resources/graphql/
+├── schema.graphqls          # root Query + Mutation
+├── trip.graphqls            # Trip, TripBrief, TripStatus
+├── research.graphqls        # ResearchJob, RankedRecommendation, TravelerGuide
+├── itinerary.graphqls       # ItineraryDay, ItineraryItem, ItineraryLeg
+├── booking.graphqls         # Booking (read + quote list — confirm stays REST)
+├── user.graphqls            # User, UserIdentity (me query)
+└── scalars.graphqls         # DateTime, Money, UUID
+```
+
+**Schema-first:** `.graphqls` files are the contract source. Resolvers implement schema;
+do not expose fields without schema definition.
+
+#### Resolver discipline (mirrors §4.0.1)
+
+| Layer | Package | Allowed | Forbidden |
+|---|---|---|---|
+| **Resolver** | `api/graphql/` | `@QueryMapping` / `@MutationMapping`; validate input; delegate to service; map result | Business rules, DB, LLM, supplier APIs |
+| **Service** | `application/` | Same as REST — all business logic | GraphQL-specific types leaking to domain |
+
+```java
+// ✅ Resolver — ≤10 lines
+@QueryMapping
+public Trip trip(@Argument UUID tripId, @AuthenticationPrincipal UserContext user) {
+    return tripQueryService.getTrip(new GetTripQuery(tripId), user);
+}
+
+// ❌ Resolver — business logic
+@MutationMapping
+public Trip updateTripBrief(@Argument UpdateTripBriefInput input) {
+    if (input.budget().amount() < 0) throw ...;  // NO — belongs in TripBriefService
+    return tripBriefRepository.save(...);         // NO — no repo in resolver
+}
+```
+
+#### Queries (reads)
+
+| Query | Returns | Notes |
+|---|---|---|
+| `me` | `User` | Current user + linked providers |
+| `trips(page, pageSize, sort)` | `TripConnection` | Paginated trip list |
+| `trip(id)` | `Trip` | Nested: `brief`, `clarification`, `researchJob`, `recommendations`, `selectedRecommendation`, `itinerary { days { items legs } }` |
+| `researchJob(tripId, jobId)` | `ResearchJob` | Poll async job status |
+| `destinationGuide(destinationId)` | `TravelerGuide` | TKB guide for chat/detail drawer |
+| `adminUsers(page, pageSize)` | `UserConnection` | `ROLE_ADMIN` only |
+
+**N+1 prevention:** use `@BatchMapping` or DataLoader for nested fields (`itinerary.days`,
+`days.items`, `items.legs`). Register loaders in `config/GraphQlConfig.java`.
+
+#### Mutations (data writes)
+
+| Mutation | Input | Effect | Status gate |
+|---|---|---|---|
+| `createTrip` | `CreateTripInput` | New trip `DRAFT` | Planner or REST fallback |
+| `updateTripBrief` | `UpdateTripBriefInput` | Merge → `TripBrief`; may → `CLARIFICATION_NEEDED` | `DRAFT`, `CLARIFICATION_NEEDED` |
+| `answerClarification` | `AnswerClarificationInput` | Apply answers → re-validate | `CLARIFICATION_NEEDED` |
+| `selectRecommendation` | `SelectRecommendationInput` | → `DESTINATION_SELECTED` | `RESEARCH_READY` |
+| `archiveTrip` | `ArchiveTripInput` | → `ARCHIVED` | any |
+| `deleteTrip` | `DeleteTripInput` | Soft delete | owner only |
+
+**Not GraphQL mutations** (use REST instead):
+
+| Operation | REST | Reason |
+|---|---|---|
+| `startResearch` | `POST .../research/run` → `202` | Async job kickoff |
+| Chat messages | `POST .../chat/messages` (SSE) | Streaming |
+| Auth | `/api/v1/auth/*` | OAuth redirects, cookies |
+| `confirmBooking` | `POST .../bookings/{id}/confirm` | `Idempotency-Key` header |
+| `generateItinerary` / `patchItinerary` | Via **chat tool** or future GraphQL mutation in Phase 1+ | LLM-orchestrated; may add GraphQL mutation when non-chat UI path needed |
+
+#### GraphQL error format
+
+Errors map to the same **snake_case codes** as REST §6.1:
+
+```json
+{
+  "errors": [{
+    "message": "Trip not found",
+    "path": ["trip"],
+    "extensions": {
+      "code": "trip_not_found",
+      "details": { "trip_id": "550e8400-e29b-41d4-a716-446655440000" }
+    }
+  }]
+}
+```
+
+```java
+// api/graphql/GraphQlExceptionHandler.java
+@GraphQlExceptionHandler(TripNotFoundException.class)
+public GraphQLError handle(TripNotFoundException ex, DataFetchingEnvironment env) {
+    return GraphqlErrorBuilder.newError()
+        .message(ex.getMessage())
+        .errorType(ErrorType.NOT_FOUND)
+        .extensions(Map.of("code", ex.getCode(), "details", ex.getDetails()))
+        .build();
+}
+```
+
+Frontend: `lib/graphql/client.ts` parses `extensions.code` → same i18n keys as REST (`common.errors.{code}`).
+
+#### Pagination (GraphQL)
+
+Use **cursor-based** connection pattern for lists:
+
+```graphql
+type TripConnection {
+  edges: [TripEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type Query {
+  trips(first: Int = 20, after: String, sort: TripSort = CREATED_AT_DESC): TripConnection!
+}
+```
+
+#### Frontend GraphQL client
+
+| Rule | Detail |
+|---|---|
+| **Codegen** | `@graphql-codegen/cli` — `npm run codegen:graphql` from repo root |
+| **Output** | `apps/frontend/src/generated/graphql/` — types + document hooks |
+| **Wrapper** | `lib/graphql/client.ts` — endpoint, credentials, error parsing |
+| **Per-feature** | `lib/graphql/trip-queries.ts`, `trip-mutations.ts` — typed documents |
+| **React Query** | `useQuery`/`useMutation` wrappers in `features/*/hooks/` |
+| **No raw fetch** | All data via generated documents — zero hand-written GraphQL strings in features |
+
+```tsx
+// features/research/hooks/use-trip-research.ts
+import { useGetTripResearchQuery } from '@/generated/graphql';
+
+export function useTripResearch(tripId: string) {
+  return useGetTripResearchQuery({ variables: { id: tripId } });
+}
+```
+
+#### Example — trip dashboard single query
+
+```graphql
+query GetTripDashboard($tripId: UUID!) {
+  trip(id: $tripId) {
+    id
+    name
+    status
+    brief { destinations budget dateRange { start end } }
+    researchJob { id status progressPct errorCode }
+    recommendations { id destination fitScore rationale travelerGuide { overview food } }
+    selectedRecommendation { id destination }
+    itinerary {
+      days {
+        dayNumber
+        items { id title scheduledStart scheduledEnd poi { name category } }
+        legs { transportMode durationMins recommendedApps { name category } }
+      }
+    }
+  }
+}
+```
+
+Replaces 5+ REST GET round-trips with one request.
+
+#### CI / contract gates
+
+- `npm run codegen:graphql` + git diff check (no drift)
+- Schema lint via GraphQL Schema Linter in CI
+- Resolver integration tests with `@GraphQlTest`
 
 ---
 
@@ -3128,11 +3334,12 @@ CI pipeline runs on PR.
 | Flyway + Postgres | `V1__create_user_table.sql`; pgvector enabled |
 | Domain VOs | `Money`, `DateRange`, `UserContext` + unit tests |
 | Error envelope | `DomainException`, `@ControllerAdvice`, `ApiErrorResponse` (§6.1) |
-| OpenAPI bootstrap | Spec in `api/openapi/`; health + auth + trip stub paths |
+| OpenAPI bootstrap | Spec in `api/openapi/`; health + auth + SSE + async job paths (REST-only) |
+| GraphQL bootstrap | `schema.graphqls` + `TripResolver`; `me` + `trips` + `trip` queries; Spring GraphQL starter |
 | Multi-provider auth | Local + Firebase Google + GitHub OAuth; JWT cookie (§4.0.5) |
 | Mailer | `MailerPort` + Resend adapter + stub; register/reset templates (§4.0.10) |
 | MapStruct | Mapper config + example controller→response flow |
-| Trip scaffold | `GET/POST /api/v1/trips` — thin controller, service unit test |
+| Trip scaffold | GraphQL `trips` query + `createTrip` mutation; REST research stub optional | Thin resolver/controller; service unit test |
 | Transactions | `@Transactional(rollbackFor = Exception.class)` pattern + Spring Retry for deadlocks (§4.0.2-E2) |
 | Checkstyle | `LineLength` max 120 in Gradle config |
 | ArchUnit | `ArchitectureTest` — layer dependency rules (§4.0.9) |
@@ -3152,16 +3359,16 @@ CI pipeline runs on PR.
 | Auth UI | `features/auth/` — local, Firebase Google, GitHub login (§4.0.5) |
 | Design system | Tailwind + tokens + Ant overrides + `PageShell` (§4.2.9) |
 | i18n | next-intl, `en/` + `ms/` namespaces (§4.2.10) |
-| Codegen | OpenAPI → TS; `npm run codegen`; CI drift check (§15) |
-| API client | `lib/api/client.ts`, zod boundary, React Query setup |
+| Codegen | GraphQL Codegen + OpenAPI → TS; `npm run codegen`; CI drift check (§15) |
+| API client | `lib/graphql/client.ts`, `lib/rest/client.ts`, React Query setup |
 | Feature template | `features/_template/` — scaffold for C6+ (§4.0.8) |
 
 **Phase 0 exit criteria (gate before Phase 1):**
 - [ ] §12.3 checklist passes on a sample PR
 - [ ] Login as `ADMIN` works in docker profile; seed skipped in prod profile
-- [ ] Frontend calls backend with generated types (no hand-written API DTOs)
+- [ ] Frontend calls backend via generated GraphQL + REST clients (no hand-written API DTOs)
 - [ ] `LlmClientRouter` smoke test with config switch anthropic ↔ openai
-- [ ] OpenAPI codegen drift fails CI when spec changes without regen
+- [ ] GraphQL + OpenAPI codegen drift fails CI when contracts change without regen
 
 ### Phase 1 — Core loop (Sprints 3–5)
 
@@ -3245,7 +3452,7 @@ Before writing code, the AI/human reads this section and the relevant plan secti
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  0. PREREQ   → npm run prereq; install missing tools; docker available  │
 │  1. PLAN     → scope the change; confirm it fits locked architecture    │
-│  2. CONTRACT → define/update OpenAPI + DTOs (API-first)                 │
+│  2. CONTRACT → define/update GraphQL schema + OpenAPI (REST-only) + codegen │
 │  3. DOMAIN   → model + ports (if new concepts)                          │
 │  4. SERVICE  → business logic in application/ (NOT in controller)       │
 │  5. ADAPTERS → infrastructure / ai implementations of ports           │
@@ -3261,12 +3468,12 @@ Before writing code, the AI/human reads this section and the relevant plan secti
 |---|---|---|
 | **0 — Prereq** | Run `npm run prereq`. Install any missing tool (Node 22, Java 21, Docker). Verify `./gradlew --version` and `docker compose version`. | All checks green; Docker daemon running |
 | **1 — Plan** | Name the feature (maps to C1–C5 or a sub-task). Read §1, §4, §4.0.1, §4.0.4, §4.2, §4.2.6. If the change alters architecture, **stop and update this plan first**. | One-line scope + affected packages listed |
-| **2 — Contract** | Add/update OpenAPI paths, request/response schemas, error codes. Run codegen. | OpenAPI diff + regenerated TS client; frontend/backend cannot compile against stale types |
+| **2 — Contract** | Add/update GraphQL schema (data) + OpenAPI paths (REST-only). Run `npm run codegen`. | Schema + OpenAPI diff; regenerated TS clients; no compile against stale types |
 | **3 — Domain** | Add value objects, enums, aggregates, port interfaces in `domain/`. Pure algorithms in `domain/algorithm/` if needed (§4.0.3). Zero framework imports. | New/changed types in `domain/model`, `domain/valueobject`, `domain/port`, optionally `domain/algorithm/` |
 | **4 — Service** | Implement use-case in `application/<feature>/`. All business rules, orchestration, and `@Transactional` boundaries here. Inject ports — never concrete adapters. | `*Service` or `*UseCase` class with unit tests (mock ports) |
 | **5 — Adapters** | Implement ports in `infrastructure/` or `ai/`. Map JPA ↔ domain. No business rules leaking into adapters beyond mapping. | Adapter + integration test where I/O is involved |
-| **6 — Route** | Add `@RestController` method: validate input DTO → call service → map to response DTO. **≤10 lines per endpoint.** | Controller diff contains **no** repos, LLM clients, or domain logic |
-| **7 — Frontend** | Add code under `features/<feature>/` per §4.2.6. Page stays thin (§4.2.6-D). Hook → `lib/api/` → generated client. Ant Design Form with `onValuesChange`. Node 22. | Feature module + thin page; passes §4.2.6 checklist |
+| **6 — Route** | Add GraphQL resolver and/or `@RestController` method: validate input → call service → map result. **≤10 lines each.** | Resolver/controller diff contains **no** repos, LLM clients, or domain logic |
+| **7 — Frontend** | Add code under `features/<feature>/` per §4.2.6. Hook → `lib/graphql/` or `lib/rest/` → generated client. | Feature module + thin page; passes §4.2.6 checklist |
 | **8 — Verify** | Complete §12.3 checklist. Run tests + lint. AI-generated code gets the same review as human code. | All checklist boxes ticked before PR |
 
 ### 12.3 Pre-merge checklist (required on every PR)
@@ -3277,16 +3484,16 @@ Copy into PR description; all items must pass:
 - [ ] **Plan alignment** — change maps to a locked feature or documented sub-task; no architecture drift
 - [ ] **Monorepo** — changes land in correct app (`apps/frontend` / `apps/backend`); root scripts updated if needed
 - [ ] **Runtime** — frontend tested on Node 22; backend compiled with Java 21
-- [ ] **Contract** — OpenAPI updated; TS client regenerated; no hand-copied API types
+- [ ] **Contract** — GraphQL schema + OpenAPI (REST-only) updated; both codegen passes run; no hand-copied API types
 - [ ] **Layer boundaries** — domain has no framework imports; DTO ≠ domain ≠ JPA entity
 - [ ] **Controller thin** — controllers contain routing/mapping only (§4.0.1); business logic is in `application/`
 - [ ] **Service owns logic** — new/changed rules live in Service, covered by unit tests with mocked ports
 - [ ] **AI isolation** — LangChain4j types stay in `ai/langchain4j`; LLM output validated before persist
 - [ ] **Tests** — service unit tests added/updated; golden-file or schema tests for structured LLM output if touched
-- [ ] **Frontend layers** — page thin (§4.2.6-D); logic in `features/`; hook → `lib/api/` → generated types; forms use `onValuesChange` (§4.2.6-F)
+- [ ] **Frontend layers** — page thin (§4.2.6-D); logic in `features/`; hook → `lib/graphql/` or `lib/rest/`; forms use `onValuesChange` (§4.2.6-F)
 - [ ] **Frontend boundaries** — no cross-feature imports; public API via `features/*/index.ts` (§4.2.6-C)
 - [ ] **Unified styling** — Tailwind classes from design tokens; Ant overrides in `globals.css`; no CSS Modules (§4.2.9)
-- [ ] **API contract** — `/api/v1/` paths; GET/POST/PUT/DELETE only; error envelope `{ code, message, details }` (§6.1)
+- [ ] **API contract** — GraphQL for data (§6.2); REST for ops (§6.1); shared error codes; no duplicate operations
 - [ ] **User scope** — data access filtered by `user_id`; no tenant fields (§4.0.5)
 - [ ] **Function params** — ≤3; extras bundled in Query/Command/Props interface (§4.0.4)
 - [ ] **Naming** — camelCase functions; kebab-case files/URLs; snake_case i18n (§4.0.4)
@@ -3309,9 +3516,9 @@ In addition to §12.3, a **feature story** is done only when all apply:
 
 | Criterion | Required |
 |---|---|
-| OpenAPI paths + error codes registered | Yes |
+| GraphQL schema + REST OpenAPI paths registered | Yes |
 | Service unit tests with mocked ports | Yes |
-| Controller slice test (routing only) | Yes |
+| Controller slice test (routing only) | Yes — REST and/or `@GraphQlTest` resolver |
 | Stub adapter if external port introduced | Yes (§4.0.7) |
 | Frontend: loading / error / empty states | Yes |
 | i18n namespace complete for the feature | Yes |
@@ -3387,7 +3594,7 @@ at-a-glance checklist for humans and AI.
 | B18 | **≤3 params** — use `*Query`/`*Command`/`UserContext` DTOs (§4.0.4) |
 | B19 | **camelCase methods** · **kebab-case URLs** · interfaces/records control fields |
 | B20 | **Clear code** — name by intent; ~40 lines/method; comments explain why |
-| B21 | **API v1** — `/api/v1/` · GET/POST/PUT/DELETE · no PATCH (§6.1) |
+| B21 | **Hybrid API** — GraphQL data (§6.2) · REST ops (§6.1) · ADR 005 |
 | B22 | **Error envelope** — `{ code, message, details }` · snake_case codes |
 | B23 | **User-scoped** — filter by `user_id`; no tenant (§4.0.5) |
 | B24 | **Constructor injection** — no field `@Autowired` |
@@ -3409,6 +3616,7 @@ at-a-glance checklist for humans and AI.
 | B40 | **CSRF** — enabled for cookie auth on mutating requests (§4.0.9) |
 | B41 | **Multi-provider auth** — `IdentityProviderPort`; Firebase/GitHub/local (§4.0.5, ADR 004) |
 | B42 | **Mailer** — `MailerPort` + Resend; stub in dev (§4.0.10) |
+| B43 | **GraphQL resolvers thin** — delegate to service; DataLoader for nested fields (§6.2) |
 
 ### 13.2 Frontend coding rules
 
@@ -3418,16 +3626,16 @@ at-a-glance checklist for humans and AI.
 | F2 | **Option A structure** — code in `features/<C1–C5>/`; pages in `app/` only |
 | F3 | **Page = routing only** — ≤20 lines; no fetch, no Form, no React Query |
 | F4 | **Feature = UI logic** — components + hooks + schemas inside feature module |
-| F5 | **Data flow** — page → component → hook → `lib/api/` → generated client |
-| F6 | **No raw fetch** — all API via `lib/api/` + generated types |
-| F7 | **No hand-written API types** — regenerate from OpenAPI |
+| F5 | **Data flow** — page → component → hook → `lib/graphql/` or `lib/rest/` → generated client |
+| F6 | **No raw fetch** — all API via `lib/graphql/` + `lib/rest/` + generated types |
+| F7 | **No hand-written API types** — regenerate from GraphQL schema + OpenAPI |
 | F8 | **TypeScript strict** — no `any` |
 | F9 | **React Query** — all server state; query keys in `lib/query/query-keys.ts` |
 | F10 | **Forms** — Ant Design `Form` + **`onValuesChange`**; save in parent hook |
 | F11 | **No API in forms** — forms emit values up; hooks call mutations |
 | F12 | **No cross-feature imports** — share via `components/ui/` + `index.ts` exports |
 | F13 | **Loading / error / empty** — every data screen handles all three |
-| F14 | **Zod at API boundary** — validate responses in `lib/api/` |
+| F14 | **Zod at API boundary** — validate responses in `lib/graphql/` / `lib/rest/` |
 | F15 | **Tailwind + Ant** — utilities for layout; Ant for widgets; unified tokens (§4.2.9) |
 | F16 | **No CSS Modules / styled-components** — Tailwind only |
 | F17 | **No secrets in bundle** — `NEXT_PUBLIC_*` only; AI calls via backend |
@@ -3438,8 +3646,8 @@ at-a-glance checklist for humans and AI.
 | F22 | **Props/form interfaces** — `XxxProps`, `XxxFormValues` on every component/form |
 | F23 | **i18n required** — next-intl; snake_case keys/files; no hardcoded UI strings (§4.2.10) |
 | F24 | **Clear code** — name by intent; early returns; no magic strings |
-| F25 | **Error display** — map `ApiError.code` → i18n; use §6.1 envelope |
-| F26 | **Auth** — attach credentials in `client.ts`; user-scoped (§4.0.5) |
+| F25 | **Error display** — map GraphQL `extensions.code` / REST `code` → i18n |
+| F26 | **Auth** — `credentials: 'include'` in graphql/rest clients; user-scoped (§4.0.5) |
 | F27 | **Exports/imports** — named exports; import order; kebab-case test files |
 | F28 | **Chat XSS** — sanitize LLM markdown (DOMPurify) |
 | F29 | **Route files** — `loading.tsx` / `error.tsx` where applicable |
@@ -3454,13 +3662,13 @@ at-a-glance checklist for humans and AI.
 
 | # | Rule |
 |---|---|
-| A1 | **Version** — all endpoints under `/api/v1/` |
-| A2 | **Verbs** — GET / POST / PUT / DELETE only — **no PATCH** |
-| A3 | **URLs** — kebab-case segments; plural nouns |
-| A4 | **Errors** — `{ code, message, details }` — snake_case `code` |
+| A1 | **GraphQL** — `POST /graphql` for data reads/mutations (§6.2) |
+| A2 | **REST** — `/api/v1/` for auth, SSE, async 202, health, booking confirm (§6.1) |
+| A3 | **No duplication** — same operation in one transport only (ADR 005) |
+| A4 | **Errors** — shared snake_case `code`; GraphQL in `extensions`, REST in body |
 | A5 | **Error display** — frontend maps `code` → i18n key |
-| A6 | **Pagination** — `page`, `page_size`, `sort` on list GETs |
-| A7 | **Idempotency-Key** header on booking confirm |
+| A6 | **Pagination** — cursor connections (GraphQL); `page`/`page_size` (REST lists) |
+| A7 | **Idempotency-Key** header on REST booking confirm |
 
 ### 13.4 Styling rules — Tailwind + Ant Design (frontend)
 
@@ -3516,7 +3724,7 @@ lint → build → test → arch → coverage → contract → docker → smoke
 | **test** | `./gradlew test` | `npm run test` (Vitest) | All pass |
 | **arch** | ArchUnit `ArchitectureTest` — layer boundaries (§4.0.9) | — | No dependency violations |
 | **coverage** | JaCoCo ≥70% on `domain` + `application` | — | Fail below threshold |
-| **contract** | OpenAPI validate | `npm run codegen` + git diff check | No drift |
+| **contract** | GraphQL schema lint + OpenAPI validate | `npm run codegen` + git diff check | No drift |
 | **migrate** | Flyway validate (Testcontainers) | — | Migrations valid |
 | **docker** | Build `docker/backend/Dockerfile` | Build `docker/frontend/Dockerfile` | Image builds |
 | **smoke** | Hit `/api/v1/ready` + `/actuator/prometheus` | — | Healthy stack |
@@ -3549,6 +3757,7 @@ Significant decisions are recorded in `docs/adr/` and referenced from §11.
 | [002](../../docs/adr/002-jwt-auth.md) | JWT in httpOnly cookie for v1 auth | Accepted |
 | [003](../../docs/adr/003-feature-extensibility.md) | Vertical-slice feature extensibility | Accepted |
 | [004](../../docs/adr/004-multi-provider-auth-resend.md) | Multi-provider auth + Resend mailer | Accepted |
+| [005](../../docs/adr/005-graphql-hybrid-api.md) | Hybrid GraphQL + REST API | Accepted |
 
 **AI agent workflow:** [`docs/AI-AGENT-WORKFLOW.md`](../../docs/AI-AGENT-WORKFLOW.md) (v1.0) —
 entry point [`AGENTS.md`](../../AGENTS.md). Update workflow version when §12 changes.

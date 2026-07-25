@@ -18,9 +18,9 @@ npm run prereq                    # must pass before any code generation
 
 ## Non-negotiables
 
-- **No business logic in controllers** — services only (`application/`)
+- **No business logic in controllers or resolvers** — services only (`application/`)
 - **No LangChain4j outside** `ai/langchain4j/`
-- **No hand-written API types** on frontend — OpenAPI → codegen
+- **No hand-written API types** on frontend — GraphQL Codegen + OpenAPI → codegen
 - **No LLM/HTTP inside** `@Transactional` methods
 - **≤3 params** per function · **≤120 chars** per line · **≤40 lines** per method
 - **Stub adapter** when vendor API is undecided (`§4.0.7`)
@@ -32,6 +32,7 @@ npm run prereq                    # must pass before any code generation
 | Task type | Package / folder |
 |---|---|
 | REST endpoint | `api/controller/` → delegate to `application/<feature>/` |
+| GraphQL resolver | `api/graphql/` → delegate to `application/<feature>/` |
 | Business rules | `application/<feature>/*Service.java` |
 | Domain model | `domain/model/`, `domain/valueobject/` |
 | Port interface | `domain/port/` |
@@ -40,7 +41,7 @@ npm run prereq                    # must pass before any code generation
 | LLM / agent | `ai/agent/`, `ai/langchain4j/` |
 | Auth UI | `features/auth/` — local, Firebase Google, GitHub |
 | Frontend screen | `features/<feature>/` — page stays in `app/` only |
-| API client (FE) | `lib/api/<resource>-api.ts` |
+| API client (FE) | `lib/graphql/`, `lib/rest/` |
 
 ## Docs index
 
@@ -51,7 +52,8 @@ npm run prereq                    # must pass before any code generation
 | [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **Every code generation task** |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Architecture, rules, NFRs, CI |
 | [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint stories, DoD |
-| [`docs/adr/`](docs/adr/) | Locked decisions (Gradle, JWT) |
+| [`docs/adr/`](docs/adr/) | Locked decisions (Gradle, JWT, GraphQL hybrid) |
+| [`docs/adr/005-graphql-hybrid-api.md`](docs/adr/005-graphql-hybrid-api.md) | GraphQL + REST hybrid API |
 
 ## Stop and ask the user when
 

@@ -11,7 +11,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | Epic | ID | Phase | Outcome |
 |---|---|---|---|
 | DevEx & Runtime | E-00 | 0a | `docker compose up` works |
-| API Platform | E-01 | 0b | `/api/v1/`, error envelope, health |
+| API Platform | E-01 | 0b | GraphQL + REST (`/graphql`, `/api/v1/`), error envelope, health |
 | Identity & Admin | E-02 | 0b | Multi-provider auth + Resend mailer + admin CRUD |
 | AI Platform | E-03 | 0b | `LlmClient` router + logging |
 | Frontend Platform | E-04 | 0b | App shell, design system, codegen |
@@ -39,22 +39,23 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 
 ## Sprint 1 — Backend platform (E-01, E-02 partial)
 
-**Goal:** `GET /api/v1/health` + multi-provider auth + trip CRUD stub with error envelope.
+**Goal:** GraphQL bootstrap + `GET /api/v1/health` + multi-provider auth + trip query/mutation stub.
 
 | ID | Story | Tasks | DoD |
 |---|---|---|---|
 | S1-1 | Gradle + Spring scaffold | `build.gradle.kts`, package layout §4, profiles | Compiles Java 21 |
 | S1-2 | Flyway + DB | `V1__create_user_table.sql`, pgvector | Migrations on startup |
 | S1-3 | Domain VOs | `Money`, `DateRange`, `UserContext` | Unit tests; no framework imports |
-| S1-4 | Error envelope | `DomainException`, `@ControllerAdvice` | Contract test for 404 shape |
-| S1-5 | OpenAPI bootstrap | Health, auth (local/firebase/github), trip paths | Spec validates |
+| S1-4 | Error envelope | `DomainException`, `@ControllerAdvice`, `GraphQlExceptionHandler` | Contract test for 404 shape (REST + GraphQL) |
+| S1-5 | OpenAPI bootstrap | Health, auth (local/firebase/github), SSE chat, research/run paths | Spec validates |
+| S1-5b | GraphQL bootstrap | `schema.graphqls`, `TripResolver`, `me`/`trips`/`trip` queries, `createTrip` mutation | `@GraphQlTest` passes |
 | S1-6 | Auth core | `IdentityProviderPort`, local login/register, JWT cookie, `user` + `user_identity` migrations | Local login works |
 | S1-6b | Gmail (Firebase) | `FirebaseIdentityAdapter`, `POST /auth/firebase`, sign-up + sign-in upsert, welcome email | New + returning Gmail users |
 | S1-6c | GitHub OAuth | `GithubOAuthIdentityAdapter`, account linking | GitHub sign-up + sign-in E2E |
 | S1-6d | Mailer | `MailerPort`, Resend + stub, welcome on Gmail sign-up | Reset + welcome in stub mode |
 | S1-6e | Auth P1 APIs | Change password, resend verify, delete account; email verify gate | UC-A12–A14 |
 | S1-7 | MapStruct | Mapper config + example flow | Compile-time mapping works |
-| S1-8 | Trip scaffold | `GET/POST /api/v1/trips` | Thin controller; service unit test |
+| S1-8 | Trip scaffold | GraphQL `trips`/`trip` + `createTrip`; delegates to `TripService` | Thin resolver; service unit test |
 | S1-9 | Checkstyle + transactions | `LineLength` 120; `@Transactional(rollbackFor)` template; Spring Retry | CI lint + integration rollback test |
 | S1-10 | ArchUnit + JaCoCo | `ArchitectureTest` layer rules; coverage ≥70% on domain/application | CI arch + coverage gates |
 | S1-11 | **KnowledgePort** | `KnowledgePort` + `PgVectorKnowledgeAdapter` stub | UC-K01–K07 |
@@ -75,8 +76,8 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S2-6 | Next.js scaffold | `(planner)/`, `(admin)/`, stepper placeholder | Builds on Node 22 |
 | S2-7 | Design system | tokens, Tailwind, Ant theme, `PageShell` | 2 sample pages consistent |
 | S2-8 | i18n | next-intl, `en/` + `ms/` | No hardcoded strings on scaffold |
-| S2-9 | Codegen pipeline | `npm run codegen`, CI drift check | Fails when spec stale |
-| S2-10 | API client layer | `lib/api/client.ts`, zod, React Query | Cookie auth + request ID |
+| S2-9 | Codegen pipeline | `npm run codegen` (GraphQL + OpenAPI), CI drift check | Fails when schema/spec stale |
+| S2-10 | API client layer | `lib/graphql/client.ts`, `lib/rest/client.ts`, React Query | Cookie auth + error code mapping |
 | S2-10b | Auth UI | `app/(auth)/login` + `register`, `GmailSignInButton` both pages, GitHub | Gmail sign-up & sign-in E2E |
 | S2-11 | Admin UI | `features/admin/`, reset password | Non-admin redirected |
 | S2-12 | Lint config | ESLint `max-len` 120, Prettier printWidth 100 | CI enforces line length |

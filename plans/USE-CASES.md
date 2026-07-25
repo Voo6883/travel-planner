@@ -72,8 +72,8 @@
 | ID | Use case | Priority | Phase | Acceptance criteria |
 |---|---|---|---|---|
 | UC-T01 | Create trip via **LLM** (`create_trip` tool) | P0 | 1 | User types intent on planner home; LLM creates trip when ready — not manual `POST /trips` |
-| UC-T01b | Create trip manually (fallback) | P2 | 1 | `POST /trips` → `DRAFT` — optional "blank trip" for power users |
-| UC-T02 | List my trips | P0 | 0b | `GET /trips` — user-scoped, paginated |
+| UC-T01b | Create trip manually (fallback) | P2 | 1 | GraphQL `createTrip` mutation → `DRAFT` — optional "blank trip" for power users |
+| UC-T02 | List my trips | P0 | 0b | GraphQL `trips` query — user-scoped, paginated |
 | UC-T03 | Open trip stepper | P0 | 1 | Overview shows `status`; stepper reflects progress 🆕 |
 | UC-T04 | Rename trip | P2 | 1 | `PUT /trips/{id}` — `name` field |
 | UC-T05 | Archive trip | P2 | 1 | `PUT /trips/{id}` → `status=ARCHIVED` |
@@ -88,7 +88,7 @@
 |---|---|---|---|---|
 | UC-C1-01 | Describe trip via **chat** (primary) or form | P0 | 1 | Chat → `update_trip_brief` tool; form auto-save mirrors same `TripBrief` |
 | UC-C1-02 | AI extract structured `TripBrief` | P0 | 1 | Guardrails validate JSON schema |
-| UC-C1-03 | Edit brief | P0 | 1 | `PUT .../brief` |
+| UC-C1-03 | Edit brief | P0 | 1 | GraphQL `updateTripBrief` mutation |
 | UC-C1-04 | **Answer clarification questions** | P0 | 1 | See below 🆕 |
 | UC-C1-05 | “Surprise me” (open destination) | P1 | 1 | `destinations=[]` + flag `surprise_me=true` |
 | UC-C1-06 | Validate budget/dates | P0 | 1 | Domain rejects invalid `Money` / `DateRange` |
@@ -121,7 +121,7 @@ When brief is ambiguous or incomplete, backend returns **typed** `ClarificationN
 |---|---|---|
 | 1 | User | Describes trip in **chat** or submits brief form |
 | 2 | System | Extraction → if gaps → `trip.status=CLARIFICATION_NEEDED` |
-| 3 | User | Answers questions inline (`PUT .../brief/clarification`) |
+| 3 | User | Answers questions inline (GraphQL `answerClarification` or chat tool) |
 | 4 | System | Re-validates → `BRIEF_COMPLETE` or more questions |
 
 **Unlock rule:** C2 research disabled until `status=BRIEF_COMPLETE`.
@@ -134,7 +134,7 @@ When brief is ambiguous or incomplete, backend returns **typed** `ClarificationN
 |---|---|---|---|---|
 | UC-C2-01 | Start research | P0 | 1 | `POST .../research/run` → `job_id` (async) 🆕 |
 | UC-C2-02 | Poll research progress | P0 | 1 | `GET .../research/jobs/{jobId}` → `queued|running|completed|failed` 🆕 |
-| UC-C2-03 | View ranked recommendations | P0 | 1 | `GET .../ranked-recommendations` when `RESEARCH_READY` |
+| UC-C2-03 | View ranked recommendations | P0 | 1 | GraphQL `trip(id) { recommendations }` when `RESEARCH_READY` |
 | UC-C2-04 | See rationale, est. cost, sources | P0 | 1 | Each item has `rationale`, `est_cost`, `traveler_guide`, `source_refs[]` |
 | UC-C2-10 | **View traveler guide on recommendation** | P0 | 1 | Overview, food, areas, highlights, practical — per §4.1.2 |
 | UC-C2-11 | **Compare places by interests** | P0 | 1 | Rank uses seasonality + price + POI/food match to brief |
@@ -159,8 +159,10 @@ POST /api/v1/trips/{tripId}/research/run
 GET /api/v1/trips/{tripId}/research/jobs/{jobId}
   → { status, progress_pct?, error_code? }
 
-GET /api/v1/trips/{tripId}/ranked-recommendations
-  → 200 when completed; 409 research_not_ready otherwise
+GET /api/v1/trips/{tripId}/research/jobs/{jobId}   # poll via GraphQL researchJob query preferred
+
+# GraphQL (when RESEARCH_READY)
+query { trip(id: $tripId) { recommendations { id destination rationale } } }
 ```
 
 Frontend: React Query polling while `RESEARCH_RUNNING`; show progress component.
@@ -187,7 +189,7 @@ UI: expandable sections on research cards + chat can summarize any section.
 |---|---|
 | 1 | User views recommendation cards on research page |
 | 2 | User clicks **“Plan this trip”** on one card |
-| 3 | `POST .../selected-recommendation` `{ recommendation_id }` |
+| 3 | GraphQL `selectRecommendation` mutation `{ recommendationId }` |
 | 4 | `trip.status=DESTINATION_SELECTED`; stores chosen destination on trip |
 | 5 | Stepper unlocks **Itinerary** (C3) |
 
