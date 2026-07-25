@@ -1734,6 +1734,7 @@ thread. See [`USE-CASES.md`](../USE-CASES.md).
 | `POST .../research/run` | `202` `{ job_id }` → `trip.status=RESEARCH_QUEUED` |
 | `GET .../research/jobs/{jobId}` | `{ status, progress_pct?, error_code? }` |
 | `GET .../ranked-recommendations` | `200` when `RESEARCH_READY`; else `409 research_not_ready` |
+| `GET .../destinations/{destinationId}/guide` | Full `traveler_guide` + areas + top POIs — for detail drawer / chat context |
 
 On job complete: `RESEARCH_READY`; optional **research-complete email** (§4.0.10).
 
