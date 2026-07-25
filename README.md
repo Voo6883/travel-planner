@@ -47,7 +47,7 @@ travel-planner/
 | `apps/frontend/` | Next.js, TypeScript, Ant Design | No Java/backend code |
 | `apps/backend/` | Spring Boot, Java 21, Gradle | No React/frontend code |
 
-Apps communicate via **GraphQL** (`POST /graphql`) for data and **REST** (`/api/v1/`) for auth, SSE, and async jobs. See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) §6, ADR 005.
+Apps communicate via **`/api/v1/`** + OpenAPI codegen only. See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) §4.0.
 
 ## Prerequisites
 
@@ -85,7 +85,7 @@ docker compose up --build
 | Service | URL |
 |---|---|
 | Frontend | http://localhost:3000 |
-| Backend API | http://localhost:8080/graphql (data) · http://localhost:8080/api/v1 (ops) |
+| Backend API | http://localhost:8080/api/v1 |
 | PostgreSQL | localhost:5432 |
 
 ### Dev admin account (local / Docker only)
@@ -99,13 +99,13 @@ docker compose up --build
 
 ## Architecture highlights
 
-- **Monorepo** — frontend + backend, GraphQL schema + OpenAPI as dual contracts
+- **Monorepo** — frontend + backend, OpenAPI as single contract source
 - **Clean/hexagonal backend** — Controller routes only; Service owns business logic
 - **Feature-based frontend** — `features/` modules aligned to C1–C5
 - **Tailwind + Ant Design** — unified design tokens; Tailwind overrides Ant by default
 - **Gmail sign-up & login** — Firebase Google; one button on login and register pages
 - **Resend mailer** — welcome, verify, password-reset emails
-- **API** — GraphQL (`/graphql`) for data · REST (`/api/v1/`) for auth/SSE/async · shared error codes (§6)
+- **API** — `/api/v1/`, GET/POST/PUT/DELETE, standard error `{ code, message, details }`
 - **Vertical-slice extensibility** — add C6+ without editing existing features (§4.0.8)
 - **Industry standards** — ArchUnit, JaCoCo, Micrometer, CSRF, virtual threads (§4.0.9)
 

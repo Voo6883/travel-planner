@@ -26,7 +26,7 @@ Run once at the start of every coding session.
 | Task | Read before writing code |
 |---|---|
 | Any | `AGENTS.md`, this file §1–§7 |
-| Backend endpoint | PLAN §4.0.1, §4.0.2, §6.1, §6.2, §13.1 |
+| Backend endpoint | PLAN §4.0.1, §4.0.2, §6.1, §13.1 |
 | Frontend screen | PLAN §4.2.6, §4.2.9, §4.2.10, §13.2 |
 | AI / agent feature | PLAN §4.1, §5, §4.0.7 + `ai/` package layout |
 | DB migration | PLAN §4.0.2-H, §4.0.2-E2, §8 |
@@ -53,7 +53,7 @@ Pick **one primary workflow** — do not mix unrelated work in one PR.
 Task type: FS
 Feature: C2 Research
 Story: S4-4 Research API
-Layers touched: GraphQL schema, OpenAPI (REST-only), domain, application, infrastructure (stub), api, features/research
+Layers touched: OpenAPI, domain, application, infrastructure (stub), api, features/research
 ```
 
 ---
@@ -64,8 +64,7 @@ Do **not** write code until all apply:
 
 - [ ] Task maps to a story in [`plans/BACKLOG.md`](../plans/BACKLOG.md) or user gave explicit scope
 - [ ] Feature ID known (C1–C5 or Phase 0)
-- [ ] GraphQL types/queries/mutations identified (data operations) — or REST-only if transport requires (§6.1)
-- [ ] OpenAPI paths identified for REST-only endpoints (auth, SSE, async 202, health)
+- [ ] OpenAPI paths identified (or spike complete for new resources)
 - [ ] Port interfaces named (`*Port.java`) if external I/O involved
 - [ ] Error codes listed (`snake_case`) if new failure modes
 - [ ] i18n namespace identified (`research.json`, etc.) for frontend work
@@ -91,37 +90,21 @@ flowchart LR
 
 ### Step 2 — CONTRACT (API-first)
 
-**Goal:** GraphQL schema (data) + OpenAPI (REST-only) are contract sources. ADR 005.
+**Goal:** OpenAPI is the single source of truth.
 
 | Action | Output |
 |---|---|
-| Add/update types in `apps/backend/src/main/resources/graphql/*.graphqls` | Queries + mutations for data operations |
-| Add/update REST paths in `apps/backend/src/.../api/openapi/openapi.yaml` | Auth, SSE, async 202, health, booking confirm only |
-| Register error codes | `snake_case` — shared across GraphQL `extensions` and REST body |
-| Run `npm run codegen` | `generated/graphql/` + `generated/rest/` updated |
+| Add/update paths in `apps/backend/src/.../api/openapi/openapi.yaml` | `/api/v1/` kebab-case paths |
+| Define request/response schemas | Match domain concepts, not JPA entities |
+| Register error codes | `snake_case` in spec + `DomainException` codes |
+| Run `npm run codegen` | `apps/frontend/src/generated/api/` updated |
 | Verify CI drift check would pass | No hand-written TS API types |
 
-**Gate:** Frontend and backend both compile against the same contracts.
-
-**Transport decision (pick one per operation):**
-
-| Use GraphQL | Use REST |
-|---|---|
-| Reads (trips, brief, itinerary, recommendations) | OAuth redirects, login, logout |
-| Data mutations (updateBrief, selectRecommendation) | SSE chat streaming |
-| Nested dashboard queries | `POST .../research/run` → 202 |
-| | Health probes, booking confirm + Idempotency-Key |
-
-```graphql
-# ✅ GraphQL — nested trip read
-query GetTrip($id: UUID!) {
-  trip(id: $id) { id status brief { budget } itinerary { days { items { title } } } }
-}
-```
+**Gate:** Frontend and backend both compile against the same contract.
 
 ```yaml
-# ✅ REST — async job kickoff only
-/api/v1/trips/{tripId}/research/run:
+# ✅ path pattern
+/api/v1/trips/{tripId}/ranked-recommendations:
   post: ...
 ```
 
@@ -195,31 +178,23 @@ Result persistResult(Validated v, UserContext user) { ... }
 
 ---
 
-### Step 6 — ROUTE (thin controller / resolver)
+### Step 6 — ROUTE (thin controller)
 
-**Goal:** HTTP or GraphQL mapping only — ≤10 lines each.
+**Goal:** HTTP mapping only — ≤10 lines per endpoint.
 
 ```java
-// GraphQL resolver (data)
-@MutationMapping
-public Trip updateTripBrief(@Argument UpdateTripBriefInput input,
+@PostMapping("/api/v1/trips/{tripId}/ranked-recommendations")
+public ResearchResponse research(@PathVariable UUID tripId,
+        @Valid @RequestBody ResearchRequest req,
         @AuthenticationPrincipal UserContext user) {
-    return tripBriefMapper.toGraphQl(
-        tripBriefService.updateBrief(input.toCommand(), user));
-}
-
-// REST controller (operational — async job)
-@PostMapping("/api/v1/trips/{tripId}/research/run")
-public ResponseEntity<ResearchJobResponse> startResearch(@PathVariable UUID tripId,
-        @AuthenticationPrincipal UserContext user) {
-    return ResponseEntity.accepted().body(
-        researchMapper.toJobResponse(researchService.enqueue(tripId, user)));
+    return researchMapper.toResponse(
+        researchService.runResearch(req.toQuery(tripId), user));
 }
 ```
 
 **Inject:** services only — never repositories, `LlmClient`, or supplier clients.
 
-**Gate:** `@GraphQlTest` or controller slice test — verify routing, mock service.
+**Gate:** Controller slice test — verify routing, mock service.
 
 ---
 
@@ -231,12 +206,11 @@ public ResponseEntity<ResearchJobResponse> startResearch(@PathVariable UUID trip
 app/.../page.tsx          →  import from features/<name>/index.ts only
 features/<name>/
   components/*-panel.tsx  →  'use client', Ant Design, loading/error/empty
-  hooks/use-*.ts          →  React Query, calls lib/graphql/ or lib/rest/
+  hooks/use-*.ts          →  React Query, calls lib/api/
   schemas/*.schema.ts     →  zod
   types.ts                →  *Props, *FormValues
   index.ts                →  public exports only
-lib/graphql/<resource>-queries.ts →  typed GraphQL documents
-lib/rest/<resource>-rest.ts       →  auth, SSE, async 202 only
+lib/api/<resource>-api.ts →  zod validate, 1 param per function
 ```
 
 **Mandatory patterns:**
@@ -316,8 +290,8 @@ If you generate any of these, **fix before finishing**:
 | `llmClient` injected in controller | Service → port → adapter |
 | JPA entity in API response | MapStruct → response DTO |
 | LangChain4j import in `application/` | `ai/langchain4j/` adapter |
-| Hand-written `interface Trip` in frontend | `@/generated/graphql` or `@/generated/rest` |
-| `fetch()` in `app/**/page.tsx` | Feature hook → `lib/graphql/` or `lib/rest/` |
+| Hand-written `interface Trip` in frontend | `@/generated/api` |
+| `fetch()` in `app/**/page.tsx` | Feature hook → `lib/api/` |
 | `useState` per form field | Ant Design `Form` + `onValuesChange` |
 | Cross-feature import | Extract to `components/ui/` |
 | LLM call inside `@Transactional` | Call LLM first, persist in separate tx |
@@ -340,7 +314,7 @@ If you generate any of these, **fix before finishing**:
 - [ ] No LLM/HTTP inside transaction
 - [ ] Domain has no framework imports
 - [ ] DTO ≠ domain ≠ JPA entity
-- [ ] Error codes registered (GraphQL extensions + OpenAPI)
+- [ ] Error codes in OpenAPI
 - [ ] Line length ≤120, method ≤40 lines, params ≤3
 - [ ] Reusable logic is `private` helper
 
@@ -348,7 +322,7 @@ If you generate any of these, **fix before finishing**:
 
 - [ ] Page ≤20 lines, no data fetching
 - [ ] Feature code in `features/<name>/`
-- [ ] Hook → `lib/graphql/` or `lib/rest/` → generated types
+- [ ] Hook → `lib/api/` → generated types
 - [ ] Form uses `onValuesChange`
 - [ ] Loading / error / empty states
 - [ ] i18n keys in snake_case JSON
@@ -357,7 +331,7 @@ If you generate any of these, **fix before finishing**:
 
 ### Full-stack
 
-- [ ] GraphQL schema + OpenAPI (REST-only) updated + codegen run
+- [ ] OpenAPI updated + codegen run
 - [ ] End-to-end happy path describable in one sentence
 - [ ] §12.3 PR checklist in PLAN.md — all items pass
 
@@ -396,7 +370,7 @@ Skip §3.3–3.7 unless scaffolding apps.
 ```
 §2 (skip if no contract change) → §3.7 → §8
 ```
-Still read existing GraphQL schema / OpenAPI / generated types.
+Still read existing OpenAPI / generated types.
 
 ### BE — Backend-only
 
@@ -437,7 +411,7 @@ Is it a React screen?
   yes → features/<feature>/ (app/ for page shell only)
   no ↓
 Is it API client or shared util?
-  yes → lib/graphql/, lib/rest/, or lib/utils/
+  yes → lib/api/ or lib/utils/
 ```
 
 ---
@@ -457,7 +431,7 @@ When presenting completed work, use this structure:
 - `path/to/file` — [what changed]
 
 ## Workflow steps completed
-- [x] Contract (GraphQL + OpenAPI + codegen)
+- [x] Contract (OpenAPI + codegen)
 - [x] Domain
 - [x] Service + tests
 - [x] Adapters
