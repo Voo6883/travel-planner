@@ -12,3 +12,17 @@
 *.ps1   text eol=crlf
 *.bat   text eol=crlf
 *.cmd   text eol=crlf
+
+# The Gradle wrapper. `gradlew` is extensionless, so it needs an explicit rule or it
+# checks out CRLF on Linux and dies the same way a .sh would.
+gradlew text eol=lf
+
+# Never let text normalisation touch binaries — a mangled gradle-wrapper.jar fails with
+# an error that points nowhere near the real cause.
+*.jar   binary
+*.png   binary
+*.jpg   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+

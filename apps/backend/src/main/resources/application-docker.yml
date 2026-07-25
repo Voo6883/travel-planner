@@ -1,0 +1,7 @@
+# Full-stack Docker Compose runtime (PLAN §4.0.0).
+# Compose injects values from the single root .env; service hostnames resolve on the Compose
+# network (e.g. `postgres`, not `localhost`). Datasource wiring: tasks/04-docker-runtime.md.
+
+logging:
+  level:
+    com.travelplanner: INFO

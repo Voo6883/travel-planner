@@ -1,0 +1,8 @@
+# Automated tests. Must stay dependency-free so `./gradlew test` runs without Docker or a
+# database. Integration tests that need Postgres use Testcontainers from
+# tasks/07-database-domain-foundation.md onward and configure their own datasource.
+
+logging:
+  level:
+    root: WARN
+    com.travelplanner: INFO

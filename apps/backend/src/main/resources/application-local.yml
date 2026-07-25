@@ -1,0 +1,7 @@
+# Local host development — apps on the host, Postgres in Docker (PLAN §4.0.0 "Hybrid" mode).
+# Datasource wiring arrives with tasks/04-docker-runtime.md and tasks/07-database-domain-foundation.md.
+# Until then the service runs with no external dependency.
+
+logging:
+  level:
+    com.travelplanner: DEBUG

@@ -1,0 +1,10 @@
+# Production placeholder.
+#
+# Deliberately contains no datasource, credentials, or endpoints — tasks/39-release-readiness.md
+# owns production configuration. Every value must arrive as an environment variable at runtime;
+# no secret is ever committed here or baked into an image (PLAN §4.0.0.2).
+
+logging:
+  level:
+    root: WARN
+    com.travelplanner: INFO

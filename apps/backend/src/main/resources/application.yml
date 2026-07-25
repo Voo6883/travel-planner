@@ -1,0 +1,23 @@
+# Base configuration shared by every profile.
+# Secrets belong in the single root .env (PLAN §4.0.0.2) and reach the app as environment
+# variables — never hard-coded here.
+
+spring:
+  application:
+    name: travel-planner-backend
+  profiles:
+    default: local
+
+server:
+  port: 8080
+  error:
+    # Never leak internals through the default error body; GlobalExceptionHandler owns the
+    # response shape (PLAN §6.1).
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+
+logging:
+  level:
+    root: INFO
+    com.travelplanner: INFO
