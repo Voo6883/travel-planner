@@ -1,0 +1,19 @@
+# Environment — single root .env (§4.0.0.2)
+.env
+.env.local
+apps/frontend/.env.local
+
+# Dependencies & build
+node_modules/
+apps/frontend/.next/
+apps/backend/build/
+apps/backend/.gradle/
+
+# Secrets
+secrets/
+*.pem
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store

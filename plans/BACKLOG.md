@@ -30,7 +30,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | ID | Story | Tasks | DoD |
 |---|---|---|---|
 | S0-1 | Prereq scripts | `check-prerequisites.sh`, `.ps1`, root `package.json`, `.nvmrc` | Non-zero exit with install hints; `npm run prereq` works |
-| S0-2 | Docker stack | `docker-compose.yml`, `docker-compose.dev.yml`, `.env.example`, Dockerfiles | postgres + backend + frontend start; healthchecks pass |
+| S0-2 | Docker stack | `docker-compose.yml`, `docker-compose.dev.yml`, `.env.example`, `env_file: .env` on services | postgres + backend + frontend start; healthchecks pass |
 | S0-3 | Wait script | `wait-for-services.sh` polls `/api/v1/ready` | Blocks until postgres + backend healthy |
 | S0-4 | CI skeleton | GitHub Actions: node 22, java 21, docker build | PR fails on wrong runtime |
 | S0-5 | PR template | Embed §12.3 checklist + link to `docs/AI-AGENT-WORKFLOW.md` | Every PR has checklist |

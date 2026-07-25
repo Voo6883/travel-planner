@@ -74,8 +74,9 @@ npm run prereq
 # 1. Check prerequisites
 npm run prereq
 
-# 2. Copy environment template
+# 2. Copy environment template (single .env at repo root for all services)
 cp .env.example .env
+# Edit .env with your API keys — never commit .env
 
 # 3. Start full stack
 docker compose up --build

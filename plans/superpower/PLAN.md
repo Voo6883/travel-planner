@@ -48,6 +48,7 @@
 | **Industry standards** | Observability, security, ArchUnit boundaries, coverage gates (§4.0.9) |
 | **Admin** | **Seeded ADMIN account** — manage users, reset passwords (§4.0.6) — dev/docker only |
 | **Runtime** | **Docker Compose** — full stack runnable in containers (§4.0.0) |
+| **Configuration** | **Single root `.env`** — all credentials & config; `.env.example` is the template (§4.0.0.2) |
 | **Pre-dev gate** | **Check prerequisites** before coding — install if missing (§4.0.0) |
 | **API** | Versioned **`/api/v1/`** · CRUD (**GET/POST/PUT/DELETE** — no PATCH) · standard error envelope (§6.1) |
 | **Annotations** | **Allowed** — Spring/Jakarta validation on backend; typed interfaces + zod on frontend (§4.0.2) |
@@ -322,10 +323,7 @@ docker compose --profile cache up -d
 
 ##### Environment & secrets
 
-- Copy `.env.example` → `.env` (gitignored) before first `docker compose up`.
-- **Never commit** `.env` — API keys injected via env (see §4.0.5, §4.0.10).
-- Frontend in Docker: `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api/v1`.
-- Backend in Docker: `SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/travel_planner`.
+See **§4.0.0.2** — single root `.env` for all services.
 
 ##### Docker rules
 
@@ -411,6 +409,66 @@ apps/frontend/                         apps/backend/
 |---|---|---|
 | `apps/frontend` | **Node.js 22** | `.nvmrc`, `package.json` `"engines": { "node": ">=22" }`, CI node-version check |
 | `apps/backend` | **Java 21** | Gradle toolchain (`build.gradle.kts`), `JAVA_HOME`, CI java-version check |
+
+#### 4.0.0.2 Single `.env` configuration (LOCKED)
+
+**One file** at the repo root holds **all** credentials and environment-specific config
+for frontend, backend, Docker Compose, and local host dev. No duplicate secret files.
+
+```
+travel-planner/
+├── .env.example          # committed — documents every key (no real secrets)
+├── .env                  # gitignored — developer fills this in (copy from .env.example)
+└── apps/                 # NO .env.local, NO secrets in application.yml values
+```
+
+| Rule | Detail |
+|---|---|
+| **Single source** | All keys in root `.env` only — not scattered across `apps/frontend/.env.local` |
+| **Template** | `.env.example` lists every variable with comments; kept in sync when keys added |
+| **Never commit** | `.env` in `.gitignore`; CI uses platform secrets with **same variable names** |
+| **No secrets in code** | `application.yml` uses `${VAR}` placeholders only — no hardcoded API keys |
+| **No secrets in images** | Dockerfiles do not `COPY .env`; Compose injects at runtime |
+| **Docker Compose** | All services use `env_file: .env` (or equivalent `environment:` from `.env`) |
+| **Host dev** | Root `npm run dev` loads root `.env` for both apps (see below) |
+
+**Variable groups** (all in the same `.env`):
+
+| Group | Examples | Consumed by |
+|---|---|---|
+| Database | `POSTGRES_*`, `SPRING_DATASOURCE_URL` | postgres, backend |
+| Auth | `JWT_SECRET`, `GITHUB_*`, `FIREBASE_*` | backend |
+| Mailer | `RESEND_API_KEY`, `MAIL_FROM`, `MAILER_PROVIDER` | backend |
+| AI | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | backend |
+| Frontend public | `NEXT_PUBLIC_*` | frontend (build + runtime) |
+| URLs / CORS | `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `NEXT_PUBLIC_API_BASE_URL` | backend, frontend |
+
+**Compose wiring:**
+
+```yaml
+# docker-compose.yml (sketch)
+services:
+  backend:
+    env_file: .env
+  frontend:
+    env_file: .env
+  postgres:
+    env_file: .env
+```
+
+**Host dev (postgres in Docker, apps on host):**
+
+```bash
+cp .env.example .env          # once
+docker compose -f docker-compose.dev.yml up -d   # DB only
+npm run dev                   # root script loads .env → starts frontend + backend
+```
+
+Root `package.json` scripts use `dotenv` (or `--env-file=.env`) so both `apps/frontend`
+and `apps/backend` receive the same variables without per-app env files.
+
+**Adding a new config key:** update `.env.example` + document in PLAN §4.0.0.2 + wire in
+`application.yml` or Next.js config — never add a second env file.
 
 **`packages/` extraction criteria (do not add prematurely):**
 - Same code imported by **2+ apps**, AND
@@ -1332,7 +1390,9 @@ public record MailMessage(
 - Password reset tokens: single-use, expiry 1h, stored hashed in `password_reset_token` table.
 - **No PII in logs** — log `mail_sent` event with recipient hash or user id only.
 
-#### Env vars (`.env.example`)
+#### Env vars
+
+All keys live in **root `.env`** — see `.env.example` and §4.0.0.2. Snippet:
 
 ```bash
 RESEND_API_KEY=re_...
@@ -2485,7 +2545,7 @@ See **§4.2.9** for the full styling stack and unified design patterns.
 | **Import order** | 1) external libs 2) `@/` absolute 3) relative — blank line between groups |
 | **Barrel `index.ts`** | Re-export public API only — no logic; avoid circular barrels |
 | **Test files** | Co-located `*.test.ts` / `*.test.tsx` (e.g. `research-api.test.ts`) |
-| **Env files** | `.env.local` (gitignored), `.env.example` (committed template) — document all keys |
+| **Env files** | **Root `.env` only** (§4.0.0.2) — no `apps/frontend/.env.local`; `.env.example` is the template |
 | **Required env** | `NEXT_PUBLIC_API_BASE_URL` → backend `/api/v1` |
 
 ##### K. Error, loading, and empty states
