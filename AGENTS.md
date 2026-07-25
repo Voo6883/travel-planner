@@ -11,7 +11,7 @@ npm run prereq                    # must pass before any code generation
 
 | Step | Action |
 |---|---|
-| 1 | Read task → map to feature **C1–C5** or Phase **0a/0b** (see [`plans/BACKLOG.md`](plans/BACKLOG.md)) |
+| 1 | Read task → map to feature **C1–C5** or **C6+** (see [`docs/ADDING-A-FEATURE.md`](docs/ADDING-A-FEATURE.md)) |
 | 2 | Read [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) sections for your layer |
 | 3 | Follow workflow: **CONTRACT → DOMAIN → SERVICE → ADAPTERS → ROUTE → FRONTEND → VERIFY** |
 | 4 | Self-check [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) §7 before finishing |
@@ -24,6 +24,7 @@ npm run prereq                    # must pass before any code generation
 - **No LLM/HTTP inside** `@Transactional` methods
 - **≤3 params** per function · **≤120 chars** per line · **≤40 lines** per method
 - **Stub adapter** when vendor API is undecided (`§4.0.7`)
+- **Vertical slice** — new feature = new packages; don't edit unrelated services (§4.0.8)
 - **Minimal diff** — only change what the task requires
 
 ## Where code goes
@@ -43,6 +44,7 @@ npm run prereq                    # must pass before any code generation
 
 | Document | When to read |
 |---|---|
+| [`docs/ADDING-A-FEATURE.md`](docs/ADDING-A-FEATURE.md) | **Adding C6+ or new capabilities** |
 | [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **Every code generation task** |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Architecture, rules, NFRs, CI |
 | [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint stories, DoD |

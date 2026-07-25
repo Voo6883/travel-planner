@@ -52,6 +52,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S1-7 | MapStruct | Mapper config + example flow | Compile-time mapping works |
 | S1-8 | Trip scaffold | `GET/POST /api/v1/trips` | Thin controller; service unit test |
 | S1-9 | Checkstyle + transactions | `LineLength` 120; `@Transactional(rollbackFor)` template; Spring Retry | CI lint + integration rollback test |
+| S1-10 | ArchUnit + JaCoCo | `ArchitectureTest` layer rules; coverage ≥70% on domain/application | CI arch + coverage gates |
 
 ---
 
@@ -73,6 +74,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S2-10 | API client layer | `lib/api/client.ts`, zod, React Query | Cookie auth + request ID |
 | S2-11 | Admin UI | `features/admin/`, reset password | Non-admin redirected |
 | S2-12 | Lint config | ESLint `max-len` 120, Prettier printWidth 100 | CI enforces line length |
+| S2-13 | Platform extensibility | `features/_template/`, `ToolRegistry`, `features.yml`, actuator/prometheus | Ready for C6+ slices |
 
 **Phase 0 gate:** all S0 + S1 + S2 DoD met; §10 Phase 0 exit criteria checked.
 

@@ -41,6 +41,7 @@ Pick **one primary workflow** — do not mix unrelated work in one PR.
 | Type | ID | Examples | Workflow variant |
 |---|---|---|---|
 | **Foundation** | `F` | Docker, CI, prereq scripts | §3-F only |
+| **New feature (C6+)** | `NF` | Post-v1 capability | §3 + [`ADDING-A-FEATURE.md`](ADDING-A-FEATURE.md) |
 | **Backend feature** | `BE` | New endpoint, service, migration | §3 full, skip §3.7 |
 | **Frontend feature** | `FE` | New screen, hook, form | §3.2 → §3.7 (skip §3.3–3.6 if no API change) |
 | **Full-stack feature** | `FS` | C1–C5 vertical slice | §3 full |
@@ -452,6 +453,7 @@ When presenting completed work, use this structure:
 
 | Document | Purpose |
 |---|---|
+| [`docs/ADDING-A-FEATURE.md`](ADDING-A-FEATURE.md) | Adding C6+ features |
 | [`AGENTS.md`](../AGENTS.md) | Entry point — quick rules |
 | [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) | Full architecture & rules |
 | [`plans/BACKLOG.md`](../plans/BACKLOG.md) | Sprint stories |

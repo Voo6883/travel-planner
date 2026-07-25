@@ -92,7 +92,8 @@ docker compose up --build
 - **Feature-based frontend** — `features/` modules aligned to C1–C5
 - **Tailwind + Ant Design** — unified design tokens; Tailwind overrides Ant by default
 - **User-based auth** — no multi-tenant; admin can manage accounts (dev seed)
-- **API** — `/api/v1/`, GET/POST/PUT/DELETE, standard error `{ code, message, details }`
+- **Vertical-slice extensibility** — add C6+ without editing existing features (§4.0.8)
+- **Industry standards** — ArchUnit, JaCoCo, Micrometer, CSRF, virtual threads (§4.0.9)
 
 ## Development workflow
 
@@ -110,6 +111,7 @@ See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) for full coding rules
 | Document | Description |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | **AI agent entry point** — quick rules & doc index |
+| [`docs/ADDING-A-FEATURE.md`](docs/ADDING-A-FEATURE.md) | How to add C6+ features (vertical slice) |
 | [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **AI code generation workflow** — pipeline, gates, forbidden patterns |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Master plan — architecture, rules, NFRs, CI/CD |
 | [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint-ready epics & stories (Sprints 0–8) |

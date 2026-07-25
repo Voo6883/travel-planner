@@ -5,7 +5,7 @@
 > historical data**, **decides** on destinations/plans, **suggests actions**, and
 > lets the user perform **quick in-app actions to book flights and hotels**.
 
-> **Status: PLAN — core features, system base, and delivery structure are LOCKED (§1, §3, §4, §6.1, §10, §12, §13–§16).**
+> **Status: PLAN — core features, system base, extensibility, and delivery structure are LOCKED (§1, §3, §4, §6.1, §10, §12, §13–§16).**
 > **Before coding:** run prerequisite check (§4.0.0). **Runtime:** Docker Compose (§4.0.0).
 > **Kickoff gate:** Phase 0a starts when this plan is merged to `master` (sign-off = merge approval).
 > Sprint-ready tasks live in [`plans/BACKLOG.md`](../BACKLOG.md).
@@ -40,6 +40,8 @@
 | **Auth mechanism** | **Self-issued JWT** in **httpOnly cookie** — v1; OAuth add-on post-v1 (§4.0.5) |
 | **Build tool** | **Gradle** (Kotlin DSL) — Java 21 toolchain; wrapper committed (§4.0) |
 | **External adapters** | **Port + stub first** — real vendor APIs wired when chosen; never block features (§4.0.7) |
+| **Extensibility** | **Vertical-slice modules** — add C6+ without editing existing features (§4.0.8) |
+| **Industry standards** | Observability, security, ArchUnit boundaries, coverage gates (§4.0.9) |
 | **Admin** | **Seeded ADMIN account** — manage users, reset passwords (§4.0.6) — dev/docker only |
 | **Runtime** | **Docker Compose** — full stack runnable in containers (§4.0.0) |
 | **Pre-dev gate** | **Check prerequisites** before coding — install if missing (§4.0.0) |
@@ -1029,6 +1031,245 @@ infrastructure/
 
 **AI rule:** if a vendor is undecided, implement the port + stub and continue — do not
 wait for procurement.
+
+### 4.0.8 Feature extensibility — adding new features safely (LOCKED)
+
+The codebase is structured so **new product capabilities (C6, C7, … or sub-features)
+ship as additive vertical slices** without modifying existing feature code. This follows
+industry **Open/Closed** practice: open for extension, closed for modification.
+
+**Cookbook:** [`docs/ADDING-A-FEATURE.md`](../../docs/ADDING-A-FEATURE.md) — step-by-step
+for humans and AI agents.
+
+#### Principles
+
+| Principle | Rule |
+|---|---|
+| **Additive only** | New feature = new packages/folders — avoid editing unrelated `*Service` classes |
+| **Ports over concrete** | New external dependency = new `domain/port/` + adapter — never import vendor in `application/` |
+| **Contract first** | New endpoints added to OpenAPI **before** implementation — codegen stays in sync |
+| **Isolated failure** | Feature flag can disable a slice without breaking C1–C5 (§4.0.9) |
+| **No shared mutable state** | Features communicate via domain types + DB — not static singletons or global caches |
+
+#### Backend — package layout per new feature `<feature>` (e.g. `packing`, `reviews`)
+
+```
+apps/backend/src/main/java/com/travelplanner/
+├── domain/
+│   ├── model/<Feature>.java              # only if new aggregate
+│   ├── port/<Feature>Port.java           # new external needs only
+│   └── exception/<Feature>*Exception.java
+├── application/<feature>/
+│   ├── <Feature>Service.java             # public use-case entry
+│   └── *Query.java / *Command.java
+├── infrastructure/
+│   ├── persistence/                      # V{n}__*.sql — next Flyway version only
+│   └── <vendor>/<Feature>*Adapter.java   # Stub* first (§4.0.7)
+├── ai/                                   # only if feature uses LLM
+│   ├── agent/<Feature>Agent.java
+│   └── tool/<Feature>Tool.java
+└── api/
+    ├── controller/<Feature>Controller.java
+    ├── dto/<feature>/
+    └── openapi/                          # new paths tagged openapi: <feature>
+```
+
+**Do not:** add methods to `TripService` for unrelated features — create `<Feature>Service`.
+
+#### Frontend — folder layout per new feature
+
+```
+apps/frontend/src/
+├── features/<feature>/                   # copy from features/_template/ (Phase 0b)
+│   ├── components/<feature>-panel.tsx
+│   ├── hooks/
+│   ├── schemas/
+│   ├── types.ts
+│   └── index.ts                          # public exports only
+├── lib/api/<feature>-api.ts
+├── locales/en/<feature>.json             # + ms/ when translated
+└── app/(planner)/trips/[tripId]/<feature>/page.tsx   # thin page only
+```
+
+**Trip stepper:** register new step in `components/layout/trip-stepper.tsx` + i18n key —
+single edit point for navigation extensibility.
+
+#### Registries (extend without branching)
+
+| Registry | Location | Used for |
+|---|---|---|
+| **Error codes** | `api/openapi/errors.yaml` + `DomainException` subclasses | New `snake_case` codes |
+| **OpenAPI tags** | One tag per feature (`intake`, `research`, …) | Group endpoints; codegen per tag optional |
+| **Agent tools** | `ai/tool/ToolRegistry.java` | Register new tools — agent discovers at runtime |
+| **Feature flags** | `config/features.yml` + `FeatureFlags` bean | Toggle C6+ in dev/staging |
+| **Query keys** | `lib/query/query-keys.ts` | Add factory: `queryKeys.<feature>(...)` |
+| **i18n namespaces** | `locales/{locale}/<feature>.json` | One file per feature |
+
+```java
+// ai/tool/ToolRegistry.java — industry plugin pattern
+public final class ToolRegistry {
+    private final Map<String, AgentTool> tools = new LinkedHashMap<>();
+
+    public void register(String name, AgentTool tool) { tools.put(name, tool); }
+    public List<AgentTool> all() { return List.copyOf(tools.values()); }
+}
+```
+
+New feature with tools: implement `AgentTool` → register in `@Configuration` — **no edits**
+to `TravelResearchAgent` loop logic.
+
+#### Database migrations — forward-only
+
+| Rule | Detail |
+|---|---|
+| **Never edit** applied migrations | Add `V{n+1}__add_<feature>_tables.sql` only |
+| **Prefix tables** | Feature-specific tables may use prefix (`packing_list`) — FK to `trip` |
+| **Backward compatible** | New columns `NULL`able or with default — old code keeps running during deploy |
+
+#### API versioning when breaking change needed
+
+1. Add `/api/v2/` paths in OpenAPI — keep v1 until frontend migrates.
+2. Deprecation header: `Sunset: <date>` on v1 endpoints.
+3. Never break v1 error envelope shape.
+
+#### Checklist — adding feature `X` (minimum)
+
+- [ ] OpenAPI paths + schemas + error codes (`openapi: X` tag)
+- [ ] `npm run codegen`
+- [ ] `domain/` types + ports (if needed)
+- [ ] `application/x/XService` + unit tests
+- [ ] Adapters (stub first) + Flyway `V{n}__...`
+- [ ] `XController` (thin)
+- [ ] `features/x/` + page + i18n namespace
+- [ ] `queryKeys.x` + `lib/api/x-api.ts`
+- [ ] Feature flag entry (if post-v1 or risky)
+- [ ] ArchUnit test: `domain` does not depend on `api` (§4.0.9)
+- [ ] §12.3 + §12.4 DoD
+
+### 4.0.9 Industry standards alignment (LOCKED)
+
+Maps common **enterprise backend / API** standards to this repo. Required for Phase 0b
+unless marked *Phase 1+*.
+
+#### Architecture & modularity
+
+| Standard | Implementation | Phase |
+|---|---|---|
+| **Hexagonal / ports & adapters** | §4 package layout | 0b |
+| **SOLID — Open/Closed** | §4.0.8 vertical slices | 0b |
+| **ArchUnit layer tests** | `LayeredArchitectureRule` — `domain` ∉ `api`, `application` ∉ `infrastructure` | 0b |
+| **12-Factor App** | Config in env, stateless processes, logs to stdout | 0a |
+
+```java
+// src/test/java/.../ArchitectureTest.java — industry standard guardrail
+@AnalyzeClasses(packages = "com.travelplanner")
+class ArchitectureTest {
+    @ArchTest
+    static final ArchRule layers = layeredArchitecture()
+        .layer("Domain").definedBy("..domain..")
+        .layer("Application").definedBy("..application..")
+        .layer("Api").definedBy("..api..")
+        .layer("Infrastructure").definedBy("..infrastructure..")
+        .whereLayer("Domain").mayOnlyBeAccessedByLayers("Application", "Infrastructure", "Ai")
+        .whereLayer("Application").mayNotBeAccessedByAnyLayer()
+        .whereLayer("Api").mayNotBeAccessedByAnyLayer();
+}
+```
+
+#### Security (OWASP-aligned)
+
+| Standard | Implementation | Phase |
+|---|---|---|
+| **Auth boundary** | JWT httpOnly cookie (ADR 002) | 0b |
+| **CSRF** | Spring Security CSRF for cookie auth; `SameSite=Lax` + token on mutating requests | 0b |
+| **Password storage** | BCrypt strength 10+; min length 8; lockout after 5 failures / 15 min | 0b |
+| **Input validation** | `@Valid` DTOs + domain invariants | 0b |
+| **Rate limiting** | Bucket4j or Redis — §14 NFR limits | 1+ |
+| **Secrets** | Env / secret manager only | 0a |
+| **CORS** | Explicit origins per env — no `*` in prod | 0b |
+| **LLM injection** | `ai/Guardrails.sanitizeUserInput()` before prompts | 1 |
+
+#### Observability (SRE industry standard)
+
+| Standard | Implementation | Phase |
+|---|---|---|
+| **Structured logging** | JSON logs + `X-Request-Id` MDC | 0b |
+| **Health probes** | `/api/v1/health`, `/api/v1/ready` | 0a |
+| **Metrics** | Micrometer + Prometheus endpoint `/actuator/prometheus` | 0b |
+| **Key metrics** | `http.server.requests`, JVM, HikariCP pool, `ai.call.tokens` | 0b |
+| **Distributed tracing** | OpenTelemetry Java agent + trace id in MDC | 1+ |
+| **AI cost** | `ai_call_log` table | 0b |
+
+#### Performance & resilience
+
+| Standard | Implementation | Phase |
+|---|---|---|
+| **Virtual threads** | `spring.threads.virtual.enabled=true` — Java 21 for I/O-heavy endpoints | 0b |
+| **Connection pool** | HikariCP: `maximum-pool-size=10` (v1), connection timeout 30s — tune via env | 0b |
+| **Timeouts** | RestClient / WebClient per supplier; LLM client read timeout in config | 1 |
+| **Circuit breaker** | Resilience4j per external provider | 1+ |
+| **ACID transactions** | §4.0.2-E2 | 0b |
+
+#### Testing & quality gates
+
+| Standard | Implementation | Phase |
+|---|---|---|
+| **Test pyramid** | Unit (domain/service) → integration (Testcontainers) → E2E (Playwright) | 0b / 1 |
+| **Coverage gate** | JaCoCo ≥ **70%** line coverage on `domain` + `application` packages | 0b |
+| **Static analysis** | Checkstyle + SpotBugs (or SonarQube when available) | 0b |
+| **Contract tests** | OpenAPI validate + codegen drift | 0b |
+| **Mutation testing** | Optional post-v1 | 3+ |
+
+#### API design (public API industry norms)
+
+| Standard | Implementation |
+|---|---|
+| **Versioning** | `/api/v1/` — v2 for breaking changes (§4.0.8) |
+| **Error model** | `{ code, message, details }` — stable machine `code` |
+| **Pagination** | `page`, `page_size`, `sort` (§6.1) |
+| **Idempotency** | `Idempotency-Key` on booking (§6.1) |
+| **OpenAPI 3.1** | Source of truth; tags per feature |
+
+#### Feature flags (industry rollout pattern)
+
+```yaml
+# config/features.yml
+features:
+  packing-list: false      # C6 example — off until ready
+  review-summary: false
+```
+
+```java
+@ConditionalOnProperty(name = "features.packing-list", havingValue = "true")
+@RestController
+@RequestMapping("/api/v1/trips/{tripId}/packing-list")
+public class PackingListController { ... }
+```
+
+New post-v1 features ship behind flags — enable in staging before prod.
+
+#### Config reference (Phase 0b `application.yml` skeleton)
+
+```yaml
+spring:
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 30000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,ready,prometheus,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+```
 
 ### 4.1 The research & decision agent (C2) — how it works
 
@@ -2049,6 +2290,10 @@ CI pipeline runs on PR.
 | Trip scaffold | `GET/POST /api/v1/trips` — thin controller, service unit test |
 | Transactions | `@Transactional(rollbackFor = Exception.class)` pattern + Spring Retry for deadlocks (§4.0.2-E2) |
 | Checkstyle | `LineLength` max 120 in Gradle config |
+| ArchUnit | `ArchitectureTest` — layer dependency rules (§4.0.9) |
+| JaCoCo | ≥70% coverage gate on `domain` + `application` |
+| Actuator | `/health`, `/ready`, `/prometheus`; virtual threads enabled |
+| CSRF + password policy | Spring Security config per §4.0.9 |
 
 **Sprint 2 — AI + frontend platform**
 
@@ -2063,6 +2308,7 @@ CI pipeline runs on PR.
 | i18n | next-intl, `en/` + `ms/` namespaces (§4.2.10) |
 | Codegen | OpenAPI → TS; `npm run codegen`; CI drift check (§15) |
 | API client | `lib/api/client.ts`, zod boundary, React Query setup |
+| Feature template | `features/_template/` — scaffold for C6+ (§4.0.8) |
 
 **Phase 0 exit criteria (gate before Phase 1):**
 - [ ] §12.3 checklist passes on a sample PR
@@ -2206,6 +2452,8 @@ Copy into PR description; all items must pass:
 - [ ] **Transactions** — write use-cases use `@Transactional(rollbackFor = Exception.class)`; rollback on failure, commit on success (§4.0.2-E2)
 - [ ] **No IO in transactions** — LLM and external HTTP calls outside `@Transactional` boundary
 - [ ] **Deadlock safety** — consistent table lock order, `@Version` on concurrent entities, `@Retryable` where needed (§4.0.2-E2)
+- [ ] **Extensibility** — new code in vertical slice; no unrelated service edits (§4.0.8)
+- [ ] **ArchUnit** — layer tests pass if backend touched (§4.0.9)
 
 ### 12.4 Feature definition of done (per C1–C5 story)
 
@@ -2264,6 +2512,8 @@ at-a-glance checklist for humans and AI.
 | X12 | **Stub-first** — port + stub before live vendor adapter (§4.0.7) |
 | X13 | **Visibility** — reusable flow extracted; `public`/`private` (BE) or `export`/module-private (FE) (§4.0.2-B4, §4.0.4) |
 | X14 | **Transactions** — rollback on failure, commit on success; deadlock prevention (§4.0.2-E2) |
+| X15 | **Extensibility** — new features = vertical slice; see §4.0.8 + `docs/ADDING-A-FEATURE.md` |
+| X16 | **Industry standards** — ArchUnit, JaCoCo, Micrometer, CSRF (§4.0.9) |
 
 ### 13.1 Backend coding rules
 
@@ -2304,6 +2554,11 @@ at-a-glance checklist for humans and AI.
 | B33 | **Transactions** — `rollbackFor = Exception.class`; commit on success (§4.0.2-E2) |
 | B34 | **No IO in `@Transactional`** — LLM/HTTP outside transaction boundary |
 | B35 | **Deadlock prevention** — lock order, `@Version`, `@Retryable` on `40P01` (§4.0.2-E2) |
+| B36 | **Vertical slice** — new feature = new `application/<feature>/`; no god services (§4.0.8) |
+| B37 | **ArchUnit** — layer boundary tests in CI (§4.0.9) |
+| B38 | **Virtual threads** — `spring.threads.virtual.enabled=true` for I/O (§4.0.9) |
+| B39 | **Metrics** — Micrometer + Prometheus actuator (§4.0.9) |
+| B40 | **CSRF** — enabled for cookie auth on mutating requests (§4.0.9) |
 
 ### 13.2 Frontend coding rules
 
@@ -2342,6 +2597,7 @@ at-a-glance checklist for humans and AI.
 | F31 | **`cn()` helper** — use for all conditional Tailwind class merging |
 | F32 | **Line length ≤120** — ESLint `max-len`; soft target 100 (§4.2.6-B3) |
 | F33 | **Module visibility** — public API only via `index.ts`; helpers non-exported (§4.2.6-B4) |
+| F34 | **New feature scaffold** — copy `features/_template/`; follow `docs/ADDING-A-FEATURE.md` (§4.0.8) |
 
 ### 13.3 API contract rules (shared)
 
@@ -2386,7 +2642,9 @@ Initial targets — refine with production data; do not block Phase 0 on tuning.
 | **Data retention** | User data until account delete | `ai_call_log` retained 90 days |
 | **Uptime monitoring** | `/health` + `/ready` polled | Compose healthchecks + CI smoke |
 | **Rate limits** | AI endpoints: 20 req/min/user | Booking confirm: 5 req/min/user |
-| **Security** | No PII in logs; secrets in env only | §4.0.2-J2, §4.0.5 |
+| **Security** | No PII in logs; secrets in env only | §4.0.2-J2, §4.0.5, §4.0.9 |
+| **Code coverage** | ≥70% line coverage on `domain` + `application` | JaCoCo gate in CI (§15) |
+| **Metrics scrape** | Prometheus `/actuator/prometheus` | §4.0.9 |
 
 ---
 
@@ -2397,18 +2655,20 @@ Pipeline mirrors §12.2 workflow. Runs on every PR to `master`.
 ### 15.1 Stages
 
 ```
-lint → build → test → contract → docker → smoke
+lint → build → test → arch → coverage → contract → docker → smoke
 ```
 
 | Stage | Backend | Frontend | Gate |
 |---|---|---|---|
-| **lint** | Checkstyle/Spotless (`LineLength` 120) | ESLint + `max-len` 120 + TypeScript `tsc --noEmit` | Fail on error |
+| **lint** | Checkstyle/Spotless (`LineLength` 120) + SpotBugs | ESLint + `max-len` 120 + TypeScript `tsc --noEmit` | Fail on error |
 | **build** | `./gradlew build -x test` | `npm run build` | Compile success |
 | **test** | `./gradlew test` | `npm run test` (Vitest) | All pass |
+| **arch** | ArchUnit `ArchitectureTest` — layer boundaries (§4.0.9) | — | No dependency violations |
+| **coverage** | JaCoCo ≥70% on `domain` + `application` | — | Fail below threshold |
 | **contract** | OpenAPI validate | `npm run codegen` + git diff check | No drift |
 | **migrate** | Flyway validate (Testcontainers) | — | Migrations valid |
 | **docker** | Build `docker/backend/Dockerfile` | Build `docker/frontend/Dockerfile` | Image builds |
-| **smoke** | Hit `/api/v1/ready` in compose | — | Healthy stack |
+| **smoke** | Hit `/api/v1/ready` + `/actuator/prometheus` | — | Healthy stack |
 
 ### 15.2 Runtime version gates
 
@@ -2436,6 +2696,7 @@ Significant decisions are recorded in `docs/adr/` and referenced from §11.
 |---|---|---|
 | [001](../../docs/adr/001-gradle.md) | Gradle as backend build tool | Accepted |
 | [002](../../docs/adr/002-jwt-auth.md) | JWT in httpOnly cookie for v1 auth | Accepted |
+| [003](../../docs/adr/003-feature-extensibility.md) | Vertical-slice feature extensibility | Accepted |
 
 **AI agent workflow:** [`docs/AI-AGENT-WORKFLOW.md`](../../docs/AI-AGENT-WORKFLOW.md) (v1.0) —
 entry point [`AGENTS.md`](../../AGENTS.md). Update workflow version when §12 changes.
