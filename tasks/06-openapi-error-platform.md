@@ -11,6 +11,8 @@ Create the versioned API contract, standard errors, pagination conventions, and 
 ## Required reading
 
 - `plans/superpower/PLAN.md` §6 and §6.1
+- **[`docs/adr/008-optimistic-concurrency.md`](../docs/adr/008-optimistic-concurrency.md) — Accepted; defines the `expected_version` convention and `version_conflict` this task must register**
+- [`docs/adr/007-chat-streaming-transport.md`](../docs/adr/007-chat-streaming-transport.md) — the two chat paths are documented as `text/event-stream` and **excluded from the codegen-drift gate**
 - `docs/AI-AGENT-WORKFLOW.md` contract step
 - `plans/BACKLOG.md` S1-4, S1-5, S2-9, S2-10
 
@@ -19,6 +21,9 @@ Create the versioned API contract, standard errors, pagination conventions, and 
 - OpenAPI source owned by the backend and versioned under `/api/v1/`.
 - Health/readiness paths reflected in the spec.
 - Standard error schema `{ code, message, details }` and initial error catalog.
+- **`version_conflict` registered in the error catalog** with an i18n key — `409` plus `details.current_version` (ADR 008).
+- **`expected_version` as a documented body-level convention** for mutations, not a header. It is chosen over `ETag`/`If-Match` precisely because it is expressible in OpenAPI and flows through codegen into the typed client; header-based concurrency would need hand-plumbed handling in the generated-client layer this project forbids editing.
+- A missing `expected_version` on a versioned mutation is `400 validation_failed` — **never** treated as "force overwrite".
 - Pagination schema using `page`, `page_size`, `sort`, and response metadata.
 - Request ID propagation and response header documentation.
 - OpenAPI validation in backend tests/CI.
