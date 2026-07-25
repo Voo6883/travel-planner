@@ -32,11 +32,11 @@
 | ID | Task | Depends on | Status | Notes |
 |---|---|---|---|---|
 | 00 | [Baseline and execution map](00-plan-baseline.md) | — | `done` | Commit `aa20043`. B-1 and B-2 resolved; open item B-3 does not affect this task's DoD. |
-| 01 | [Prerequisite and root tooling](01-prerequisite-root-tooling.md) | 00 | `review` | Commit `a6dcb3c`. Gate verified pass+fail on PowerShell 5.1 and Git Bash; 27/27 assertions per platform. Linux/macOS unexecuted — see **F-7**. |
+| 01 | [Prerequisite and root tooling](01-prerequisite-root-tooling.md) | 00 | `done` | Commit `a6dcb3c`. 27/27 assertions per platform locally; **CI green on `ubuntu-latest` and `windows-latest`** — first Linux execution. **F-7 closed.** |
 | 02 | [Backend minimal scaffold](02-backend-minimal-scaffold.md) | 01 | `done` | Commit `daca342`. Spring Boot 3.5.3, Gradle 8.14.5 wrapper, Java 21 toolchain. 10/10 tests; health/ready/404 verified at runtime. |
 | 03 | [Frontend minimal scaffold](03-frontend-minimal-scaffold.md) | 01 | `done` | Commit `48f1388`. Next 15.5.21 / React 19. lint+typecheck+build clean, 9/9 tests; 320 px no-overflow verified in-browser for `en` and `ms`. |
 | 04 | [Docker runtime and orchestration](04-docker-runtime.md) | 01, 02, 03 | `done` | Commit `b83dd86`. All three services healthy; `ready` reports `database: UP`; volume survives restart; images non-root and secret-free. |
-| 05 | [CI and repository workflow](05-ci-repository-workflow.md) | 01, 02, 03, 04 | `review` | Commit `1da85b5`. Five jobs; custom logic verified locally. **Workflow has never executed on GitHub Actions** — `gh` unauthenticated (B-3), nothing pushed. **F-7 stays open.** |
+| 05 | [CI and repository workflow](05-ci-repository-workflow.md) | 01, 02, 03, 04 | `done` | Commits `1da85b5`, `d24c88c`. All five jobs green on GitHub Actions, including `docker build + smoke` asserting `"database":"UP"` in a clean runner. Actions bumped off the deprecated Node 20 runtime. |
 
 ## Phase 0B/0C — platform
 
@@ -105,19 +105,30 @@
 
 | Status | Count |
 |---|---|
-| `done` | 4 |
+| `done` | 6 |
 | `in_progress` | 0 |
 | `blocked` | 0 |
-| `review` | 2 |
+| `review` | 0 |
 | `not_started` | 36 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*
 
-**Phase 0A exit criteria are met in code but not yet proven in CI.** Tasks 01 and 05 stay
-`review` until a real GitHub Actions run executes — that single run closes **F-7** and moves both
-to `done`.
+## ✅ Phase 0A complete
 
-**Active blockers:** none gating execution. **B-3** (`gh` unauthenticated) is informational.
+Tasks 00–05 are `done` and **proven in CI**, not just locally. Green on GitHub Actions:
+
+| Job | Proves |
+|---|---|
+| `prereq` (ubuntu + windows) | The gate runs on Linux — closes **F-7** |
+| `backend` (Java 21) | Compiles and tests on a clean runner |
+| `frontend` (Node 22) | Lint, typecheck, test, build |
+| `docker build + smoke` | Same Dockerfiles as local; stack reaches `"database":"UP"` |
+| `security` | Nothing secret-shaped is tracked |
+
+**Next executable task: [06 — OpenAPI and error platform](06-openapi-error-platform.md)**, now
+reconciled with ADR 008 and ADR 007.
+
+**Active blockers:** none. **B-3** (`gh` unauthenticated) is informational only.
 
 Resolved: **B-1** (toolchain) — Node 22.23.1, Temurin JDK 21.0.11 LTS. **B-2** (trunk) —
 superseded 2026-07-26: work happens on `dev`. **Port 8080** — Oracle XE owns it on the dev

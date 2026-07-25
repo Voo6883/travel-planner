@@ -324,7 +324,8 @@ the stale `main`. **Resolution:** authenticate `gh`, or confirm no PRs are open.
 | **F-4** | Stale user-`PATH` entry `C:\Program Files\Java\jdk-18.0.1.1\bin` remains. Harmless — machine `PATH` puts JDK 21 ahead of it — but worth removing to avoid confusion |
 | **F-5** | `dev` mirrors `master` exactly and has no role under the B-2 decision. Delete it, or define its purpose, before it drifts |
 | **F-6** | 11 fully-merged `origin/cursor/*` branches are absorbed into `master` and can be pruned |
-| **F-7** | Task 01's prerequisite gate is unexecuted on Linux/macOS — no host available. Bash builtins only, so it should hold, but [Task 05](05-ci-repository-workflow.md) must run `npm run prereq` and `npm run prereq:test` on an Ubuntu runner to close this |
+| ~~F-7~~ | ✅ **Closed 2026-07-26.** The prerequisite gate now executes on `ubuntu-latest` in CI and passes, alongside `windows-latest`. The bash-builtins rewrite, the `gradlew`/`*.sh` `eol=lf` rule, and the `100755` exec bit were all validated together by that run |
+| **F-9** | macOS remains unexecuted — GitHub offers no free macOS runner here. macOS ships **bash 3.2**, so the risk is non-zero, though `check-prerequisites.sh` deliberately avoids bash 4+ features (no associative arrays, no `${var,,}`). Add a `macos-latest` matrix entry if macOS becomes a supported dev platform |
 | **F-8** | `tasks/README.md` still mandates one branch/PR per task against `master`; actual practice is feature commits on `dev`. Reconcile the docs or the practice |
 
 ## 8a. Environment decisions (dev machine)
@@ -338,9 +339,13 @@ the stale `main`. **Resolution:** authenticate `gh`, or confirm no PRs are open.
 
 ## 9. Next executable task
 
-> **[Task 01 — Prerequisite and Root Tooling](01-prerequisite-root-tooling.md)** — branch
-> `agent/task-01-root-tooling`.
+> **[Task 06 — OpenAPI and Error Platform](06-openapi-error-platform.md)**
 
-Task 00's only dependent is Task 01, and Task 00 is `done`. Nothing blocks it: B-1 (toolchain) and
-B-2 (trunk) are both resolved, and B-3 does not gate execution. Branch from `master`, merge to
-`master`.
+**Phase 0A (tasks 00–05) is complete and proven in CI**, not merely locally: all five jobs are
+green on GitHub Actions, including the Docker smoke test reaching `"database":"UP"` in a clean
+runner. Nothing is blocked — B-1, B-2 and B-4 are resolved, F-7 is closed, and B-3 is
+informational.
+
+Task 06 has been reconciled with ADR 008 (`expected_version`, `version_conflict`) and ADR 007
+(chat paths excluded from the codegen-drift gate) as part of the B-4 resolution, so it can be
+executed from its brief without further reconciliation.
