@@ -1,7 +1,7 @@
 # AI Agent Instructions — Travel Planner
 
-> **Read this file first.** Every AI coding session on this repo follows
-> [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md).
+> **Read this file first**, then [`docs/AGENT-HARNESS.md`](docs/AGENT-HARNESS.md) (scope & drift
+> control), then your task brief, then [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md).
 
 ## Quick start
 
@@ -9,12 +9,19 @@
 npm run prereq                    # must pass before any code generation
 ```
 
+**No code without a task ID.** Work orders live in [`tasks/`](tasks/) — one task per branch/PR
+(`agent/task-NN-*`), executed in dependency order. Start at [`tasks/README.md`](tasks/README.md).
+
 | Step | Action |
 |---|---|
-| 1 | Read task → map to feature **C1–C5** or **C6+**; check [`plans/USE-CASES.md`](plans/USE-CASES.md) for acceptance criteria |
+| 0 | Read [`docs/AGENT-HARNESS.md`](docs/AGENT-HARNESS.md) — topic boundary, conflict protocol, drift tripwires |
+| 1 | Open your brief `tasks/NN-*.md` → map to **C1–C5**; check [`plans/USE-CASES.md`](plans/USE-CASES.md) for acceptance criteria |
 | 2 | Read [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) sections for your layer |
 | 3 | Follow workflow: **CONTRACT → DOMAIN → SERVICE → ADAPTERS → ROUTE → FRONTEND → VERIFY** |
-| 4 | Self-check [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) §7 before finishing |
+| 4 | Self-check [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) §7 + the harness evidence gate before finishing |
+
+**When docs conflict or a contract is unspecified: stop and ask.** Never resolve it by guessing —
+see [`docs/AGENT-HARNESS.md`](docs/AGENT-HARNESS.md) §3.
 
 ## Non-negotiables
 
@@ -46,6 +53,8 @@ npm run prereq                    # must pass before any code generation
 
 | Document | When to read |
 |---|---|
+| [`docs/AGENT-HARNESS.md`](docs/AGENT-HARNESS.md) | **Every session, before coding** — scope, conflicts, drift, evidence |
+| [`tasks/README.md`](tasks/README.md) | **Every session** — task index, authority order, execution rules |
 | [`plans/USE-CASES.md`](plans/USE-CASES.md) | Use cases & acceptance criteria |
 | [`docs/UI-UX-DESIGN-SYSTEM.md`](docs/UI-UX-DESIGN-SYSTEM.md) | **Any web or PWA UI work** |
 | [`docs/ADDING-A-FEATURE.md`](docs/ADDING-A-FEATURE.md) | **Adding C6+ or new capabilities** |
@@ -72,6 +81,8 @@ This repo currently contains **planning documentation only** (no application sca
 - `README.md` — product overview and planned quick start
 - `plans/superpower/PLAN.md` — locked architecture (source of truth for architecture)
 - `plans/USE-CASES.md`, `plans/BACKLOG.md`, `plans/TRAVEL-KNOWLEDGE-CATALOG.md`
+- `tasks/` — 40 execution-sized implementation briefs (`00`–`39`) + `tasks/README.md`
+- `docs/AGENT-HARNESS.md` — agent scope control & drift prevention
 - `docs/AI-AGENT-WORKFLOW.md`, `docs/ADDING-A-FEATURE.md`
 - `docs/UI-UX-DESIGN-SYSTEM.md`, `docs/ARCHITECTURE-DIAGRAMS.md`
 - `docs/adr/` — locked ADRs (Gradle, JWT, extensibility, auth/Resend, PWA)

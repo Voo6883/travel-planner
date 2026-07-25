@@ -2,7 +2,8 @@
 
 A **knowledge-based, LLM-powered travel planner**. Users chat to plan trips. Decisions are grounded in a **Travel Knowledge Base** — destinations, food, areas, POIs, seasonality, and prices — with the LLM reasoning over retrieved facts, not inventing them.
 
-> **Status:** Planning complete — architecture, delivery structure, and sprint backlog are locked. Application code not yet scaffolded. Start with **Phase 0a** (Sprint 0) per [`plans/BACKLOG.md`](plans/BACKLOG.md).
+> **Status:** Planning complete — architecture, delivery structure, sprint backlog, and a 40-task implementation plan are locked. Application code not yet scaffolded.
+> **Start here:** [`tasks/README.md`](tasks/README.md) → execute [`tasks/00-plan-baseline.md`](tasks/00-plan-baseline.md), then Task 01 onward in dependency order.
 
 ## Features (v1)
 
@@ -113,11 +114,20 @@ docker compose up --build
 ## Development workflow
 
 Every feature and AI-generated change follows the mandatory workflow in **§12** of the plan.
-**AI agents:** read [`AGENTS.md`](AGENTS.md) → [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) first.
 
 ```
 PREREQ → PLAN → CONTRACT → DOMAIN → SERVICE → ADAPTERS → ROUTE → FRONTEND → VERIFY
 ```
+
+**AI agents — read in this order:**
+
+```
+AGENTS.md → docs/AGENT-HARNESS.md → tasks/NN-*.md → docs/AI-AGENT-WORKFLOW.md
+```
+
+Work is executed **one task per branch/PR** (`agent/task-NN-*`), in dependency order, against the
+task briefs in [`tasks/`](tasks/). The [agent harness](docs/AGENT-HARNESS.md) defines scope
+boundaries, the documentation-conflict protocol, and the evidence gate for completion.
 
 See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) for full coding rules, layer boundaries, and checklists.
 
@@ -126,6 +136,8 @@ See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) for full coding rules
 | Document | Description |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | **AI agent entry point** — quick rules & doc index |
+| [`tasks/README.md`](tasks/README.md) | **Implementation task plan** — 40 execution-sized briefs, authority order, execution rules |
+| [`docs/AGENT-HARNESS.md`](docs/AGENT-HARNESS.md) | **Agent scope control** — topic boundary, conflict protocol, drift tripwires, evidence gate |
 | [`docs/ADDING-A-FEATURE.md`](docs/ADDING-A-FEATURE.md) | How to add C6+ features (vertical slice) |
 | [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **AI code generation workflow** — pipeline, gates, forbidden patterns |
 | [`plans/USE-CASES.md`](plans/USE-CASES.md) | **Use case catalog** — acceptance criteria & MVP funnel |
@@ -135,7 +147,7 @@ See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) for full coding rules
 | [`docs/UI-UX-DESIGN-SYSTEM.md`](docs/UI-UX-DESIGN-SYSTEM.md) | **UI/UX design system** — tokens, layouts, PWA presentation |
 | [`docs/ARCHITECTURE-DIAGRAMS.md`](docs/ARCHITECTURE-DIAGRAMS.md) | **Architecture diagrams** — system, flow, activity (Mermaid) |
 | [`docs/PLAN-COMPATIBILITY.md`](docs/PLAN-COMPATIBILITY.md) | **Post-merge plan compatibility review** |
-| [`docs/adr/`](docs/adr/) | Architecture decision records (Gradle, JWT, extensibility, auth, Resend, **PWA**) |
+| [`docs/adr/`](docs/adr/) | Architecture decision records (001–010) — Gradle, JWT, extensibility, auth/Resend, PWA, **same-origin proxy, chat streaming, concurrency, session revocation, TKB sourcing** |
 
 ## License
 

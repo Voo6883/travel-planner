@@ -3704,6 +3704,11 @@ Significant decisions are recorded in `docs/adr/` and referenced from §11.
 | [003](../../docs/adr/003-feature-extensibility.md) | Vertical-slice feature extensibility | Accepted |
 | [004](../../docs/adr/004-multi-provider-auth-resend.md) | Multi-provider auth + Resend mailer | Accepted |
 | [005](../../docs/adr/005-nextjs-pwa.md) | Next.js Progressive Web App (Serwist) | Accepted |
+| [006](../../docs/adr/006-cookie-topology-same-origin.md) | Same-origin API via Next.js rewrite proxy | Accepted |
+| [007](../../docs/adr/007-chat-streaming-transport.md) | Chat streaming transport (POST-SSE) + LLM event model | Accepted |
+| [008](../../docs/adr/008-optimistic-concurrency.md) | Optimistic concurrency & partial updates without PATCH | Accepted |
+| [009](../../docs/adr/009-session-lifecycle-revocation.md) | Session lifecycle, revocation & account linking safety | Accepted |
+| [010](../../docs/adr/010-tkb-data-sourcing-embeddings.md) | TKB data sourcing, coverage & embedding lifecycle | Accepted |
 
 **AI agent workflow:** [`docs/AI-AGENT-WORKFLOW.md`](../../docs/AI-AGENT-WORKFLOW.md) (v1.0) —
 entry point [`AGENTS.md`](../../AGENTS.md). Update workflow version when §12 changes.
