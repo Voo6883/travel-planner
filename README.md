@@ -10,7 +10,7 @@ A **knowledge-based, LLM-powered travel planner**. Users chat to plan trips. Dec
 |---|---|---|
 | C1 | **Intake** | Chat (primary) or form → structured `TripBrief` |
 | C2 | **Research** | Knowledge-based ranking — TKB + RAG → grounded destination guides |
-| C3 | **Itinerary** | Day-by-day plan grounded in real POIs |
+| C3 | **Itinerary** | Day timeline + travel routes + transport mode + app suggestions per leg |
 | C4 | **Booking** | Search + book flights/hotels — human-confirmed |
 | C5 | **Trip chat** | LLM-driven create + decisions across the full planning flow |
 

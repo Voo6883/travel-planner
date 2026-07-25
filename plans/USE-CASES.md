@@ -2,6 +2,7 @@
 
 > Product use case catalog with acceptance criteria. Implements PM review P0/P1 items.
 > Technical rules: [`superpower/PLAN.md`](superpower/PLAN.md). Delivery: [`BACKLOG.md`](BACKLOG.md).
+> **Knowledge catalog:** [`TRAVEL-KNOWLEDGE-CATALOG.md`](TRAVEL-KNOWLEDGE-CATALOG.md).
 
 **Legend:** ✅ In plan (locked) · 🆕 Added this doc · ⏳ Phase · ❌ Deferred post-v1
 
@@ -139,7 +140,7 @@ When brief is ambiguous or incomplete, backend returns **typed** `ClarificationN
 | UC-C2-11 | **Compare places by interests** | P0 | 1 | Rank uses seasonality + price + POI/food match to brief |
 | UC-C2-12 | **Ask about a place in chat** | P0 | 1 | `get_destination_guide` — *"what's good to eat?"*, *"best area to stay?"* |
 | UC-C2-13 | **See best areas within destination** | P0 | 1 | `traveler_guide.areas[]` — stay vs explore vs day-trip |
-| UC-C2-14 | **See food recommendations** | P0 | 1 | `traveler_guide.food` — must-try dishes + food districts + POI refs |
+| UC-C2-15 | **See transport & apps for destination** | P0 | 1 | `traveler_guide.mobility` — modes + app chips (maps, transit…) |
 | UC-C2-05 | No confident result | P0 | 1 | Typed empty result — not hallucination |
 | UC-C2-06 | **Select destination** | P0 | 1 | See below 🆕 |
 | UC-C2-07 | Re-run research | P1 | 1 | New job; previous results kept as history |
@@ -176,6 +177,7 @@ Each ranked recommendation includes a structured **`traveler_guide`**:
 | `food` | Must-try dishes, food districts, dietary notes |
 | `highlights` | Top sights & activities matched to trip interests |
 | `practical` | Getting around, daily budget band, crowds, safety |
+| `mobility` | Transport modes + recommended apps (maps, transit card, ride-hail) |
 
 UI: expandable sections on research cards + chat can summarize any section.
 
@@ -200,6 +202,11 @@ UI: expandable sections on research cards + chat can summarize any section.
 | UC-C3-03 | POI grounded with source ref | P0 | 1 | Each item has `source_ref` (place id / URL) 🆕 |
 | UC-C3-06 | **Food slots in itinerary** | P0 | 1 | Meal items from `poi.category=food`; area-clustered with sights |
 | UC-C3-07 | **Area-clustered days** | P0 | 1 | Days grouped by `destination_area` — minimize cross-city transit |
+| UC-C3-08 | **Day timeline view** | P0 | 1 | `scheduled_start` / `scheduled_end` per item — vertical timeline UI |
+| UC-C3-09 | **Travel route between stops** | P0 | 1 | `itinerary_leg` — mode, duration, instructions between items |
+| UC-C3-10 | **Transport mode per leg** | P0 | 1 | `transport_mode` enum: WALK, METRO, TRAIN, BUS, TAXI, RIDE_HAIL, FERRY… |
+| UC-C3-11 | **App suggestion per leg** | P0 | 1 | Leg shows recommended apps (e.g. Google Maps, Grab) from `travel_app` KB |
+| UC-C3-12 | **Ask route in chat** | P0 | 1 | `get_route` — *"how do I get from Gion to Arashiyama?"* |
 | UC-C3-04 | Regenerate itinerary | P1 | 1 | `POST .../itinerary/regenerate` |
 | UC-C3-05 | Regenerate single day | P2 | 2 | Via C5 chat or dedicated action |
 
@@ -323,8 +330,13 @@ All factual claims in C2/C3/C5 must be **retrieved from the Travel Knowledge Bas
 | UC-K04 | Seasonality + price from history | P0 | 1 | `getSeasonality` + `getPriceTrend` feed C2 ranking |
 | UC-K05 | Provenance on every fact | P0 | 1 | `source_refs[]` on recommendations, itinerary POIs, chat answers |
 | UC-K06 | No invented facts | P0 | 1 | Empty / `low_confidence` when KB has no match — never hallucinate |
-| UC-K07 | KB seed data (dev) | P0 | 1 | Flyway seed for ≥3 destinations with guides, areas, POIs |
+| UC-K07 | KB seed data (dev) | P0 | 1 | Flyway seed ≥3 destinations: guides, areas, POIs, **routes, apps** |
 | UC-K08 | Live web supplements KB | P1 | 1 | WebSearchTool for events/advisories only — core intel from TKB |
+| UC-K09 | **Transport modes per destination** | P0 | 1 | `getTransportModes` — metro, bus, taxi, when to use, payment hint |
+| UC-K10 | **Route segments A→B** | P0 | 1 | `findRoutes` — duration, mode, cost band, instructions |
+| UC-K11 | **Travel app recommendations** | P0 | 1 | `getRecommendedApps` — maps, transit, ride_hail, translation per destination |
+| UC-K12 | **Timeline on itinerary** | P0 | 1 | Items have `scheduled_start/end`; legs between items |
+| UC-K13 | **Chat: which app to use** | P0 | 1 | `get_travel_apps` — *"which app for metro in Tokyo?"* |
 
 ---
 
@@ -340,3 +352,4 @@ All factual claims in C2/C3/C5 must be **retrieved from the Travel Knowledge Bas
 | UC-C4-* | C4 Booking | §7 |
 | UC-C5-* | C5 Trip chat | §3.2 |
 | UC-K* | Travel Knowledge Base | §4.1.0, §4.1.2, §5.0 |
+| UC-N* | Mailer | §4.0.10 |

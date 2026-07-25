@@ -109,7 +109,8 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S4-3 | Agent loop | `TravelResearchAgent`, tool budget | Bounded loop |
 | S4-4 | DSA ranking | `DestinationRanker` + interest/seasonality/price weights | Table-driven tests |
 | S4-4b | **Traveler knowledge DB** | `destination_guide`, `destination_area`, `poi`, embeddings; seed data | §4.1.2 stub adapter |
-| S4-4c | **Knowledge tools** | `DestinationGuideTool`, `FoodGuideTool`, `AreaGuideTool`, `PoiKnowledgeTool` | Agent retrieves for C2 |
+| S4-4c | **Knowledge tools** | Guide, Food, Area, POI, **Transport, Route, TravelApp** tools | Agent retrieves for C2 |
+| S4-4d | **Mobility KB seed** | `transport_mode`, `route_segment`, `travel_app` seed data | UC-K09–K11, PM-K03/04 |
 | S4-5 | Research API | `POST .../research/run`, `GET .../jobs/{id}`, ranked list | User-scoped |
 | S4-6 | Select destination | `POST .../selected-recommendation` → DESTINATION_SELECTED | UC-C2-06 |
 | S4-7 | C2 frontend | `features/research/`; polling UI; traveler guide panels; "Plan this trip" CTA | UC-C2-10/13/14 |
@@ -124,8 +125,8 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | ID | Story | Tasks | DoD |
 |---|---|---|---|
 | S5-1 | Data model | `itinerary_day`, `itinerary_item` migrations | Flyway + domain |
-| S5-2 | Itinerary service | `ItineraryDayPlanner`, area-cluster + food slots from POI knowledge | Overlap checks |
-| S5-3 | C3 API + frontend | `features/itinerary/` | Day-by-day from server |
+| S5-2 | Itinerary service | Timeline + legs from POI/route KB; area-cluster + food slots | UC-C3-08/09/10/11 |
+| S5-3 | C3 API + frontend | `features/itinerary/` — **timeline view**, leg chips, app badges | Day-by-day from server |
 | S5-4 | E2E | "help me create a plan" → research → itinerary | Playwright happy path |
 | S5-5 | **Chat itinerary tools** | `generate_itinerary`, `patch_itinerary` | UC-C5-06/07 |
 

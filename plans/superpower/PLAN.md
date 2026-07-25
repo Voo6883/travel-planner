@@ -10,6 +10,7 @@
 > **Kickoff gate:** Phase 0a starts when this plan is merged to `master` (sign-off = merge approval).
 > Sprint-ready tasks live in [`plans/BACKLOG.md`](../BACKLOG.md).
 > **Use cases:** [`plans/USE-CASES.md`](../USE-CASES.md) — acceptance criteria & MVP funnel.
+> **Knowledge catalog:** [`plans/TRAVEL-KNOWLEDGE-CATALOG.md`](../TRAVEL-KNOWLEDGE-CATALOG.md) — PM review & TKB scope.
 > **AI agents:** start with [`AGENTS.md`](../../AGENTS.md) → [`docs/AI-AGENT-WORKFLOW.md`](../../docs/AI-AGENT-WORKFLOW.md).
 
 ---
@@ -192,7 +193,9 @@ The LLM is the primary planner; structured UI reflects the same state.
 | `generate_itinerary` | `DESTINATION_SELECTED` | Run C3 → `ITINERARY_READY` |
 | `patch_itinerary` | `ITINERARY_READY`+ | Structured diff — not free-text replace |
 | `search_booking_quotes` | `ITINERARY_READY`+ | Return quotes; confirm via C4 UI |
-| `get_destination_guide` | `RESEARCH_READY`+ | Food, areas, sights, practical — from traveler knowledge DB (§4.1.2) |
+| `get_destination_guide` | `RESEARCH_READY`+ | Food, areas, sights, mobility, apps — from TKB (§4.1.2) |
+| `get_route` | `ITINERARY_READY`+ | How to get from A → B — mode, duration, apps |
+| `get_travel_apps` | `RESEARCH_READY`+ | Which apps to install (maps, transit, ride-hail…) |
 
 **Example — create from opener:**
 
@@ -1695,9 +1698,10 @@ User query / TripBrief
        │
        ▼
 ┌──────────────────┐     ┌─────────────────────────────────────────┐
-│  RETRIEVE (TKB)  │────►│ destination_guide · destination_area    │
-│  SQL + pgvector  │     │ poi · seasonality · price_history       │
-│  RAG             │     │ knowledge_source (provenance)             │
+│  RETRIEVE (TKB)  │────►│ destination_guide · destination_area · poi  │
+│  SQL + pgvector  │     │ seasonality · price_history                 │
+│  RAG             │     │ transport_mode · route_segment · travel_app │
+│                  │     │ knowledge_source (provenance)               │
 └────────┬─────────┘     └─────────────────────────────────────────┘
          │ retrieved chunks + structured rows
          ▼
@@ -1728,10 +1732,13 @@ User query / TripBrief
 public interface KnowledgePort {
     Optional<DestinationGuide> getGuide(DestinationId id);
     List<DestinationArea> getAreas(DestinationId id, AreaQuery query);
-    List<Poi> searchPois(PoiSearchQuery query);           // SQL filters + tags
-    List<KnowledgeMatch> semanticSearch(SemanticQuery q); // pgvector RAG
+    List<Poi> searchPois(PoiSearchQuery query);
+    List<KnowledgeMatch> semanticSearch(SemanticQuery q);
     Optional<Seasonality> getSeasonality(DestinationId id, Month month);
     Optional<PriceTrend> getPriceTrend(DestinationId id, PriceQuery query);
+    List<TransportMode> getTransportModes(DestinationId id);
+    List<RouteSegment> findRoutes(RouteQuery query);       // poi/area A → B templates
+    List<TravelApp> getRecommendedApps(DestinationId id, AppCategory category);
 }
 ```
 
@@ -1758,6 +1765,9 @@ TripBrief ──► TravelResearchAgent
                    • AreaGuideTool              (DB: neighborhoods, where to stay/explore)
                    • FoodGuideTool              (DB+RAG: must-try dishes, food districts)
                    • PoiKnowledgeTool           (DB+RAG: sights, activities by interest)
+                   • TransportGuideTool         (DB: modes available — metro, bus, taxi…)
+                   • RouteSegmentTool           (DB: A→B legs, duration, mode, cost band)
+                   • TravelAppTool              (DB: recommended apps — maps, transit, ride-hail)
                    • FlightSearchTool           (indicative fares)
                    • HotelSearchTool            (indicative rates)
                    • CurrencyTool               (normalize to user's currency)
@@ -1775,6 +1785,7 @@ TripBrief ──► TravelResearchAgent
 | `areas` | Best neighborhoods/regions **within** the destination (stay vs day-trip) |
 | `food` | Must-try dishes, food scenes, dietary notes — matched to brief interests |
 | `highlights` | Top POIs/activities ranked to user interests (sight, nature, food, nightlife) |
+| `mobility` | Transport modes summary + top recommended apps (maps, transit card, ride-hail) |
 | `practical` | Getting around, typical daily budget band, crowd level, safety notes |
 | `source_refs` | Grounding links / POI ids for every claim |
 
@@ -1808,8 +1819,10 @@ Each recommendation includes `traveler_guide` + `source_refs[]` for grounding (U
 
 ### 4.1.2 Traveler knowledge base (LOCKED)
 
+> Full catalog + PM review: [`TRAVEL-KNOWLEDGE-CATALOG.md`](../TRAVEL-KNOWLEDGE-CATALOG.md).
+
 Historical and curated data that answers **what a traveller wants to know** — used by
-C2 (choose where), C3 (plan within the place), and C5 (chat Q&A).
+C2 (choose where), C3 (plan within the place + **timeline & routes**), and C5 (chat Q&A).
 
 #### Knowledge layers
 
@@ -1817,7 +1830,9 @@ C2 (choose where), C3 (plan within the place), and C5 (chat Q&A).
 |---|---|---|
 | **Macro — where to go** | `destination`, `seasonality`, `price_history` | Destination fit, best time, cost trend |
 | **Place — what it's like** | `destination_guide` | Overview, culture, vibe, who it's for |
-| **Micro — within the place** | `destination_area`, `poi` | Neighborhoods, day-trip zones, sights, food spots |
+| **Micro — within the place** | `destination_area`, `poi` | Neighborhoods, sights, food spots |
+| **Mobility — how to move** 🆕 | `transport_mode`, `route_segment`, `travel_app` | Routes, transport type, which app to use |
+| **Timeline — when** 🆕 | `itinerary_day`, `itinerary_item`, `itinerary_leg` | Day schedule, legs between stops |
 | **Semantic retrieval** | `destination_embedding`, `poi_embedding` (pgvector) | RAG: "romantic areas", "street food", "temples" |
 | **Ingestion audit** | `knowledge_source` | Source URL/dataset, `refreshed_at`, trust tier |
 
@@ -1854,15 +1869,77 @@ C2 (choose where), C3 (plan within the place), and C5 (chat Q&A).
 | `nightlife` | Bars, districts |
 
 Each POI: `name`, `description`, `area_id`, `tags[]`, `best_time`, `avg_visit_mins`,
-`price_band`, `source_ref`, optional `embedding`.
+`opening_hours`, `price_band`, `source_ref`, optional `embedding`.
+
+#### `transport_mode` (how to get around — per destination) 🆕
+
+| `mode` enum | When travellers use it |
+|---|---|
+| `WALK` | Short distances, scenic areas |
+| `METRO` / `SUBWAY` | Urban core |
+| `TRAIN` | Inter-city, JR/regional rail |
+| `BUS` | Local routes, airport links |
+| `TAXI` | Late night, luggage, no metro |
+| `RIDE_HAIL` | Grab, Uber, Bolt — app-based |
+| `FERRY` | Islands, coastal routes |
+| `RENTAL_BIKE` | Bike-friendly cities |
+| `DOMESTIC_FLIGHT` | Long domestic legs |
+
+Fields: `display_name`, `when_to_use`, `payment_hint`, `typical_cost_band`,
+`recommended_app_ids[]`, `source_ref`.
+
+#### `route_segment` (travel route template A → B) 🆕
+
+KB stores **template legs** between areas or POIs. C3 instantiates as `itinerary_leg`.
+
+| Field | Example |
+|---|---|
+| `from_ref` / `to_ref` | `area:gion` → `poi:fushimi-inari` |
+| `transport_mode` | `TRAIN` |
+| `duration_mins` | 25 |
+| `distance_km` | 8.2 |
+| `cost_band` | Money range |
+| `instructions` | "JR Nara Line from Kyoto Station" |
+| `recommended_app_ids[]` | Google Maps, Japan Transit Planner |
+
+`PoiRouteOptimizer` (§4.0.3) orders POIs; `route_segment` rows chain the **travel route**.
+
+#### `travel_app` (which app to use) 🆕
+
+| `category` | Examples |
+|---|---|
+| `maps` | Google Maps, Apple Maps, Citymapper |
+| `transit` | Japan Transit Planner, Moovit |
+| `transit_card` | Suica, Oyster — payment apps/cards |
+| `ride_hail` | Grab, Uber, Bolt |
+| `translation` | Google Translate |
+| `food` | Tabelog, Yelp |
+| `booking` | Airline / hotel apps (C4) |
+| `esim` | Airalo, Holafly |
+
+Fields: `name`, `category`, `platforms[]`, `why_recommended`, `store_url`, `pairs_with_mode`,
+`destinations[]` (scope), `source_ref`.
+
+**PM rule:** every seeded destination has ≥3 apps: **maps + transit + 1 local** (PM-K04).
+
+#### Timeline & legs (C3 output — instance data) 🆕
+
+| Table | Role |
+|---|---|
+| `itinerary_day` | Day number, date, area focus |
+| `itinerary_item` | `scheduled_start`, `scheduled_end`, `poi_id`, `item_type`, `duration_mins` |
+| `itinerary_leg` | Between items: `transport_mode`, `duration_mins`, `route_segment_id?`, `recommended_app_ids[]`, `instructions` |
+
+**UI:** vertical timeline — time column, POI cards, leg chips (🚇 15 min · Google Maps).
 
 #### Agent usage by feature
 
 | Feature | Knowledge used |
 |---|---|
 | **C2 — pick destination** | Compare `traveler_guide` across candidates; rank by brief interests + seasonality + price |
-| **C3 — itinerary** | `PoiKnowledgeTool` + `AreaGuideTool` — schedule POIs by area cluster, meal slots from `food` POIs |
-| **C5 — chat** | `get_destination_guide` tool — *"what's good to eat in Kyoto?"*, *"best area to stay?"* |
+| **C2 — guide card** | Overview, food, areas, highlights + `mobility` (modes + apps) |
+| **C3 — itinerary** | POI + `route_segment` → **timeline** + **travel route** + app chips per leg |
+| **C5 — chat** | `get_destination_guide`, `get_route`, `get_transport_modes`, `get_travel_apps` |
 
 #### Ingestion (Phase 1 — stub + seed; live pipelines post-v1)
 
@@ -2846,12 +2923,14 @@ DRAFT ─(search/quote)→ QUOTED ─(optional hold)→ HELD ─(USER confirms)�
 - `trip_brief`, `trip_clarification` (pending questions/answers)
 - `research_job` — `id`, `trip_id`, `status`, `progress_pct`, `error_code`, `started_at`, `completed_at`
 - `ranked_recommendation` — per research run; `source_refs` JSON
-- `itinerary_day`, `itinerary_item` — `source_ref` on POI items
-- Booking: `booking` (+ `booking_status` history), `payment_reference`
-- Chat: `planner_session`, `conversation`, `message`
+- `itinerary_day`, `itinerary_item` — `scheduled_start/end`, `poi_id`, `source_ref`
+- `itinerary_leg` — transport between items: `transport_mode`, `duration_mins`, `route_segment_id`, `recommended_app_ids[]`
 - Knowledge/RAG: `destination`, `destination_guide`, `destination_area`, `poi`,
+  `transport_mode`, `route_segment`, `travel_app`,
   `destination_embedding`, `poi_embedding` (pgvector), `knowledge_source`
 - History: `price_history`, `seasonality` (macro signals for C2)
+- Booking: `booking` (+ `booking_status` history), `payment_reference`
+- Chat: `planner_session`, `conversation`, `message`
 - Ops: `ai_call_log` (tokens/cost/provider)
 
 ---
