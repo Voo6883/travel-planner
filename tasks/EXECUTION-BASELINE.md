@@ -260,6 +260,7 @@ the stale `main`. **Resolution:** authenticate `gh`, or confirm no PRs are open.
 | **F-4** | Stale user-`PATH` entry `C:\Program Files\Java\jdk-18.0.1.1\bin` remains. Harmless — machine `PATH` puts JDK 21 ahead of it — but worth removing to avoid confusion |
 | **F-5** | `dev` mirrors `master` exactly and has no role under the B-2 decision. Delete it, or define its purpose, before it drifts |
 | **F-6** | 11 fully-merged `origin/cursor/*` branches are absorbed into `master` and can be pruned |
+| **F-7** | Task 01's prerequisite gate is unexecuted on Linux/macOS — no host available. Bash builtins only, so it should hold, but [Task 05](05-ci-repository-workflow.md) must run `npm run prereq` and `npm run prereq:test` on an Ubuntu runner to close this |
 
 ---
 

@@ -32,9 +32,9 @@
 | ID | Task | Depends on | Status | Notes |
 |---|---|---|---|---|
 | 00 | [Baseline and execution map](00-plan-baseline.md) | — | `done` | Commit `aa20043`. B-1 and B-2 resolved; open item B-3 does not affect this task's DoD. |
-| 01 | [Prerequisite and root tooling](01-prerequisite-root-tooling.md) | 00 | `not_started` | **Next executable task.** Nothing blocking. |
-| 02 | [Backend minimal scaffold](02-backend-minimal-scaffold.md) | 01 | `not_started` | B-1 resolved — JDK 21.0.11 LTS installed. |
-| 03 | [Frontend minimal scaffold](03-frontend-minimal-scaffold.md) | 01 | `not_started` | B-1 resolved — Node 22.23.1. May run in parallel with 02. |
+| 01 | [Prerequisite and root tooling](01-prerequisite-root-tooling.md) | 00 | `review` | Commit `a6dcb3c`. Gate verified pass+fail on PowerShell 5.1 and Git Bash; 27/27 assertions per platform. Linux/macOS unexecuted — see **F-7**. |
+| 02 | [Backend minimal scaffold](02-backend-minimal-scaffold.md) | 01 | `not_started` | **Next executable task.** Gradle wrapper must be 8.x — the gate activates that check once `apps/backend/gradlew` exists. |
+| 03 | [Frontend minimal scaffold](03-frontend-minimal-scaffold.md) | 01 | `not_started` | Root `package.json` stays orchestration-only; deps go in `apps/frontend/`. May run in parallel with 02. |
 | 04 | [Docker runtime and orchestration](04-docker-runtime.md) | 01, 02, 03 | `not_started` | B-1 resolved. |
 | 05 | [CI and repository workflow](05-ci-repository-workflow.md) | 01, 02, 03, 04 | `not_started` | |
 
@@ -101,8 +101,8 @@
 | `done` | 1 |
 | `in_progress` | 0 |
 | `blocked` | 0 |
-| `review` | 0 |
-| `not_started` | 39 |
+| `review` | 1 |
+| `not_started` | 38 |
 
 **Active blockers:** B-3 (`gh` unauthenticated) only, and it does not gate execution.
 
