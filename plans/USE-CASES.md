@@ -334,9 +334,10 @@ All factual claims in C2/C3/C5 must be **retrieved from the Travel Knowledge Bas
 | UC-K08 | Live web supplements KB | P1 | 1 | WebSearchTool for events/advisories only — core intel from TKB |
 | UC-K09 | **Transport modes per destination** | P0 | 1 | `getTransportModes` — metro, bus, taxi, when to use, payment hint |
 | UC-K10 | **Route segments A→B** | P0 | 1 | `findRoutes` — duration, mode, cost band, instructions |
-| UC-K11 | **Travel app recommendations** | P0 | 1 | `getRecommendedApps` — maps, transit, ride_hail, translation per destination |
+| UC-K11 | **Locale app pack** | P0 | 1 | `getRecommendedApps(country)` — local apps per usage; `local_name` (e.g. 滴滴出行) |
 | UC-K12 | **Timeline on itinerary** | P0 | 1 | Items have `scheduled_start/end`; legs between items |
-| UC-K13 | **Chat: which app to use** | P0 | 1 | `get_travel_apps` — *"which app for metro in Tokyo?"* |
+| UC-K13 | **Chat: apps for destination** | P0 | 1 | *"Going to China — what apps?"* → essential pack; no Uber in CN |
+| UC-K14 | **Suppress global where inactive** | P0 | 1 | `replaces_global[]` — don't suggest Uber when 滴滴 is required |
 
 ---
 

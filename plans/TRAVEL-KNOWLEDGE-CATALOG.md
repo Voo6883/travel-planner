@@ -151,7 +151,57 @@ Chat: *"I'm going to China — what apps?"* → essential pack from KB.
 
 See **§2.1** for full locale tables.
 
-### Layer E — Timeline (when during the day) 🆕 P0
+### 2.1 Locale app packs (by country) 🆕
+
+When user picks a destination, surface **essential** apps to download — matched to **local usage**.
+
+#### China (CN) — essential pack
+
+| Usage | App | Local name | Why |
+|---|---|---|---|
+| Ride-hail | Didi | 滴滴出行 | Main taxi app; Uber not available |
+| Maps | Amap | 高德地图 | Best navigation & transit in China |
+| Payment | Alipay | 支付宝 | Pay everywhere; link to Didi |
+| Payment | WeChat Pay | 微信支付 | Alternative payment |
+| Food | Dianping | 大众点评 | Restaurant reviews & booking |
+| Trains | 12306 | 铁路12306 | High-speed rail tickets |
+| Translation | Youdao / Google | 有道翻译 | Menus & signs |
+
+**Setup notes (China):** VPN may be needed for some global apps; install Didi + Amap + Alipay **before** landing; Chinese SIM helps for verification.
+
+#### Japan (JP) — essential pack
+
+| Usage | App | Local name | Why |
+|---|---|---|---|
+| Maps | Google Maps | — | Works well in Japan |
+| Transit | Japan Transit Planner | 乗換案内 | Train routing |
+| Transit card | Suica / PASMO | — | IC card for trains & shops |
+| Food | Tabelog | 食べログ | Restaurant ratings |
+| Ride | GO / Japan Taxi | — | Official taxi apps |
+
+#### Thailand (TH) — essential pack
+
+| Usage | App | Why |
+|---|---|---|
+| Ride-hail | Grab | Dominant ride + food delivery |
+| Maps | Google Maps | Reliable |
+| Food | Wongnai | Local restaurant guide |
+
+#### LLM behavior
+
+```
+User: "I'm planning a trip to China"
+  → get_travel_apps(country=CN)
+  → "Before you go, download these essential apps:
+     🚗 滴滴出行 (ride-hail) — like Uber but for China
+     🗺️ 高德地图 (maps)
+     💳 支付宝 (payment — needed for Didi & most shops)
+     …"
+```
+
+**Do not** suggest Uber in China. KB `replaces_global` enforces this.
+
+---
 
 | Entity | Purpose | Traveller question |
 |---|---|---|
@@ -211,7 +261,9 @@ See **§2.1** for full locale tables.
 | PM-K01 | Every itinerary day shows **timeline** (start/end per item) |
 | PM-K02 | Every gap between items shows **route leg** (mode + duration) |
 | PM-K03 | Destination has ≥1 **transport_mode** in KB seed |
-| PM-K04 | Destination has ≥3 **travel_app** recommendations (maps + transit + 1 local) |
+| PM-K04 | Country has **locale app pack** — essential apps per usage (ride, maps, pay…) |
+| PM-K08 | China trip suggests **滴滴出行** not Uber; KB `replaces_global` enforced |
+| PM-K09 | **"Download before you go"** UI shows essential pack on destination select |
 | PM-K05 | Route legs cite `source_ref` or `route_segment_id` — not invented |
 | PM-K06 | Chat answers *"how do I get from X to Y?"* from KB |
 | PM-K07 | Chat answers *"which app for metro here?"* from `travel_app` |
