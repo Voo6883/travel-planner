@@ -22,6 +22,8 @@ An **LLM-powered travel planner** monorepo. Users describe where they want to go
 | Backend | Java 21, Spring Boot 3.x, Gradle, LangChain4j |
 | Database | PostgreSQL + pgvector |
 | AI | Anthropic + OpenAI (switchable at runtime) |
+| Auth | Local (email/username + password), Firebase Google, GitHub OAuth |
+| Mailer | Resend (`resend.com`) |
 | Runtime | Docker Compose |
 
 ## Repository layout (planned)
@@ -91,7 +93,9 @@ docker compose up --build
 - **Clean/hexagonal backend** — Controller routes only; Service owns business logic
 - **Feature-based frontend** — `features/` modules aligned to C1–C5
 - **Tailwind + Ant Design** — unified design tokens; Tailwind overrides Ant by default
-- **User-based auth** — no multi-tenant; admin can manage accounts (dev seed)
+- **Multi-provider auth** — email/username + password, Firebase Google, GitHub; JWT session cookie
+- **Resend mailer** — welcome, verify, password-reset emails
+- **API** — `/api/v1/`, GET/POST/PUT/DELETE, standard error `{ code, message, details }`
 - **Vertical-slice extensibility** — add C6+ without editing existing features (§4.0.8)
 - **Industry standards** — ArchUnit, JaCoCo, Micrometer, CSRF, virtual threads (§4.0.9)
 
@@ -115,7 +119,7 @@ See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) for full coding rules
 | [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **AI code generation workflow** — pipeline, gates, forbidden patterns |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Master plan — architecture, rules, NFRs, CI/CD |
 | [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint-ready epics & stories (Sprints 0–8) |
-| [`docs/adr/`](docs/adr/) | Architecture decision records (Gradle, JWT auth) |
+| [`docs/adr/`](docs/adr/) | Architecture decision records (Gradle, JWT, extensibility, auth, Resend) |
 
 ## License
 

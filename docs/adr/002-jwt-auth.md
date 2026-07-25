@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted — **session transport** still in force. Identity providers extended by [ADR 004](004-multi-provider-auth-resend.md).
 
 ## Context
 
@@ -20,7 +20,7 @@ directly (no BFF).
 - `GET /api/v1/auth/me` — return current user + roles for `useUserContext()`
 - Frontend `lib/api/client.ts` uses `credentials: 'include'`
 
-**OAuth (Google/GitHub)** is deferred to post-v1; add as supplementary login, not a replacement.
+**OAuth (Google/GitHub)** and additional providers: see [ADR 004](004-multi-provider-auth-resend.md) — Firebase Google + GitHub + local in v1.
 
 ## Rationale
 

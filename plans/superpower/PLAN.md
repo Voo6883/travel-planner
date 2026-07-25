@@ -37,7 +37,8 @@
 | **Naming** | **camelCase** functions · **kebab-case** files & URLs · **snake_case** i18n files (§4.0.4) |
 | **i18n** | **next-intl** — required from v1; no hardcoded user-facing strings (§4.2.10) |
 | **Auth** | **User-based accounts** — one user owns their trips; **no multi-tenant** (§4.0.5) |
-| **Auth mechanism** | **Self-issued JWT** in **httpOnly cookie** — v1; OAuth add-on post-v1 (§4.0.5) |
+| **Auth mechanism** | **Multi-provider** — local (email/username + password), **Firebase Google**, **GitHub OAuth**; session = JWT httpOnly cookie (§4.0.5) |
+| **Mailer** | **Resend** (`resend.com`) — behind `MailerPort`; welcome, verify, password-reset (§4.0.10) |
 | **Build tool** | **Gradle** (Kotlin DSL) — Java 21 toolchain; wrapper committed (§4.0) |
 | **External adapters** | **Port + stub first** — real vendor APIs wired when chosen; never block features (§4.0.7) |
 | **Extensibility** | **Vertical-slice modules** — add C6+ without editing existing features (§4.0.8) |
@@ -200,7 +201,7 @@ docker compose --profile cache up -d
 ##### Environment & secrets
 
 - Copy `.env.example` → `.env` (gitignored) before first `docker compose up`.
-- **Never commit** `.env` — API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) injected via env.
+- **Never commit** `.env` — API keys injected via env (see §4.0.5, §4.0.10).
 - Frontend in Docker: `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api/v1`.
 - Backend in Docker: `SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/travel_planner`.
 
@@ -863,37 +864,189 @@ package-visible test fixtures.
 | **Private helpers** | Same ≤3 rule |
 | **Generated / framework code** | Exempt |
 
-### 4.0.5 Auth — user-based, no tenant (LOCKED)
+### 4.0.5 Auth — multi-provider login, user-based, no tenant (LOCKED)
 
-This is a **single-user-account** system — not multi-tenant SaaS.
+This is a **single-user-account** system — not multi-tenant SaaS. Users may sign in via
+**multiple providers**; all paths issue the same **self-issued JWT** session (httpOnly cookie).
+
+#### Login providers (v1 — all three)
+
+| Provider | ID | Flow | Backend adapter |
+|---|---|---|---|
+| **Email or username + password** | `LOCAL` | `POST /api/v1/auth/login` with `{ login, password }` | `LocalPasswordIdentityAdapter` |
+| **Google (Gmail) via Firebase** | `FIREBASE_GOOGLE` | Frontend Firebase Auth → `POST /api/v1/auth/firebase` with `{ idToken }` | `FirebaseIdentityAdapter` |
+| **GitHub** | `GITHUB` | `GET /api/v1/auth/oauth/github/start` → callback → JWT cookie | `GithubOAuthIdentityAdapter` |
+
+**Design pattern:** same as LLM routing (§5.4) — `IdentityProviderPort` + adapters in
+`infrastructure/auth/`; **never** vendor SDKs in `application/` or controllers.
+
+```
+domain/port/IdentityProviderPort.java     # verify credentials / token → IdentityClaims
+infrastructure/auth/
+├── local/LocalPasswordIdentityAdapter.java
+├── firebase/FirebaseIdentityAdapter.java   # Firebase Admin SDK — verify idToken only here
+└── github/GithubOAuthIdentityAdapter.java
+application/auth/
+├── AuthService.java                      # orchestrates providers → issue JWT
+├── AccountLinkingService.java            # link provider to existing user by email
+└── JwtTokenService.java
+```
+
+#### Session (unchanged transport — ADR 002)
 
 | Decision | Detail |
 |---|---|
-| **Account model** | One **User** owns their trips, briefs, bookings, conversations |
-| **No tenant** | No `tenant_id`, no org/workspace hierarchy, no tenant admin |
-| **UserContext** | `{ userId, email, roles[] }` — passed as param 2 or `@AuthenticationPrincipal` |
-| **Data isolation** | Every query scoped by `user_id`; services reject cross-user access — **except `ROLE_ADMIN`** (§4.0.6) |
-| **Roles** | `ROLE_USER` (default) · `ROLE_ADMIN` (user management) |
-| **Auth from v1** | Registered user accounts (not guest-only) |
-| **Token transport** | Self-issued **JWT** returned on login; stored in **httpOnly, Secure, SameSite** cookie |
-| **Login API** | `POST /api/v1/auth/login` → sets cookie; `POST /api/v1/auth/logout` clears it |
-| **Session check** | `GET /api/v1/auth/me` → current user + roles for `useUserContext()` |
-| **OAuth** | Google/GitHub — **post-v1** add-on; router stays open, not in Phase 0 |
-| **Frontend** | Credentials via cookie (`credentials: 'include'` in `lib/api/client.ts`); no tenant selector |
+| **Account model** | One **User** owns trips, briefs, bookings, conversations |
+| **No tenant** | No `tenant_id`, no org/workspace hierarchy |
+| **UserContext** | `{ userId, email, roles[] }` — `@AuthenticationPrincipal` |
+| **Data isolation** | Every query scoped by `user_id` — except `ROLE_ADMIN` (§4.0.6) |
+| **Roles** | `ROLE_USER` (default) · `ROLE_ADMIN` |
+| **Token transport** | Self-issued **JWT** in **httpOnly, Secure, SameSite=Lax** cookie (`tp_session`) |
+| **Session APIs** | `POST /auth/logout` · `GET /auth/me` · `POST /auth/refresh` (optional v1.1) |
+| **Frontend** | `credentials: 'include'` in `lib/api/client.ts` |
+
+#### Local login (email **or** username)
+
+| Field | Rule |
+|---|---|
+| **`login`** | Accepts **email** or **username** (case-insensitive username) |
+| **Password** | BCrypt strength 10+; min 8 chars; lockout after 5 failures / 15 min (§4.0.9) |
+| **Registration** | `POST /api/v1/auth/register` — email, username, password; sends verify email via Resend (§4.0.10) |
+| **`password_hash`** | Nullable — OAuth-only users have no local password |
 
 ```java
-// UserContext — record, not a loose map
-public record UserContext(@NotNull UUID userId, String email, List<String> roles) {}
-
-// ✅ Service always scopes to user
-public Trip getTrip(GetTripQuery query, UserContext user) {
-    return tripPort.findByIdAndUserId(query.tripId(), user.userId())
-        .orElseThrow(() -> new TripNotFoundException(query.tripId()));
-}
+// POST /api/v1/auth/login
+public record LocalLoginRequest(
+    @NotBlank String login,      // email OR username
+    @NotBlank String password
+) {}
 ```
 
-**API calls:** frontend calls Spring Boot **directly** (no BFF) with auth header/cookie.
-Next.js Route Handlers only for health/static — not for proxying business APIs.
+#### Firebase Google (Gmail)
+
+| Step | Detail |
+|---|---|
+| 1 | Frontend: Firebase JS SDK `signInWithPopup(GoogleAuthProvider)` |
+| 2 | Frontend: `user.getIdToken()` → `POST /api/v1/auth/firebase` `{ idToken }` |
+| 3 | Backend: `FirebaseIdentityAdapter.verify(idToken)` → email, `firebase_uid` |
+| 4 | Backend: find or create `user` + `user_identity` row; issue JWT cookie |
+
+**Env:** `FIREBASE_PROJECT_ID`, service account JSON or `GOOGLE_APPLICATION_CREDENTIALS`.
+Firebase Admin SDK imports **only** in `infrastructure/auth/firebase/`.
+
+#### GitHub OAuth
+
+| Step | Detail |
+|---|---|
+| 1 | Frontend: redirect to `GET /api/v1/auth/oauth/github/start` (or link from login page) |
+| 2 | Backend: redirect to GitHub authorize URL with `client_id`, `state`, `scope=user:email` |
+| 3 | GitHub callback: `GET /api/v1/auth/oauth/github/callback?code=&state=` |
+| 4 | Backend: exchange code → access token → fetch user email/id → find/create user → JWT cookie |
+
+**Env:** `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_CALLBACK_URL`.
+
+#### Account linking
+
+| Rule | Detail |
+|---|---|
+| **Same email** | Second provider with matching verified email links to existing `user` — new `user_identity` row |
+| **Conflict** | Email exists but provider mismatch → typed error `identity_already_linked` |
+| **Primary email** | Stored on `user.email`; updated when provider supplies verified email |
+
+#### Auth API summary
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/v1/auth/register` | Local sign-up |
+| POST | `/api/v1/auth/login` | Local email/username + password |
+| POST | `/api/v1/auth/firebase` | Exchange Firebase `idToken` for session |
+| GET | `/api/v1/auth/oauth/github/start` | Start GitHub OAuth |
+| GET | `/api/v1/auth/oauth/github/callback` | GitHub OAuth callback |
+| POST | `/api/v1/auth/logout` | Clear session cookie |
+| GET | `/api/v1/auth/me` | Current user + roles + linked providers |
+| POST | `/api/v1/auth/password/forgot` | Send reset email (Resend) |
+| POST | `/api/v1/auth/password/reset` | Reset with token from email |
+
+#### Frontend login (`features/auth/`)
+
+```
+features/auth/
+├── components/
+│   ├── login-panel.tsx           # tabs or buttons: local | Google | GitHub
+│   ├── local-login-form.tsx
+│   ├── register-form.tsx
+│   └── forgot-password-form.tsx
+├── hooks/
+│   ├── use-local-login.ts
+│   ├── use-firebase-google-login.ts   # Firebase SDK wrapper
+│   └── use-github-login.ts            # redirect to /auth/oauth/github/start
+└── index.ts
+```
+
+- Firebase config via `NEXT_PUBLIC_FIREBASE_*` env vars only — no secrets in bundle beyond public Firebase keys.
+- GitHub: full redirect flow — no GitHub secret in frontend.
+
+```java
+public record UserContext(@NotNull UUID userId, String email, List<String> roles) {}
+```
+
+**API calls:** frontend calls Spring Boot **directly** (no BFF) with session cookie.
+
+**ADR:** [`docs/adr/004-multi-provider-auth-resend.md`](../../docs/adr/004-multi-provider-auth-resend.md)
+
+### 4.0.10 Mailer — Resend.com (LOCKED)
+
+All transactional email goes through **Resend** (`https://resend.com`) behind a domain port.
+
+| Rule | Detail |
+|---|---|
+| **Port** | `domain/port/MailerPort.java` — `send(MailMessage message)` |
+| **Adapter** | `infrastructure/mail/ResendMailerAdapter.java` — **only** place that imports Resend SDK/HTTP |
+| **Stub** | `StubMailerAdapter` — logs email in dev when `mailer.provider=stub` (§4.0.7) |
+| **Secrets** | `RESEND_API_KEY` via env — never committed |
+| **From address** | `MAIL_FROM` env (e.g. `noreply@yourdomain.com`) — domain verified in Resend |
+
+#### Mail types (v1)
+
+| Mail | Trigger | Template |
+|---|---|---|
+| **Welcome** | After `POST /auth/register` | `mail/templates/welcome.html` |
+| **Email verification** | Registration; link with signed token | `mail/templates/verify-email.html` |
+| **Password reset** | `POST /auth/password/forgot` | `mail/templates/reset-password.html` |
+| **Admin password reset** | Admin action (§4.0.6) — optional notify user | `mail/templates/admin-reset-notify.html` |
+
+```java
+// domain/port/MailerPort.java
+public interface MailerPort {
+    void send(MailMessage message);
+}
+
+public record MailMessage(
+    String to,
+    String subject,
+    String htmlBody,
+    String textBody
+) {}
+```
+
+#### Application usage
+
+- `AuthService` / `PasswordResetService` call `MailerPort` — never Resend directly.
+- Password reset tokens: single-use, expiry 1h, stored hashed in `password_reset_token` table.
+- **No PII in logs** — log `mail_sent` event with recipient hash or user id only.
+
+#### Env vars (`.env.example`)
+
+```bash
+RESEND_API_KEY=re_...
+MAIL_FROM=noreply@example.com
+MAILER_PROVIDER=resend          # resend | stub
+```
+
+#### Frontend
+
+- No Resend calls from browser — all mail server-side.
+- Forgot-password / verify-email UI in `features/auth/`.
 
 ### 4.0.6 Admin role & database seeder (LOCKED)
 
@@ -2219,7 +2372,10 @@ DRAFT ─(search/quote)→ QUOTED ─(optional hold)→ HELD ─(USER confirms)�
 
 ## 8. Data model sketch
 
-- **User:** `user` — `id`, `username` (unique), `password_hash`, `email`, `role` (`USER` | `ADMIN`), `enabled`, audit columns (§4.0.5, §4.0.6)
+- **User:** `user` — `id`, `username` (unique, nullable for OAuth-only), `password_hash` (nullable), `email` (unique), `email_verified`, `role`, `enabled`, audit columns
+- **Identity:** `user_identity` — `id`, `user_id` FK, `provider` (`LOCAL`|`FIREBASE_GOOGLE`|`GITHUB`), `provider_subject_id`, `email`, `created_at`; unique(`provider`, `provider_subject_id`)
+- **Password reset:** `password_reset_token` — `id`, `user_id`, `token_hash`, `expires_at`, `used_at`
+- **Mail audit:** `mail_event` — `id`, `user_id`, `template`, `status`, `created_at` (no body — Resend handles delivery)
 - **Seed:** dev admin row — username `ADMIN`, BCrypt(`123456`), role `ADMIN` (§4.0.6)
 - **Audit:** `audit_event` — admin actions (reset password, enable/disable user)
 - Core: `trip` (FK `user_id`), `trip_brief`, `itinerary_day`, `itinerary_item`
@@ -2285,7 +2441,8 @@ CI pipeline runs on PR.
 | Domain VOs | `Money`, `DateRange`, `UserContext` + unit tests |
 | Error envelope | `DomainException`, `@ControllerAdvice`, `ApiErrorResponse` (§6.1) |
 | OpenAPI bootstrap | Spec in `api/openapi/`; health + auth + trip stub paths |
-| Auth (JWT cookie) | Login/logout/me endpoints (§4.0.5) |
+| Multi-provider auth | Local + Firebase Google + GitHub OAuth; JWT cookie (§4.0.5) |
+| Mailer | `MailerPort` + Resend adapter + stub; register/reset templates (§4.0.10) |
 | MapStruct | Mapper config + example controller→response flow |
 | Trip scaffold | `GET/POST /api/v1/trips` — thin controller, service unit test |
 | Transactions | `@Transactional(rollbackFor = Exception.class)` pattern + Spring Retry for deadlocks (§4.0.2-E2) |
@@ -2304,6 +2461,7 @@ CI pipeline runs on PR.
 | LangChain4j | Anthropic + OpenAI adapters in `ai/langchain4j/` only |
 | AI observability | `ai_call_log`, `X-Request-Id` MDC, token/latency logging |
 | Next.js scaffold | App Router, `(planner)/` + `(admin)/` shells, trip stepper placeholder |
+| Auth UI | `features/auth/` — local, Firebase Google, GitHub login (§4.0.5) |
 | Design system | Tailwind + tokens + Ant overrides + `PageShell` (§4.2.9) |
 | i18n | next-intl, `en/` + `ms/` namespaces (§4.2.10) |
 | Codegen | OpenAPI → TS; `npm run codegen`; CI drift check (§15) |
@@ -2357,7 +2515,8 @@ Packing, review summaries, disruption replanning, narrative, translation, groups
 | Topic | Decision | ADR / section |
 |---|---|---|
 | Build tool | **Gradle** (Kotlin DSL), wrapper committed | `docs/adr/001-gradle.md` |
-| Auth v1 | **Self-issued JWT** in httpOnly cookie | `docs/adr/002-jwt-auth.md`, §4.0.5 |
+| Auth v1 | **Multi-provider** + JWT cookie | ADR 004, §4.0.5 |
+| Mailer | **Resend** via `MailerPort` | §4.0.10, ADR 004 |
 | External APIs | **Stub-first** — features never blocked on vendor | §4.0.7 |
 | Guest vs accounts | User accounts from v1, no tenant | §4.0.5 |
 | BFF vs direct | Direct to Spring Boot | §4.0.5 |
@@ -2370,8 +2529,9 @@ Packing, review summaries, disruption replanning, narrative, translation, groups
 | 2 | Flight/hotel supplier APIs | Live C4 adapters only | `StubFlightSearchAdapter`, `StubHotelSearchAdapter` |
 | 3 | Payment provider (e.g. Stripe) | Live payment flow in Sprint 7 | Stub payment port returning fixture quotes |
 | 4 | Historical data source | Live `HistoricalPriceTool` data richness | Seed fixture rows in Flyway dev migration |
-| 5 | OAuth (Google/GitHub) | Social login only | JWT email/password auth (§4.0.5) |
-| 6 | Local model (Ollama) | Optional provider | Router interface stays open (§5.4) |
+| 5 | Local model (Ollama) | Optional provider | Router interface stays open (§5.4) |
+
+**Removed from open (locked in ADR 004):** ~~OAuth (Google/GitHub)~~ → Firebase Google + GitHub in v1; ~~mail provider~~ → Resend.
 
 **Rule:** open questions affect **live adapter** selection only — stub adapters and port
 interfaces ship regardless.
@@ -2559,6 +2719,8 @@ at-a-glance checklist for humans and AI.
 | B38 | **Virtual threads** — `spring.threads.virtual.enabled=true` for I/O (§4.0.9) |
 | B39 | **Metrics** — Micrometer + Prometheus actuator (§4.0.9) |
 | B40 | **CSRF** — enabled for cookie auth on mutating requests (§4.0.9) |
+| B41 | **Multi-provider auth** — `IdentityProviderPort`; Firebase/GitHub/local (§4.0.5, ADR 004) |
+| B42 | **Mailer** — `MailerPort` + Resend; stub in dev (§4.0.10) |
 
 ### 13.2 Frontend coding rules
 
@@ -2598,6 +2760,7 @@ at-a-glance checklist for humans and AI.
 | F32 | **Line length ≤120** — ESLint `max-len`; soft target 100 (§4.2.6-B3) |
 | F33 | **Module visibility** — public API only via `index.ts`; helpers non-exported (§4.2.6-B4) |
 | F34 | **New feature scaffold** — copy `features/_template/`; follow `docs/ADDING-A-FEATURE.md` (§4.0.8) |
+| F35 | **Auth UI** — `features/auth/`; Firebase public config only (§4.0.5) |
 
 ### 13.3 API contract rules (shared)
 
@@ -2697,6 +2860,7 @@ Significant decisions are recorded in `docs/adr/` and referenced from §11.
 | [001](../../docs/adr/001-gradle.md) | Gradle as backend build tool | Accepted |
 | [002](../../docs/adr/002-jwt-auth.md) | JWT in httpOnly cookie for v1 auth | Accepted |
 | [003](../../docs/adr/003-feature-extensibility.md) | Vertical-slice feature extensibility | Accepted |
+| [004](../../docs/adr/004-multi-provider-auth-resend.md) | Multi-provider auth + Resend mailer | Accepted |
 
 **AI agent workflow:** [`docs/AI-AGENT-WORKFLOW.md`](../../docs/AI-AGENT-WORKFLOW.md) (v1.0) —
 entry point [`AGENTS.md`](../../AGENTS.md). Update workflow version when §12 changes.
