@@ -84,10 +84,21 @@ When documents conflict, stop implementation, record the conflict, and resolve i
 - [36 — Chat security and rendering](36-chat-security-rendering.md)
 - [37 — Semantic cache and Redis](37-semantic-cache-redis.md)
 
+### Knowledge operations (added by ADR 010)
+
+These two briefs were added after ADR 010 was accepted; its Consequences section requires them
+and records that tasks 00–39 did not cover them. Both are numbered outside the original sequence
+but execute within Phase 1, after Task 17.
+
+- [40 — TKB refresh and re-embedding pipeline](40-tkb-refresh-reembed.md)
+- [41 — Admin knowledge curation](41-admin-knowledge-curation.md)
+
 ### Final integration
 
 - [38 — Full-system verification](38-full-system-verification.md)
 - [39 — Production configuration and release readiness](39-release-readiness.md)
+
+> Tasks 38 and 39 gate on 40 and 41 as well — "Tasks 01–37 complete" predates their existence.
 
 ## Standard task completion report
 

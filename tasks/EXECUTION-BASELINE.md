@@ -185,10 +185,28 @@ optimistic one corrupts every downstream task.
 
 | ID | Severity | Blocks | Issue |
 |---|---|---|---|
-| **B-4** | **High** | `16`, `17` outright; touches `06`, `09`, `10`, `12`, `14`, `18`, `20`, `22` | ADR 006–010 consequences were never propagated into the task briefs |
 | **B-3** | Low | Task 00 completeness | `gh` unauthenticated — open PRs not reviewed via API |
 
-### B-4 — the ADRs have outrun the task briefs
+### B-4 — the ADRs have outrun the task briefs — ✅ RESOLVED 2026-07-26
+
+Reconciled across eight commits. Every item in the table below is now written into the owning
+brief, with the ADR listed in its `Required reading` and marked as the higher authority.
+
+| Commit | Change |
+|---|---|
+| `cdbb698` | Task 16 — coverage model, licence register, embedding lifecycle, HNSW pre-ANN filtering |
+| `020bd4a` | Task 17 — knowledge stub is the documented exception to §4.0.7; 3 curated destinations; hybrid retrieval; freshness TTLs |
+| `3d8bac3` | **Task 40 created** — TKB refresh and re-embedding pipeline |
+| `3ee39ab` | **Task 41 created** — admin knowledge curation |
+| `31cf936` | Task 14 — `Flux<LlmEvent>` sealed union, superseding PLAN §5.1 |
+| `ad49c85` | Tasks 06, 18 — `expected_version` / `version_conflict`, no optimistic UI on agent-mutable entities |
+| `6b8cf18` | Tasks 09, 10, 12 — token-version revocation and the account-linking pre-hijack fix |
+| *(this)* | Index, ledger, and dependency updates |
+
+Tasks 07, 08, 11, 15, 20, 22, 26, 28, 31 and 33 already referenced the relevant ADR concepts and
+were left unchanged — the reconciliation was deliberately surgical rather than a blanket rewrite.
+
+**The original finding, retained for context:**
 
 ADRs 006–010 landed in `aa20043`, **after** the 40 briefs were written (`769fa90`, `c02c9e2`).
 Their `Consequences` sections name the tasks they affect, but no brief was updated. Authority
@@ -218,9 +236,13 @@ Mandated by an accepted ADR and absent from every brief:
 the TKB refresh / re-embed pipeline, and admin knowledge curation. Neither appears among tasks
 00–39.
 
-**Resolution:** reconcile the ADR consequences into the affected briefs and add the two missing
-tasks, *before* reaching task 14. This is documentation work with no code impact and is cheapest
-now. Do not resolve it by editing an ADR to match a brief — the ADR is the higher authority.
+**Resolution applied:** the ADR consequences were reconciled into the affected briefs and the two
+missing tasks were created. No ADR was edited to match a brief — the ADR is the higher authority,
+so the briefs moved.
+
+**Standing rule this produced:** when an ADR is accepted, its `Consequences` section names the
+tasks it affects. Those briefs must be updated in the same change. An ADR that outruns its briefs
+does not fail loudly — it stalls a task months later, at execution time.
 
 ### B-1 — Local toolchain below required versions — ✅ RESOLVED 2026-07-25
 

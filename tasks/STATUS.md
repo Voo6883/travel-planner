@@ -57,8 +57,8 @@
 
 | ID | Task | Depends on | Status | Notes |
 |---|---|---|---|---|
-| 16 | [Knowledge domain and schema](16-knowledge-domain-schema.md) | 07, 14, 15 | `blocked` | **B-4** — brief predates ADR 010; missing `coverage_level`, licence register, embedding lifecycle columns. |
-| 17 | [Knowledge seed and retrieval](17-knowledge-seed-retrieval.md) | 14, 16 | `blocked` | **B-4** — Scope asks for a "realistic `StubDestinationKnowledgeAdapter`", which ADR 010 §3 forbids. Do not start until reconciled. |
+| 16 | [Knowledge domain and schema](16-knowledge-domain-schema.md) | 07, 14, 15 | `not_started` | B-4 resolved (`cdbb698`) — coverage model, licence register, embedding lifecycle, HNSW now in scope. |
+| 17 | [Knowledge seed and retrieval](17-knowledge-seed-retrieval.md) | 14, 16 | `not_started` | B-4 resolved (`020bd4a`) — knowledge stub is now the documented exception to §4.0.7; 3 curated destinations. |
 | 18 | [Trip and TripBrief core](18-trip-brief-core.md) | 06, 07, 11, 15, 17 | `not_started` | No `Validation` section. |
 | 19 | [LLM TripBrief extraction](19-llm-trip-brief-extraction.md) | 14, 18 | `not_started` | LLM output → schema/golden-file test required. |
 | 20 | [Conversation persistence and SSE](20-conversation-sse.md) | 06, 07, 11, 14, 15 | `not_started` | No `Validation` section. ADR 007 — `Flux<LlmEvent>`. |
@@ -85,11 +85,18 @@
 | 36 | [Chat security and rendering](36-chat-security-rendering.md) | 20, 21, 22, 27, 31, 35 | `not_started` | No `Validation` section. |
 | 37 | [Semantic cache and Redis](37-semantic-cache-redis.md) | 14, 17, 25, 30, 35, 36 | `not_started` | No `Validation` section. New runtime service — confirm against plan before starting. |
 
+## Knowledge operations — added by ADR 010
+
+| ID | Task | Depends on | Status | Notes |
+|---|---|---|---|---|
+| 40 | [TKB refresh and re-embedding](40-tkb-refresh-reembed.md) | 14, 15, 16, 17 | `not_started` | Added `3d8bac3`. Required by ADR 010 Consequences; absent from the original 00–39. |
+| 41 | [Admin knowledge curation](41-admin-knowledge-curation.md) | 12, 16, 17, 40 | `not_started` | Added `3ee39ab`. ADR 010 §7 — without it, fixing a closed restaurant needs a migration and redeploy. |
+
 ## Final integration
 
 | ID | Task | Depends on | Status | Notes |
 |---|---|---|---|---|
-| 38 | [Full-system verification](38-full-system-verification.md) | 01–37 (or explicitly waived with rationale) | `not_started` | No `Validation` section. |
+| 38 | [Full-system verification](38-full-system-verification.md) | 01–37, **40, 41** (or explicitly waived with rationale) | `not_started` | No `Validation` section. Dependency list predates 40/41. |
 | 39 | [Production configuration and release readiness](39-release-readiness.md) | 38 | `not_started` | No `Validation` section. Requires 38 with no release-blocking failures. |
 
 ---
@@ -100,17 +107,17 @@
 |---|---|
 | `done` | 4 |
 | `in_progress` | 0 |
-| `blocked` | 2 |
+| `blocked` | 0 |
 | `review` | 2 |
-| `not_started` | 32 |
+| `not_started` | 36 |
+
+*42 tasks total — 40 original plus 40/41 added by ADR 010.*
 
 **Phase 0A exit criteria are met in code but not yet proven in CI.** Tasks 01 and 05 stay
 `review` until a real GitHub Actions run executes — that single run closes **F-7** and moves both
 to `done`.
 
-**Active blockers:** **B-4** (ADR 006–010 consequences never propagated into the task briefs) —
-blocks 16 and 17 outright and touches 06, 09, 10, 12, 14, 18, 20, 22. **B-3** (`gh`
-unauthenticated) does not gate execution.
+**Active blockers:** none gating execution. **B-3** (`gh` unauthenticated) is informational.
 
 Resolved: **B-1** (toolchain) — Node 22.23.1, Temurin JDK 21.0.11 LTS. **B-2** (trunk) —
 superseded 2026-07-26: work happens on `dev`. **Port 8080** — Oracle XE owns it on the dev
