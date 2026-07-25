@@ -36,7 +36,7 @@
 | 02 | [Backend minimal scaffold](02-backend-minimal-scaffold.md) | 01 | `done` | Commit `daca342`. Spring Boot 3.5.3, Gradle 8.14.5 wrapper, Java 21 toolchain. 10/10 tests; health/ready/404 verified at runtime. |
 | 03 | [Frontend minimal scaffold](03-frontend-minimal-scaffold.md) | 01 | `done` | Commit `48f1388`. Next 15.5.21 / React 19. lint+typecheck+build clean, 9/9 tests; 320 px no-overflow verified in-browser for `en` and `ms`. |
 | 04 | [Docker runtime and orchestration](04-docker-runtime.md) | 01, 02, 03 | `done` | Commit `b83dd86`. All three services healthy; `ready` reports `database: UP`; volume survives restart; images non-root and secret-free. |
-| 05 | [CI and repository workflow](05-ci-repository-workflow.md) | 01, 02, 03, 04 | `not_started` | **Next executable task.** Must run `prereq` + `prereq:test` on an Ubuntu runner to close **F-7**. |
+| 05 | [CI and repository workflow](05-ci-repository-workflow.md) | 01, 02, 03, 04 | `review` | Commit `1da85b5`. Five jobs; custom logic verified locally. **Workflow has never executed on GitHub Actions** — `gh` unauthenticated (B-3), nothing pushed. **F-7 stays open.** |
 
 ## Phase 0B/0C — platform
 
@@ -101,8 +101,12 @@
 | `done` | 4 |
 | `in_progress` | 0 |
 | `blocked` | 2 |
-| `review` | 1 |
-| `not_started` | 33 |
+| `review` | 2 |
+| `not_started` | 32 |
+
+**Phase 0A exit criteria are met in code but not yet proven in CI.** Tasks 01 and 05 stay
+`review` until a real GitHub Actions run executes — that single run closes **F-7** and moves both
+to `done`.
 
 **Active blockers:** **B-4** (ADR 006–010 consequences never propagated into the task briefs) —
 blocks 16 and 17 outright and touches 06, 09, 10, 12, 14, 18, 20, 22. **B-3** (`gh`
