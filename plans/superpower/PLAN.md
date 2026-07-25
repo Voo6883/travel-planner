@@ -2636,6 +2636,10 @@ and keeps the **whole app on one unified design system**.
 Goal: one consistent look (spacing, color, type, radius, shadows) everywhere — planner
 screens, admin panel, marketing — without mixing ad-hoc CSS approaches.
 
+Exact visual tokens, responsive behavior, component states, accessibility, and PWA
+presentation are defined in [`docs/UI-UX-DESIGN-SYSTEM.md`](../../docs/UI-UX-DESIGN-SYSTEM.md).
+This section governs the styling architecture; the design-system document governs visual values.
+
 ##### Stack (LOCKED)
 
 | Layer | Tool | Role |
@@ -2689,7 +2693,7 @@ All screens follow these patterns — **no one-off layouts**:
 | **Form layout** | `space-y-4` inside Ant `Form layout="vertical"` | C1 brief, admin forms |
 | **Primary button** | Ant `<Button type="primary">` + global `@apply` in globals.css | CTAs |
 | **Page title** | `text-2xl font-semibold text-foreground` | Panel headers |
-| **Muted text** | `text-sm text-muted-foreground` | Hints, secondary info |
+| **Muted text** | `text-sm text-foreground-muted` | Hints, secondary info |
 | **Error alert** | `rounded-lg border border-destructive/50 bg-destructive/10 p-4` | Error states |
 
 Shared layout components in `components/layout/` encode these patterns once
@@ -2697,10 +2701,20 @@ Shared layout components in `components/layout/` encode these patterns once
 
 ##### Token sync example
 
+This is a simplified light-mode wiring example. Exact role-token names, dark values,
+and Ant component mappings come from `docs/UI-UX-DESIGN-SYSTEM.md` §3.1 and §12.2.
+
 ```typescript
 // styles/design-tokens.ts — single source
 export const tokens = {
-  color: { primary: '#1677ff', foreground: '#0f172a', muted: '#64748b', destructive: '#dc2626' },
+  color: {
+    actionPrimaryFill: '#0958d9',
+    actionPrimaryText: '#0958d9',
+    foreground: '#0f172a',
+    foregroundMuted: '#475569',
+    foregroundSubtle: '#5f6f84',
+    destructive: '#b91c1c',
+  },
   radius: { sm: '0.375rem', md: '0.5rem', lg: '0.75rem' },
   spacing: { page: '1.5rem', section: '1.5rem' },
   font: { sans: 'Inter, system-ui, sans-serif' },
@@ -2714,9 +2728,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: tokens.color.primary,
+        'action-primary-fill': tokens.color.actionPrimaryFill,
+        'action-primary-text': tokens.color.actionPrimaryText,
         foreground: tokens.color.foreground,
-        muted: tokens.color.muted,
+        'foreground-muted': tokens.color.foregroundMuted,
+        'foreground-subtle': tokens.color.foregroundSubtle,
         destructive: tokens.color.destructive,
       },
       borderRadius: { sm: tokens.radius.sm, md: tokens.radius.md, lg: tokens.radius.lg },
@@ -2732,7 +2748,7 @@ import { tokens } from './design-tokens';
 export const antTheme = {
   cssVar: true,
   token: {
-    colorPrimary: tokens.color.primary,
+    colorPrimary: tokens.color.actionPrimaryText,
     borderRadius: Number.parseFloat(tokens.radius.md) * 16,
     fontFamily: tokens.font.sans,
   },
