@@ -1,0 +1,18 @@
+{
+  "name": "travel-planner",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monorepo root - orchestration scripts only. Application code lives in apps/frontend and apps/backend.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=22 <23",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "prereq": "node scripts/prereq.mjs",
+    "prereq:test": "node scripts/tests/run-prereq-tests.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
