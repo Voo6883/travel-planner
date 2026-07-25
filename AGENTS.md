@@ -48,6 +48,7 @@ npm run prereq                    # must pass before any code generation
 |---|---|
 | [`plans/USE-CASES.md`](plans/USE-CASES.md) | Use cases & acceptance criteria |
 | [`docs/ADDING-A-FEATURE.md`](docs/ADDING-A-FEATURE.md) | **Adding C6+ or new capabilities** |
+| [`docs/ARCHITECTURE-DIAGRAMS.md`](docs/ARCHITECTURE-DIAGRAMS.md) | System, flow, and activity diagrams |
 | [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **Every code generation task** |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Architecture, rules, NFRs, CI |
 | [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint stories, DoD |
