@@ -47,6 +47,7 @@ npm run prereq                    # must pass before any code generation
 | Document | When to read |
 |---|---|
 | [`plans/USE-CASES.md`](plans/USE-CASES.md) | Use cases & acceptance criteria |
+| [`docs/UI-UX-DESIGN-SYSTEM.md`](docs/UI-UX-DESIGN-SYSTEM.md) | **Any web or PWA UI work** |
 | [`docs/ADDING-A-FEATURE.md`](docs/ADDING-A-FEATURE.md) | **Adding C6+ or new capabilities** |
 | [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **Every code generation task** |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Architecture, rules, NFRs, CI |
