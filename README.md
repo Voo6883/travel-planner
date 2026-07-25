@@ -18,7 +18,7 @@ A **knowledge-based, LLM-powered travel planner**. Users chat to plan trips. Dec
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 15 (App Router), TypeScript, Ant Design, Tailwind CSS, TanStack Query, next-intl |
+| Frontend | Next.js 15 (App Router), TypeScript, Ant Design, Tailwind CSS, TanStack Query, next-intl, **PWA (Serwist)** |
 | Backend | Java 21, Spring Boot 3.x, Gradle, LangChain4j |
 | Database | PostgreSQL + pgvector | Travel Knowledge Base (TKB) + embeddings |
 | AI | Anthropic + OpenAI (switchable at runtime) |
@@ -105,6 +105,7 @@ docker compose up --build
 - **Tailwind + Ant Design** — unified design tokens; Tailwind overrides Ant by default
 - **Gmail sign-up & login** — Firebase Google; one button on login and register pages
 - **Resend mailer** — welcome, verify, password-reset emails
+- **PWA** — installable Next.js app via Serwist (manifest + service worker; §4.2.11)
 - **API** — `/api/v1/`, GET/POST/PUT/DELETE, standard error `{ code, message, details }`
 - **Vertical-slice extensibility** — add C6+ without editing existing features (§4.0.8)
 - **Industry standards** — ArchUnit, JaCoCo, Micrometer, CSRF, virtual threads (§4.0.9)
@@ -131,7 +132,7 @@ See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) for full coding rules
 | [`plans/TRAVEL-KNOWLEDGE-CATALOG.md`](plans/TRAVEL-KNOWLEDGE-CATALOG.md) | **TKB catalog** — PM review: timeline, routes, transport, apps |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Master plan — architecture, rules, NFRs, CI/CD |
 | [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint-ready epics & stories (Sprints 0–8) |
-| [`docs/adr/`](docs/adr/) | Architecture decision records (Gradle, JWT, extensibility, auth, Resend) |
+| [`docs/adr/`](docs/adr/) | Architecture decision records (Gradle, JWT, extensibility, auth, Resend, **PWA**) |
 
 ## License
 

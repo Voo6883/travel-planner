@@ -28,6 +28,7 @@
 | **LLM providers** | **Anthropic + OpenAI, switchable** at runtime via config (§5.4) |
 | Frontend | **Next.js (App Router) + TypeScript + Ant Design** (strictly typed, contracts generated from backend) |
 | Frontend runtime | **Node.js 22** — enforced via `.nvmrc` / `engines` / CI (see §4.0) |
+| **Frontend PWA** | **Allowed & required from Phase 0b** — installable Next.js PWA via Serwist (§4.2.11, ADR 005) |
 | Frontend structure | **Option A — feature-based modules** aligned to C1–C5 (§4.2) — **LOCKED** |
 | Frontend layering | **Page = routing only; Feature = UI logic; API = generated client** (§4.2.6) |
 | Frontend styling | **Tailwind CSS + Ant Design** — Tailwind overrides Ant; unified design tokens (§4.2.9) |
@@ -378,7 +379,7 @@ travel-planner/                    # monorepo root — shared docs, docker, scri
 
 | Folder | Runtime | Build entry | Contains |
 |---|---|---|---|
-| **`apps/frontend/`** | Node.js 22 | `package.json`, `next.config.ts` | Next.js App Router, `features/`, `components/`, generated API client, i18n, Tailwind |
+| **`apps/frontend/`** | Node.js 22 | `package.json`, `next.config.ts` | Next.js App Router + **PWA (Serwist)**, `features/`, `components/`, generated API client, i18n, Tailwind |
 | **`apps/backend/`** | Java 21 | `build.gradle.kts`, `./gradlew` | Spring Boot API, `domain/`, `application/`, `ai/`, `infrastructure/`, Flyway, OpenAPI source |
 
 **Separation rules (non-negotiable):**
@@ -2134,6 +2135,7 @@ folders and do not map cleanly to C1–C5.
 | Area | Decision |
 |---|---|
 | Framework | **Next.js 15+ App Router** (`app/`) — no Pages Router |
+| **PWA** | **Serwist (`@serwist/next`)** — web app manifest + service worker; installable (§4.2.11) |
 | UI library | **Ant Design** — forms, tables, modals, layout |
 | Forms | Ant Design `Form` with **`onValuesChange`** for controlled, incremental updates |
 | Data fetching | **TanStack Query (React Query)** — cache, loading/error states, mutations |
@@ -2188,6 +2190,8 @@ app/
 │   │       ├── itinerary/page.tsx      #   C3 — day-by-day plan
 │   │       └── booking/page.tsx        #   C4 — flights/hotels + confirm
 │   └── settings/page.tsx
+├── ~offline/page.tsx         # PWA offline fallback shell (§4.2.11)
+├── manifest.ts               # Web App Manifest (§4.2.11)
 └── api/                      # optional Next.js route handlers (BFF) — use sparingly
     └── health/route.ts       #   prefer calling Spring Boot directly from browser/server
 ```
@@ -2199,43 +2203,51 @@ offers structured views. User can jump between steps; chat tools keep state in s
 #### 4.2.4 Directory layout (Option A — LOCKED)
 
 ```
-apps/frontend/src/
-├── app/                          # routes ONLY — thin pages (§4.2.3)
-├── features/
-│   ├── intake/                   # C1
-│   │   ├── components/           #   trip-brief-form.tsx, destination-picker.tsx
-│   │   ├── hooks/                #   use-trip-brief.ts, use-save-brief.ts
-│   │   ├── schemas/              #   trip-brief.schema.ts
-│   │   ├── types.ts              #   TripBriefFormValues interface
-│   │   └── index.ts              #   public exports
-│   ├── research/                 # C2
-│   ├── itinerary/                # C3
-│   ├── booking/                  # C4
-│   └── chat/                     # C5
-├── components/
-│   ├── ui/                       # money-display.tsx, empty-state.tsx
-│   └── layout/                   # page-shell.tsx, app-shell.tsx, trip-stepper.tsx
-├── lib/
-│   ├── api/                      # research-api.ts, trip-api.ts
-│   ├── query/                    # query-keys.ts, client.ts
-│   ├── i18n/                     # request.ts, routing config (§4.2.10)
-│   └── utils/                    # cn.ts, format-money.ts
-├── styles/                       # design-tokens.ts, ant-theme.ts, globals.css (§4.2.9)
-├── tailwind.config.ts            # at apps/frontend/ root
-├── locales/                      # translation files — snake_case (§4.2.10)
-│   ├── en/
-│   │   ├── common.json
-│   │   ├── trip_brief.json
-│   │   └── booking_flow.json
-│   └── ms/
-│       └── ...
-├── generated/
-│   └── api/
-├── hooks/                        # cross-feature: use-trip-context.ts
-├── lib/algorithms/               # UI-only sort/filter helpers (§4.0.3)
-└── types/
+apps/frontend/
+├── next.config.ts                # withSerwist wrapper (§4.2.11)
+├── public/
+│   ├── icons/                    # PWA icons (192, 512, maskable)
+│   └── sw.js                     # generated service worker (build output — do not edit)
+└── src/
+    ├── app/                      # routes ONLY — thin pages (§4.2.3)
+    │   ├── manifest.ts           # Web App Manifest (§4.2.11)
+    │   └── ~offline/page.tsx     # offline fallback shell (§4.2.11)
+    ├── features/
+    │   ├── intake/               # C1
+    │   │   ├── components/       #   trip-brief-form.tsx, destination-picker.tsx
+    │   │   ├── hooks/            #   use-trip-brief.ts, use-save-brief.ts
+    │   │   ├── schemas/          #   trip-brief.schema.ts
+    │   │   ├── types.ts          #   TripBriefFormValues interface
+    │   │   └── index.ts          #   public exports
+    │   ├── research/             # C2
+    │   ├── itinerary/            # C3
+    │   ├── booking/              # C4
+    │   └── chat/                 # C5
+    ├── components/
+    │   ├── ui/                   # money-display.tsx, empty-state.tsx
+    │   └── layout/               # page-shell.tsx, app-shell.tsx, trip-stepper.tsx
+    ├── lib/
+    │   ├── api/                  # research-api.ts, trip-api.ts
+    │   ├── query/                # query-keys.ts, client.ts
+    │   ├── i18n/                 # request.ts, routing config (§4.2.10)
+    │   └── utils/                # cn.ts, format-money.ts
+    ├── styles/                   # design-tokens.ts, ant-theme.ts, globals.css (§4.2.9)
+    ├── sw.ts                     # Serwist service worker source (§4.2.11)
+    ├── locales/                  # translation files — snake_case (§4.2.10)
+    │   ├── en/
+    │   │   ├── common.json
+    │   │   ├── trip_brief.json
+    │   │   └── booking_flow.json
+    │   └── ms/
+    │       └── ...
+    ├── generated/
+    │   └── api/
+    ├── hooks/                    # cross-feature: use-trip-context.ts
+    ├── lib/algorithms/           # UI-only sort/filter helpers (§4.0.3)
+    └── types/
 ```
 
+`tailwind.config.ts` lives at `apps/frontend/` root (alongside `next.config.ts`).
 #### 4.2.5 Feature module innards
 
 Each `features/<name>/` follows the same internal shape:
@@ -2879,6 +2891,104 @@ const t = useTranslations('trip_brief');
 - New feature → add matching namespace file under each locale folder.
 - Missing key fails CI lint (eslint-plugin-i18next or custom check in Phase 0).
 
+#### 4.2.11 Progressive Web App — PWA (LOCKED)
+
+The Next.js frontend **is a PWA** — installable on mobile and desktop. PWA support
+is **allowed and required** from Phase 0b scaffold (not deferred). See ADR 005.
+
+##### Stack (LOCKED)
+
+| Item | Choice |
+|---|---|
+| Library | **Serwist** via `@serwist/next` (successor to `next-pwa`) |
+| Manifest | App Router `src/app/manifest.ts` (or `manifest.json`) |
+| Service worker source | `src/sw.ts` — Serwist + `defaultCache` |
+| Generated SW | `public/sw.js` — **build output; do not hand-edit** |
+| Offline fallback | `app/~offline/page.tsx` — branded shell when offline |
+| Icons | `public/icons/` — 192×192, 512×512, maskable |
+| Dev mode | SW **disabled** in development (`disable: true` when `NODE_ENV=development`) |
+
+**Rejected:** `next-pwa` / `@ducanh2912/next-pwa` (unmaintained relative to Serwist),
+hand-rolled Workbox configs, Capacitor/native wrappers for v1.
+
+##### v1 scope
+
+| In scope | Out of scope (post-v1) |
+|---|---|
+| Installable app (Add to Home Screen) | Full offline trip CRUD / chat |
+| Web App Manifest + theme color | Background sync of mutations |
+| Precache of app shell + static assets | Push notifications |
+| Offline fallback page (`/~offline`) | Caching authenticated API bodies |
+| Network-first for `/api/v1/**` | Storing JWT/PII in Cache Storage |
+
+##### Caching rules
+
+| Resource | Strategy | Rationale |
+|---|---|---|
+| App shell / static assets | Precache (Serwist manifest) | Fast reload, offline shell |
+| Next.js `_next/static/**` | Cache-first (Serwist default) | Immutable hashed assets |
+| `GET /api/v1/**` | **Network-only** (or network-first, no cache of auth responses) | Auth cookies + fresh trip data |
+| Mutations (POST/PUT/DELETE) | Network-only — never cache | Correctness + CSRF |
+| Offline navigation | Fallback to `/~offline` | Clear UX when disconnected |
+
+##### Config sketch
+
+```ts
+// apps/frontend/next.config.ts
+import withSerwistInit from '@serwist/next';
+
+const withSerwist = withSerwistInit({
+  swSrc: 'src/sw.ts',
+  swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV === 'development',
+});
+
+export default withSerwist({ /* Next config */ });
+```
+
+```ts
+// src/app/manifest.ts — name via i18n build defaults; keep display standalone
+import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'Travel Planner',
+    short_name: 'Travel',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#ffffff',
+    theme_color: '#0f172a',
+    icons: [
+      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      {
+        src: '/icons/icon-maskable-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+    ],
+  };
+}
+```
+
+##### PWA coding rules
+
+| Rule | Detail |
+|---|---|
+| **Serwist only** | Do not add a second SW library or manual `navigator.serviceWorker.register` outside Serwist |
+| **No API cache of auth data** | Never precache or Cache Storage JWT cookies / trip payloads |
+| **HTTPS / secure context** | Production must be HTTPS (Compose/prod reverse proxy); localhost OK for local SW testing |
+| **i18n offline page** | `/~offline` copy via next-intl — no hardcoded strings |
+| **Icons in repo** | Commit icons under `public/icons/`; do not hotlink CDN icons |
+| **CI** | Production build must emit `public/sw.js`; smoke check installability metadata present |
+
+##### Phase 0b setup
+
+Wire in Next.js scaffold (S2-6 / S2-14): `@serwist/next`, `src/sw.ts`, `app/manifest.ts`,
+icons, `/~offline` page, `withSerwist` in `next.config.ts`. Verify production build
+registers a service worker and Lighthouse PWA checks pass for installability.
+
 ---
 
 ## 5. AI abstraction (LangChain4j hidden behind our interfaces)
@@ -3165,6 +3275,7 @@ CI pipeline runs on PR.
 | LangChain4j | Anthropic + OpenAI adapters in `ai/langchain4j/` only |
 | AI observability | `ai_call_log`, `X-Request-Id` MDC, token/latency logging |
 | Next.js scaffold | App Router, `(planner)/` + `(admin)/` shells, trip stepper placeholder |
+| **PWA** | Serwist, manifest, icons, `/~offline`, SW in prod build (§4.2.11, ADR 005) |
 | Auth UI | `features/auth/` — local, Firebase Google, GitHub login (§4.0.5) |
 | Design system | Tailwind + tokens + Ant overrides + `PageShell` (§4.2.9) |
 | i18n | next-intl, `en/` + `ms/` namespaces (§4.2.10) |
@@ -3176,6 +3287,7 @@ CI pipeline runs on PR.
 - [ ] §12.3 checklist passes on a sample PR
 - [ ] Login as `ADMIN` works in docker profile; seed skipped in prod profile
 - [ ] Frontend calls backend with generated types (no hand-written API DTOs)
+- [ ] Production frontend build emits PWA service worker + valid web app manifest (§4.2.11)
 - [ ] `LlmClientRouter` smoke test with config switch anthropic ↔ openai
 - [ ] OpenAPI codegen drift fails CI when spec changes without regen
 
@@ -3224,6 +3336,7 @@ Packing, review summaries, disruption replanning, narrative, translation, groups
 | External APIs | **Stub-first** — features never blocked on vendor | §4.0.7 |
 | Guest vs accounts | User accounts from v1, no tenant | §4.0.5 |
 | BFF vs direct | Direct to Spring Boot | §4.0.5 |
+| Frontend PWA | **Serwist** — installable Next.js PWA | ADR 005, §4.2.11 |
 
 ### Still open (non-blocking for Phase 0–1)
 
@@ -3307,6 +3420,7 @@ Copy into PR description; all items must pass:
 - [ ] **Function params** — ≤3; extras bundled in Query/Command/Props interface (§4.0.4)
 - [ ] **Naming** — camelCase functions; kebab-case files/URLs; snake_case i18n (§4.0.4)
 - [ ] **i18n** — no hardcoded user-facing strings; snake_case keys in locale files (§4.2.10)
+- [ ] **PWA** — if frontend touched: Serwist only; no auth API cache; manifest/SW rules respected (§4.2.11)
 - [ ] **Admin seed** — dev/docker only; `ADMIN` user after migrate; disabled in prod (§4.0.6)
 - [ ] **Admin audit** — password reset / user changes logged to `audit_event` (§4.0.6)
 - [ ] **No secrets** — API keys only via env/config; nothing committed
@@ -3465,6 +3579,7 @@ at-a-glance checklist for humans and AI.
 | F33 | **Module visibility** — public API only via `index.ts`; helpers non-exported (§4.2.6-B4) |
 | F34 | **New feature scaffold** — copy `features/_template/`; follow `docs/ADDING-A-FEATURE.md` (§4.0.8) |
 | F35 | **Auth UI** — `features/auth/`; Firebase public config only (§4.0.5) |
+| F36 | **PWA** — Serwist only; manifest + SW; no auth API cache; `/~offline` i18n (§4.2.11) |
 
 ### 13.3 API contract rules (shared)
 
@@ -3512,6 +3627,8 @@ Initial targets — refine with production data; do not block Phase 0 on tuning.
 | **Security** | No PII in logs; secrets in env only | §4.0.2-J2, §4.0.5, §4.0.9 |
 | **Code coverage** | ≥70% line coverage on `domain` + `application` | JaCoCo gate in CI (§15) |
 | **Metrics scrape** | Prometheus `/actuator/prometheus` | §4.0.9 |
+| **PWA installability** | Manifest + SW in prod build | Lighthouse installable; §4.2.11 |
+| **Offline UX** | App shell fallback `/~offline` | No offline API mutations in v1 |
 
 ---
 
@@ -3565,6 +3682,7 @@ Significant decisions are recorded in `docs/adr/` and referenced from §11.
 | [002](../../docs/adr/002-jwt-auth.md) | JWT in httpOnly cookie for v1 auth | Accepted |
 | [003](../../docs/adr/003-feature-extensibility.md) | Vertical-slice feature extensibility | Accepted |
 | [004](../../docs/adr/004-multi-provider-auth-resend.md) | Multi-provider auth + Resend mailer | Accepted |
+| [005](../../docs/adr/005-nextjs-pwa.md) | Next.js Progressive Web App (Serwist) | Accepted |
 
 **AI agent workflow:** [`docs/AI-AGENT-WORKFLOW.md`](../../docs/AI-AGENT-WORKFLOW.md) (v1.0) —
 entry point [`AGENTS.md`](../../AGENTS.md). Update workflow version when §12 changes.

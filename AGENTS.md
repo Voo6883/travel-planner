@@ -52,7 +52,7 @@ npm run prereq                    # must pass before any code generation
 | [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **Every code generation task** |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Architecture, rules, NFRs, CI |
 | [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint stories, DoD |
-| [`docs/adr/`](docs/adr/) | Locked decisions (Gradle, JWT) |
+| [`docs/adr/`](docs/adr/) | Locked decisions (Gradle, JWT, PWA, …) |
 
 ## Stop and ask the user when
 
