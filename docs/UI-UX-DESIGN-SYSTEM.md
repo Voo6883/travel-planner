@@ -809,9 +809,9 @@ may be visually grouped, but each retains an accessible sender label.
 - Success shows provider reference and next steps.
 - Expired price returns to review with old and new values clearly labeled.
 
-Booking sub-states:
+Booking uses `booking.status`, which is separate from `trip.status`:
 
-| State | UI behavior |
+| `booking.status` / UI state | UI behavior |
 |---|---|
 | `DRAFT` | Search or resume incomplete criteria |
 | `QUOTED` | Compare current quotes; show expiry/freshness |
@@ -821,6 +821,16 @@ Booking sub-states:
 | `CONFIRMED` | Show provider reference, confirmed total, and next steps |
 | `FAILED` | Show typed reason and safe retry only after reconciliation |
 | `CANCELLED` | Show cancellation state and provider reference when available |
+
+The UI renders both status values from the API and never infers one from the other.
+The expected relationship is:
+
+| Booking state | Expected `trip.status` | Booking step |
+|---|---|---|
+| `DRAFT`, `QUOTED` | `ITINERARY_READY` | Available |
+| `HELD`, confirming, unknown after timeout | `BOOKING_IN_PROGRESS` | Current |
+| `CONFIRMED` | `BOOKED` | Complete |
+| `FAILED`, `CANCELLED` | API-resolved from other active/confirmed bookings | Error or available |
 
 If price or terms change after review, return to review and require renewed consent.
 Reloading or returning from a provider reconciles server state before enabling any action.

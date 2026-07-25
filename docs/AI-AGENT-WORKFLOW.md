@@ -4,7 +4,9 @@
 > Cloud Agent, Claude, etc.) generating code in the Travel Planner monorepo.
 >
 > **Authority:** This workflow implements [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) §12.
-> On conflict, **PLAN.md wins**.
+> On architecture, data-flow, or product-behavior conflict, **PLAN.md wins**.
+> For exact UI tokens, responsive presentation, component states, and accessibility,
+> [`UI-UX-DESIGN-SYSTEM.md`](UI-UX-DESIGN-SYSTEM.md) wins over illustrative PLAN examples.
 
 ---
 
