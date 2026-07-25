@@ -7,6 +7,9 @@ const withNextIntl = createNextIntlPlugin('./src/lib/i18n/request.ts');
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Emits a self-contained server bundle so the runtime image needs no node_modules
+  // (docker/frontend/Dockerfile).
+  output: 'standalone',
   typescript: {
     // Never ship on a broken type-check; `npm run typecheck` must stay meaningful.
     ignoreBuildErrors: false,

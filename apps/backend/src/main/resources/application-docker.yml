@@ -1,6 +1,19 @@
 # Full-stack Docker Compose runtime (PLAN §4.0.0).
-# Compose injects values from the single root .env; service hostnames resolve on the Compose
-# network (e.g. `postgres`, not `localhost`). Datasource wiring: tasks/04-docker-runtime.md.
+#
+# Compose injects these from the single root .env. The database hostname is the Compose service
+# name `postgres` — never `localhost`, which inside a container refers to the container itself
+# (§4.0.0.2).
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/travel_planner}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 3000
+      # Readiness reports an unavailable database; the container does not crash-loop on it.
+      initialization-fail-timeout: -1
 
 logging:
   level:

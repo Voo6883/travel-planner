@@ -1,0 +1,24 @@
+# Never let secrets or local state into an image (PLAN §4.0.0 Docker rules).
+.env
+.env.*
+**/secrets/
+*.pem
+*.p12
+*.jks
+
+# Build output and caches — the image builds these itself.
+build/
+.gradle/
+out/
+bin/
+
+# VCS and editor metadata
+.git/
+.gitignore
+.idea/
+.vscode/
+*.iml
+
+# Test reports
+**/build/reports/
+**/build/test-results/

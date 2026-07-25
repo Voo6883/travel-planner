@@ -1,6 +1,19 @@
 # Local host development — apps on the host, Postgres in Docker (PLAN §4.0.0 "Hybrid" mode).
-# Datasource wiring arrives with tasks/04-docker-runtime.md and tasks/07-database-domain-foundation.md.
-# Until then the service runs with no external dependency.
+#
+# Host-run means `localhost`, not the Compose service name `postgres` (§4.0.0.2). The default
+# below reflects that; SPRING_DATASOURCE_URL in the root .env overrides it.
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/travel_planner}
+    username: ${POSTGRES_USER:travel_planner}
+    password: ${POSTGRES_PASSWORD:travel_planner}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 3000
+      # Start even when Postgres is down, so /api/v1/ready can report it as DOWN. Failing at
+      # startup instead would make a stopped database indistinguishable from a broken build.
+      initialization-fail-timeout: -1
 
 logging:
   level:

@@ -1,0 +1,87 @@
+# Travel Planner — full stack (PLAN §4.0.0).
+#
+#   docker compose up --build          start everything
+#   docker compose down                stop, keep data
+#   docker compose down -v             stop and wipe the database
+#
+# Configuration comes from the single root .env (§4.0.0.2). No secret is baked into an image;
+# everything is injected at runtime.
+#
+# HOST ports are configurable (*_HOST_PORT) while CONTAINER ports stay fixed at the values the
+# plan locks. Defaults match the plan exactly — the override exists only for machines where a
+# port is already taken, and lives in the developer's untracked .env.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: travel-planner-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-travel_planner}
+      POSTGRES_USER: ${POSTGRES_USER:-travel_planner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    ports:
+      - '${POSTGRES_HOST_PORT:-5432}:5432'
+    volumes:
+      # Named volume — data survives `docker compose down` and container replacement.
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-travel_planner} -d ${POSTGRES_DB:-travel_planner}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: ../../docker/backend/Dockerfile
+    container_name: travel-planner-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        # Do not start the backend until Postgres actually accepts connections.
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      # Inside the network the host is the service name, never localhost (§4.0.0.2).
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-travel_planner}
+      POSTGRES_USER: ${POSTGRES_USER:-travel_planner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+    ports:
+      - '${BACKEND_HOST_PORT:-8080}:8080'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/api/v1/ready >/dev/null || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: ../../docker/frontend/Dockerfile
+      args:
+        # Browser-facing, so it must be the HOST port — the browser cannot resolve `backend`.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080/api/v1}
+    container_name: travel-planner-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+    ports:
+      - '${FRONTEND_HOST_PORT:-3000}:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  postgres_data:
+    name: travel_planner_postgres_data

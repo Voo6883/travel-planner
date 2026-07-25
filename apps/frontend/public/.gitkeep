@@ -1,0 +1,7 @@
+# Static assets served from the site root.
+#
+# Declared by PLAN §4.2.4. Kept in git while empty because docker/frontend/Dockerfile copies
+# this directory into the runtime image — without it the image build fails at
+# `COPY /app/public`.
+#
+# PWA icons (192, 512, maskable) land here in tasks/13-pwa-foundation.md.

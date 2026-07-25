@@ -1,0 +1,34 @@
+# Travel Planner — hybrid development: PostgreSQL in Docker, apps on the host (PLAN §4.0.0).
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# Host-run apps reach the database at localhost, not at the Compose service name `postgres`
+# (§4.0.0.2). Use the commented SPRING_DATASOURCE_URL in .env.example for this mode.
+#
+# Shares the same named volume as docker-compose.yml, so switching between full-stack and
+# hybrid mode keeps the same data.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: travel-planner-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-travel_planner}
+      POSTGRES_USER: ${POSTGRES_USER:-travel_planner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    ports:
+      - '${POSTGRES_HOST_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-travel_planner} -d ${POSTGRES_DB:-travel_planner}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  postgres_data:
+    name: travel_planner_postgres_data

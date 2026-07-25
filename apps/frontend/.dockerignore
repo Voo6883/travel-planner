@@ -1,0 +1,19 @@
+# Never let secrets or local state into an image (PLAN §4.0.0 Docker rules).
+.env
+.env.*
+.env.local
+**/secrets/
+*.pem
+
+# Build output and dependencies — the image installs and builds these itself.
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# VCS and editor metadata
+.git/
+.gitignore
+.idea/
+.vscode/

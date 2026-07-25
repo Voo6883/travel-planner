@@ -30,6 +30,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
+    // JDBC only — enough for /api/v1/ready to prove the database is reachable (task 04 DoD).
+    // JPA entities and Flyway migrations belong to tasks/07-database-domain-foundation.md.
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    runtimeOnly("org.postgresql:postgresql")
+
     testImplementation(platform("org.springframework.boot:spring-boot-dependencies:3.5.3"))
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

@@ -11,7 +11,15 @@
   },
   "scripts": {
     "prereq": "node scripts/prereq.mjs",
-    "prereq:test": "node scripts/tests/run-prereq-tests.mjs"
+    "prereq:test": "node scripts/tests/run-prereq-tests.mjs",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:reset": "docker compose down -v",
+    "docker:logs": "docker compose logs -f",
+    "docker:ps": "docker compose ps",
+    "dev:db": "docker compose -f docker-compose.dev.yml up -d",
+    "dev:db:down": "docker compose -f docker-compose.dev.yml down",
+    "wait": "node scripts/wait.mjs"
   },
   "dependencies": {},
   "devDependencies": {}
