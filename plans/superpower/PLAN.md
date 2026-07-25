@@ -195,7 +195,7 @@ The LLM is the primary planner; structured UI reflects the same state.
 | `search_booking_quotes` | `ITINERARY_READY`+ | Return quotes; confirm via C4 UI |
 | `get_destination_guide` | `RESEARCH_READY`+ | Food, areas, sights, mobility, apps — from TKB (§4.1.2) |
 | `get_route` | `ITINERARY_READY`+ | How to get from A → B — mode, duration, apps |
-| `get_travel_apps` | `RESEARCH_READY`+ | Which apps to install (maps, transit, ride-hail…) |
+| `get_travel_apps` | `RESEARCH_READY`+ | **Locale app pack** — local apps by country & usage (ride, maps, pay, food…) |
 
 **Example — create from opener:**
 
@@ -1785,7 +1785,7 @@ TripBrief ──► TravelResearchAgent
 | `areas` | Best neighborhoods/regions **within** the destination (stay vs day-trip) |
 | `food` | Must-try dishes, food scenes, dietary notes — matched to brief interests |
 | `highlights` | Top POIs/activities ranked to user interests (sight, nature, food, nightlife) |
-| `mobility` | Transport modes summary + top recommended apps (maps, transit card, ride-hail) |
+| `mobility` | Transport modes + **locale app pack** (local apps per usage — e.g. 滴滴 in China) |
 | `practical` | Getting around, typical daily budget band, crowd level, safety notes |
 | `source_refs` | Grounding links / POI ids for every claim |
 
@@ -1904,23 +1904,70 @@ KB stores **template legs** between areas or POIs. C3 instantiates as `itinerary
 
 `PoiRouteOptimizer` (§4.0.3) orders POIs; `route_segment` rows chain the **travel route**.
 
-#### `travel_app` (which app to use) 🆕
+#### `travel_app` — **locale app pack** (which app to download) 🆕
 
-| `category` | Examples |
+**Not generic global apps only** — each country/destination has a **local app pack**:
+apps locals actually use, grouped by **what you need them for**.
+
+| Field | Example (China) |
 |---|---|
-| `maps` | Google Maps, Apple Maps, Citymapper |
-| `transit` | Japan Transit Planner, Moovit |
-| `transit_card` | Suica, Oyster — payment apps/cards |
-| `ride_hail` | Grab, Uber, Bolt |
-| `translation` | Google Translate |
-| `food` | Tabelog, Yelp |
-| `booking` | Airline / hotel apps (C4) |
-| `esim` | Airalo, Holafly |
+| `name` | Didi |
+| `local_name` | 滴滴出行 |
+| `country_codes[]` | `["CN"]` |
+| `destinations[]` | Beijing, Shanghai, China (country-wide) |
+| `category` | `ride_hail` |
+| `usage_context` | "Call taxis & ride-hail — Uber does not work in mainland China" |
+| `when_to_use` | Airport transfers, cross-town trips, late night |
+| `setup_notes` | "Needs Chinese phone number; link Alipay or WeChat Pay" |
+| `platforms` | `["ios", "android"]` |
+| `store_url` | App Store / 应用商店 link |
+| `replaces_global` | Uber, Bolt — **do not suggest** where inactive |
+| `priority` | `essential` \| `recommended` \| `optional` |
+| `source_ref` | Official store / vendor URL |
 
-Fields: `name`, `category`, `platforms[]`, `why_recommended`, `store_url`, `pairs_with_mode`,
-`destinations[]` (scope), `source_ref`.
+| `category` | What it's for | China example | Japan example | Thailand example |
+|---|---|---|---|---|
+| `maps` | Navigation | 高德地图 (Amap), 百度地图 | Google Maps, Navitime | Google Maps |
+| `ride_hail` | Taxi / car | **滴滴出行** | Japan Taxi, GO | **Grab** |
+| `transit` | Metro / bus routes | 地铁通, 高德 transit | Japan Transit Planner | BTS / MRT app |
+| `train_booking` | High-speed / rail | **12306** | JR East, SmartEX | — |
+| `food` | Restaurants, delivery | **大众点评**, 美团 | Tabelog, Gurunavi | Wongnai |
+| `payment` | Pay locally | **支付宝**, 微信支付 | Suica app, PayPay | PromptPay apps |
+| `translation` | Language | 有道翻译, Google Translate | Google Translate | Google Translate |
+| `esim` | Data | Airalo China eSIM | — | Airalo |
+| `messaging` | Local contact | WeChat 微信 | LINE | LINE |
 
-**PM rule:** every seeded destination has ≥3 apps: **maps + transit + 1 local** (PM-K04).
+**PM rules (locale apps):**
+
+| Rule | Detail |
+|---|---|
+| **Locale-first** | Prefer **local** app over global if global doesn't work there (e.g. 滴滴 not Uber in China) |
+| **Per usage** | Surface apps by **what you need** — ride, maps, food, pay, trains — not one generic list |
+| **Essential pack** | Before trip: show **"Download before you go"** checklist (`essential` priority apps) |
+| **Chat trigger** | *"I'm going to China"* → LLM suggests locale pack via `get_travel_apps(country=CN)` |
+| **Leg context** | Route leg shows the **local** app for that mode (滴滴 on RIDE_HAIL leg in Shanghai) |
+
+**`traveler_guide.local_app_pack`** (shown on destination card + trip overview):
+
+```json
+{
+  "country": "CN",
+  "essential": [
+    { "category": "ride_hail", "name": "滴滴出行", "local_name": "滴滴出行", "why": "Main ride app — Uber unavailable" },
+    { "category": "maps", "name": "Amap", "local_name": "高德地图", "why": "Best maps & transit in China" },
+    { "category": "payment", "name": "Alipay", "local_name": "支付宝", "why": "Pay at most shops & link to Didi" }
+  ],
+  "recommended": [
+    { "category": "food", "name": "Dianping", "local_name": "大众点评" },
+    { "category": "train_booking", "name": "12306", "local_name": "铁路12306" }
+  ]
+}
+```
+
+Fields: `name`, `local_name`, `category`, `platforms[]`, `usage_context`, `when_to_use`,
+`setup_notes`, `store_url`, `country_codes[]`, `priority`, `replaces_global[]`, `source_ref`.
+
+**PM rule:** every seeded country has an **essential** pack (≥3 apps covering ride + maps + pay or transit).
 
 #### Timeline & legs (C3 output — instance data) 🆕
 

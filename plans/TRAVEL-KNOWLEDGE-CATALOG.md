@@ -105,31 +105,51 @@ POI fields: `name`, `description`, `area_id`, `lat/lng`, `best_time`, `avg_visit
 
 Used by C3 to chain POIs into a **travel route**; LLM picks from KB templates, DSA optimizes order (§4.0.3).
 
-#### `travel_app` (recommended apps) 🆕 P0
+#### `travel_app` — locale app pack (download before you go) 🆕 P0
 
-| Field | Example |
+Each **country/destination** has apps locals use — **not** only global apps.
+Grouped by **usage** (ride, maps, food, pay, trains…).
+
+| Field | Example (China — ride-hail) |
 |---|---|
-| `name` | Google Maps |
-| `category` | `maps` \| `transit` \| `ride_hail` \| `food` \| `translation` \| `booking` \| `esim` \| `transit_card` |
-| `platforms` | `["ios", "android"]` |
-| `destinations[]` | country or destination scope |
-| `why_recommended` | "Best turn-by-turn + transit in Japan" |
-| `deep_link` | App Store / Play Store URL |
-| `pairs_with_mode` | `METRO`, `WALK` — optional |
-| `source_ref` | Official store link |
+| `name` | Didi |
+| `local_name` | 滴滴出行 |
+| `country_codes[]` | `["CN"]` |
+| `category` | `ride_hail` |
+| `usage_context` | "Taxis & ride-hail — Uber unavailable in mainland China" |
+| `when_to_use` | Airport, cross-town, late night |
+| `setup_notes` | "Chinese phone number; link 支付宝 or 微信" |
+| `priority` | `essential` \| `recommended` \| `optional` |
+| `replaces_global[]` | `["Uber", "Bolt"]` — suppress where inactive |
+| `store_url` | App Store / 应用商店 |
 
-**Default app categories per trip (PM spec):**
+**Locale examples by usage:**
 
-| Category | When surfaced | Examples |
+| Usage | China | Japan | Thailand |
+|---|---|---|---|
+| Ride-hail | **滴滴出行** | GO / Japan Taxi | **Grab** |
+| Maps | **高德地图** | Google Maps | Google Maps |
+| Food | **大众点评** | Tabelog | Wongnai |
+| Pay | **支付宝**, 微信 | PayPay, Suica | PromptPay |
+| Trains | **12306** | SmartEX | — |
+
+**Default categories surfaced:**
+
+| Category | When | Note |
 |---|---|---|
-| `maps` | Every destination | Google Maps, Apple Maps, Citymapper |
-| `transit` | Has metro/train | Japan Transit Planner, Moovit |
-| `transit_card` | IC card destinations | Suica (JP), Oyster (UK) |
-| `ride_hail` | Taxi alternative | Grab (SEA), Uber, Bolt |
-| `translation` | Non-English primary | Google Translate |
-| `food` | Food-heavy trips | Tabelog (JP), Yelp |
-| `booking` | C4 phase | Airline app, hotel app |
-| `esim` | International | Airalo, Holafly |
+| `ride_hail` | Need a car | **Local app required** in CN, JP, SEA |
+| `maps` | Navigation | May be Amap not Google in CN |
+| `payment` | Pay shops / link ride apps | Alipay/WeChat in China |
+| `food` | Find restaurants | Dianping, Tabelog… |
+| `train_booking` | HSR / rail | 12306 in China |
+| `transit` | Metro routes | City-specific |
+| `translation` | Language barrier | Always useful |
+| `esim` | Mobile data | Pre-trip install |
+
+**UI — "Download before you go"** checklist on destination select / trip overview.
+Chat: *"I'm going to China — what apps?"* → essential pack from KB.
+
+See **§2.1** for full locale tables.
 
 ### Layer E — Timeline (when during the day) 🆕 P0
 
