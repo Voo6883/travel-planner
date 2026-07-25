@@ -33,9 +33,9 @@
 |---|---|---|---|---|
 | 00 | [Baseline and execution map](00-plan-baseline.md) | — | `done` | Commit `aa20043`. Open items B-2, B-3 do not affect this task's DoD. |
 | 01 | [Prerequisite and root tooling](01-prerequisite-root-tooling.md) | 00 | `not_started` | **Next executable task.** Not blocked by B-1 — it authors the gate rather than passing it. |
-| 02 | [Backend minimal scaffold](02-backend-minimal-scaffold.md) | 01 | `blocked` | **B-1** — no JDK 21 installed. |
-| 03 | [Frontend minimal scaffold](03-frontend-minimal-scaffold.md) | 01 | `blocked` | **B-1** — Node 18.19.1, requires 22.x. May run in parallel with 02. |
-| 04 | [Docker runtime and orchestration](04-docker-runtime.md) | 01, 02, 03 | `blocked` | **B-1** — builds both apps. |
+| 02 | [Backend minimal scaffold](02-backend-minimal-scaffold.md) | 01 | `not_started` | B-1 resolved — JDK 21.0.11 LTS installed. |
+| 03 | [Frontend minimal scaffold](03-frontend-minimal-scaffold.md) | 01 | `not_started` | B-1 resolved — Node 22.23.1. May run in parallel with 02. |
+| 04 | [Docker runtime and orchestration](04-docker-runtime.md) | 01, 02, 03 | `not_started` | B-1 resolved. |
 | 05 | [CI and repository workflow](05-ci-repository-workflow.md) | 01, 02, 03, 04 | `not_started` | |
 
 ## Phase 0B/0C — platform
@@ -100,9 +100,10 @@
 |---|---|
 | `done` | 1 |
 | `in_progress` | 0 |
-| `blocked` | 3 |
+| `blocked` | 0 |
 | `review` | 0 |
-| `not_started` | 36 |
+| `not_started` | 39 |
 
-**Active blockers:** B-1 (toolchain below required versions), B-2 (trunk branch ambiguity),
-B-3 (`gh` unauthenticated). Full detail in [`EXECUTION-BASELINE.md`](EXECUTION-BASELINE.md) §7.
+**Active blockers:** B-2 (trunk branch ambiguity), B-3 (`gh` unauthenticated). Neither gates
+Phase 0A execution. **B-1 (toolchain) resolved 2026-07-25** — Node 22.23.1 and Temurin JDK
+21.0.11 LTS verified. Full detail in [`EXECUTION-BASELINE.md`](EXECUTION-BASELINE.md) §7.

@@ -185,32 +185,41 @@ optimistic one corrupts every downstream task.
 
 | ID | Severity | Blocks | Issue |
 |---|---|---|---|
-| **B-1** | High | `02`, `03`, `04` | Local toolchain does not meet Phase 0A prerequisites |
 | **B-2** | Medium | Release / PR hygiene | Trunk branch ambiguity: `master` vs `main` |
 | **B-3** | Low | Task 00 completeness | `gh` unauthenticated — open PRs not reviewed via API |
 
-### B-1 — Local toolchain below required versions
+### B-1 — Local toolchain below required versions — ✅ RESOLVED 2026-07-25
 
-Measured on the development machine at baseline:
+Originally raised because the machine ran Node 18.19.1 and Java 1.8.0_51 with no JDK 21 present,
+blocking Tasks 02, 03 and 04. Resolved by switching Node via `nvm` and installing Temurin 21.
 
 | Tool | Required | Detected | Status |
 |---|---|---|---|
-| Node.js | 22.x | **18.19.1** | ✗ below requirement |
+| Node.js | 22.x | 22.23.1 (`nvm`) | ✓ |
 | npm | 10+ | 10.2.4 | ✓ |
-| Java JDK | 21 | **1.8.0_51** (`JAVA_HOME=C:\Program Files\Java\jdk`) | ✗ below requirement |
-| Installed JDKs | — | 8, 17, 18, 19, 20 — **no 21** | ✗ none usable |
+| Java JDK | 21 | 21.0.11 LTS — Temurin `21.0.11+10` | ✓ |
+| `JAVA_HOME` | JDK 21 | `C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot\` (machine scope) | ✓ |
 | Docker | v2+ | 28.5.2 | ✓ |
 | Docker Compose | v2+ | v2.40.3-desktop.1 | ✓ |
 | Git | 2.x+ | 2.40.1.windows.1 | ✓ |
 
-**Impact.** Task 01 (writing the prerequisite scripts) is **not** blocked — it authors the check
-rather than passing it, and this machine is a useful negative-path fixture for the failure
-messages the brief requires. Tasks 02 (Spring Boot / Java 21), 03 (Next.js / Node 22) and 04
-(Docker build of both) **cannot be validated** until Node 22 and JDK 21 are installed.
+Verification in a shell with freshly-resolved environment:
 
-**Resolution required from the user:** install Node.js 22.x and JDK 21, then re-run
-`npm run prereq` once Task 01 lands. Per `AGENTS.md` §"Stop and ask the user when", a failing
-prerequisite check is an escalation, not something to work around.
+```
+C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot\bin\java.exe
+openjdk version "21.0.11" 2026-04-21 LTS
+OpenJDK Runtime Environment Temurin-21.0.11+10 (build 21.0.11+10-LTS)
+OpenJDK 64-Bit Server VM Temurin-21.0.11+10 (build 21.0.11+10-LTS, mixed mode, sharing)
+javac 21.0.11
+```
+
+The Adoptium `bin` directory precedes both Oracle `javapath` shims in the machine `PATH`, so
+`java` resolves to 21 in any new shell. Tasks 02, 03 and 04 are unblocked.
+
+> **Note — JDK 21 not 22.** JDK 22 was requested but 22 is a non-LTS release, out of support since
+> September 2024, and `plans/superpower/PLAN.md` §4.0.0, `README.md`, and `docs/adr/001-gradle.md`
+> all lock **Java 21**. Installing 22 would have failed the very gate Task 01 builds. Confirmed
+> with the user before installing (see follow-up **F-4** for the leftover stale `PATH` entry).
 
 ### B-2 — Trunk branch ambiguity
 
@@ -239,6 +248,7 @@ the stale `main`. **Resolution:** authenticate `gh`, or confirm no PRs are open.
 | **F-1** | `tasks/README.md` baseline commit still reads `50f5d01`; should be updated to `aa20043` |
 | **F-2** | Baseline validation (link/ID/cycle checks) was run from a throwaway script. Consider promoting it to `scripts/` under Task 01 or Task 05 so the ledger stays verifiable |
 | **F-3** | 23 briefs lack a `Validation` section; the §6 universal gate covers this, but per-brief validation would be stronger |
+| **F-4** | Stale user-`PATH` entry `C:\Program Files\Java\jdk-18.0.1.1\bin` remains. Harmless — machine `PATH` puts JDK 21 ahead of it — but worth removing to avoid confusion |
 
 ---
 
