@@ -5,9 +5,10 @@
 > historical data**, **decides** on destinations/plans, **suggests actions**, and
 > lets the user perform **quick in-app actions to book flights and hotels**.
 
-> **Status: PLAN — core features & system base are now LOCKED (§1, §3, §4, §6.1, §12, §13).**
+> **Status: PLAN — core features, system base, and delivery structure are LOCKED (§1, §3, §4, §6.1, §10, §12, §13–§16).**
 > **Before coding:** run prerequisite check (§4.0.0). **Runtime:** Docker Compose (§4.0.0).
-> Implementation deferred until sign-off.
+> **Kickoff gate:** Phase 0a starts when this plan is merged to `master` (sign-off = merge approval).
+> Sprint-ready tasks live in [`plans/BACKLOG.md`](../BACKLOG.md).
 
 ---
 
@@ -35,6 +36,9 @@
 | **Naming** | **camelCase** functions · **kebab-case** files & URLs · **snake_case** i18n files (§4.0.4) |
 | **i18n** | **next-intl** — required from v1; no hardcoded user-facing strings (§4.2.10) |
 | **Auth** | **User-based accounts** — one user owns their trips; **no multi-tenant** (§4.0.5) |
+| **Auth mechanism** | **Self-issued JWT** in **httpOnly cookie** — v1; OAuth add-on post-v1 (§4.0.5) |
+| **Build tool** | **Gradle** (Kotlin DSL) — Java 21 toolchain; wrapper committed (§4.0) |
+| **External adapters** | **Port + stub first** — real vendor APIs wired when chosen; never block features (§4.0.7) |
 | **Admin** | **Seeded ADMIN account** — manage users, reset passwords (§4.0.6) — dev/docker only |
 | **Runtime** | **Docker Compose** — full stack runnable in containers (§4.0.0) |
 | **Pre-dev gate** | **Check prerequisites** before coding — install if missing (§4.0.0) |
@@ -123,7 +127,7 @@ prints the tool name, required version, and **install hint** for the detected OS
 | **Docker** | 24+ | container runtime | [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Win/Mac) or `docker.io` (Linux) |
 | **Docker Compose** | v2+ | orchestrate stack | Included with Docker Desktop; `docker compose version` |
 | **Git** | 2.x+ | version control | [git-scm.com](https://git-scm.com/) |
-| **Build tool** | Maven **or** Gradle (TBD §11) | backend build | Install once build tool locked in Phase 0 |
+| **Gradle** | **8.x** (wrapper in repo) | `apps/backend` build | `./gradlew --version`; install from [gradle.org](https://gradle.org/install/) only if wrapper missing |
 
 **Optional (recommended):**
 | Tool | Purpose |
@@ -163,6 +167,10 @@ travel-planner/
 | **postgres** | `pgvector/pgvector:pg16` | `5432` | PostgreSQL + pgvector |
 | **backend** | `docker/backend/Dockerfile` | `8080` | Spring Boot API `/api/v1/` |
 | **frontend** | `docker/frontend/Dockerfile` | `3000` | Next.js app |
+| **redis** *(Phase 2+)* | `redis:7-alpine` | `6379` | Semantic cache (§5.3) — optional Compose profile `cache` |
+
+**Health endpoints (Phase 0a):** backend exposes `GET /api/v1/health` (liveness) and
+`GET /api/v1/ready` (readiness — DB reachable). `wait-for-services.sh` polls `/ready`.
 
 ##### Commands (root)
 
@@ -181,6 +189,9 @@ docker compose down
 
 # Tear down + wipe volumes (fresh DB)
 docker compose down -v
+
+# Phase 2+ — include Redis for semantic cache
+docker compose --profile cache up -d
 ```
 
 ##### Environment & secrets
@@ -225,8 +236,11 @@ travel-planner/                    # monorepo root
 │   └── backend/                   # Spring Boot 3.x        →  Java 21
 ├── docker/                        # Dockerfiles (§4.0.0)
 ├── scripts/                       # check-prerequisites, wait-for-services
-├── packages/                      # optional shared libs (types, scripts) — add only when needed
-├── plans/                         # architecture & feature plans (this file)
+├── docs/adr/                      # architecture decision records
+├── packages/                      # shared libs — only when criteria in §4.0 met
+├── plans/
+│   ├── superpower/PLAN.md         # architecture & rules (this file)
+│   └── BACKLOG.md                 # sprint-ready epics & stories
 ├── .nvmrc                         # 22
 ├── .env.example                   # env template for docker compose
 ├── package.json                   # root scripts: prereq, dev, codegen, docker:*
@@ -237,7 +251,12 @@ travel-planner/                    # monorepo root
 | App | Runtime | Enforcement |
 |---|---|---|
 | `apps/frontend` | **Node.js 22** | `.nvmrc`, `package.json` `"engines": { "node": ">=22" }`, CI node-version check |
-| `apps/backend` | **Java 21** | Maven/Gradle toolchain, `JAVA_HOME`, CI java-version check |
+| `apps/backend` | **Java 21** | Gradle toolchain (`build.gradle.kts`), `JAVA_HOME`, CI java-version check |
+
+**`packages/` extraction criteria (do not add prematurely):**
+- Same code imported by **2+ apps**, AND
+- OpenAPI codegen **cannot** cover it (e.g. shared ESLint config, not API types).
+- Never duplicate DTO shapes — regenerate from OpenAPI instead.
 
 **Monorepo rules:**
 - Run **`npm run prereq`** before first dev session (§4.0.0).
@@ -736,8 +755,12 @@ This is a **single-user-account** system — not multi-tenant SaaS.
 | **UserContext** | `{ userId, email, roles[] }` — passed as param 2 or `@AuthenticationPrincipal` |
 | **Data isolation** | Every query scoped by `user_id`; services reject cross-user access — **except `ROLE_ADMIN`** (§4.0.6) |
 | **Roles** | `ROLE_USER` (default) · `ROLE_ADMIN` (user management) |
-| **Auth from v1** | Registered user accounts (not guest-only); exact provider TBD (§11) |
-| **Frontend** | Session/JWT from backend; `useUserContext()` hook; no tenant selector in UI |
+| **Auth from v1** | Registered user accounts (not guest-only) |
+| **Token transport** | Self-issued **JWT** returned on login; stored in **httpOnly, Secure, SameSite** cookie |
+| **Login API** | `POST /api/v1/auth/login` → sets cookie; `POST /api/v1/auth/logout` clears it |
+| **Session check** | `GET /api/v1/auth/me` → current user + roles for `useUserContext()` |
+| **OAuth** | Google/GitHub — **post-v1** add-on; router stays open, not in Phase 0 |
+| **Frontend** | Credentials via cookie (`credentials: 'include'` in `lib/api/client.ts`); no tenant selector |
 
 ```java
 // UserContext — record, not a loose map
@@ -858,7 +881,37 @@ features/admin/
 #### Login
 
 - Same login endpoint as regular users — username `ADMIN`, password `123456`.
-- JWT/session includes `roles: ["ADMIN"]` → unlocks `(admin)` routes.
+- JWT includes `roles: ["ADMIN"]` → unlocks `(admin)` routes.
+
+### 4.0.7 External adapters — stub-first policy (LOCKED)
+
+Vendor APIs (web search, flights, hotels, payments) are **not** blockers for feature
+delivery. Every domain port gets a **stub adapter** before a real one.
+
+| Rule | Detail |
+|---|---|
+| **Port first** | Define interface in `domain/port/` before any HTTP client |
+| **Stub ships with feature** | `infrastructure/<vendor>/Stub*Adapter` returns realistic fixture data |
+| **Profile switch** | `application.yml`: `adapters.search=stub` \| `live` — default `stub` in dev |
+| **Contract tests** | Stub and live adapters share the same port contract tests |
+| **No controller stubs** | Stubs live in `infrastructure/` only — never fake logic in controllers |
+| **Phase 1 default** | C2/C3 use stubs for search + suppliers; real providers wired in Phase 2 |
+
+```
+infrastructure/
+├── search/
+│   ├── StubSearchAdapter.java      # fixture JSON — ships in Sprint 4 (C2)
+│   └── LiveSearchAdapter.java      # real API — when vendor chosen (§11)
+├── flights/
+│   ├── StubFlightSearchAdapter.java
+│   └── LiveFlightSearchAdapter.java
+└── hotels/
+    ├── StubHotelSearchAdapter.java
+    └── LiveHotelSearchAdapter.java
+```
+
+**AI rule:** if a vendor is undecided, implement the port + stub and continue — do not
+wait for procurement.
 
 ### 4.1 The research & decision agent (C2) — how it works
 
@@ -1796,7 +1849,7 @@ DRAFT ─(search/quote)→ QUOTED ─(optional hold)→ HELD ─(USER confirms)�
 - Chat: `conversation`, `message`
 - Knowledge/RAG: `destination`, `destination_embedding` (pgvector), `poi`
 - History: `price_history`, `seasonality`  (the "historical data" backing C2)
-- Ops: `ai_call_log` (tokens/cost/provider), `audit_event`
+- Ops: `ai_call_log` (tokens/cost/provider)
 
 ---
 
@@ -1815,55 +1868,128 @@ DRAFT ─(search/quote)→ QUOTED ─(optional hold)→ HELD ─(USER confirms)�
 - **Observability:** `X-Request-Id` on all requests; structured logs; no PII in logs (§4.0.2-J2).
 - **API standards:** versioned `/api/v1/`, CRUD verbs, standard error envelope (§6.1).
 - **Auth:** user-scoped data access; no tenant (§4.0.5).
-- **CI gates:** compile + unit tests + OpenAPI codegen drift check + Flyway validate — must pass before merge.
+- **CI gates:** see §15 — compile, test, codegen drift, Flyway validate must pass before merge.
 - **Branch naming:** `feature/{ticket}-short-desc`, `fix/{ticket}-short-desc`.
 - **Prompt changes:** any edit under `ai/prompt/` triggers eval harness in CI.
 
 ---
 
-## 10. Phased roadmap
+## 10. Phased roadmap & delivery
 
-**Phase 0 — Foundation**
-**Prerequisites script** (`scripts/check-prerequisites.*`) + **`npm run prereq`**;
-**Docker** — `docker-compose.yml`, Dockerfiles for backend + frontend, `.env.example`;
-Monorepo scaffold (`apps/frontend`, `apps/backend`, root tooling); Node 22 + Java 21
-enforcement in CI; Spring Boot skeleton; package structure (§4); Postgres+pgvector+Flyway;
-domain value objects + `Money`; `LlmClient`/`EmbeddingClient`/`VectorStore` interfaces +
-`LlmClientRouter` with **both** LangChain4j-backed Anthropic & OpenAI adapters;
-PromptTemplateStore; observability + `ai_call_log`; OpenAPI→TS codegen pipeline;
-API v1 + standard error envelope (§6.1); user auth scaffold (§4.0.5);
-admin seeder (`ADMIN` / `123456` dev only, §4.0.6); admin user-management APIs;
-Next.js app scaffold (Option A feature structure, §4.2) with generated client;
-Tailwind CSS + unified design tokens + Ant global overrides (§4.2.9);
-next-intl + locale files (§4.2.10); **§12 workflow checklist** wired into PR template.
+Phases map to **epics** in [`plans/BACKLOG.md`](../BACKLOG.md). Each phase has explicit
+**exit criteria** — do not start the next phase until the current one passes.
 
-**Phase 1 — Core loop (C1→C3)**
-Intake/`TripBrief` extraction (C1) → research & decision agent + tools + historical
-data (C2) → itinerary generation (C3). Frontend screens for brief, recommendations,
-itinerary.
+### Phase 0a — DevEx & runtime (Sprint 0)
 
-**Phase 2 — Action + refine (C4, C5)**
-Flight/hotel search + booking state machine + payment provider integration (C4);
-conversational refinement (C5). Semantic cache; eval harness in CI.
+**Goal:** clone → `npm run prereq` → `docker compose up` → healthy stack.
 
-**Phase 3 — Later features**
+| Deliverable | Detail |
+|---|---|
+| Prereq scripts | `scripts/check-prerequisites.*`, `npm run prereq` |
+| Docker | `docker-compose.yml`, `docker-compose.dev.yml`, Dockerfiles, `.env.example` |
+| Health | `GET /api/v1/health`, `GET /api/v1/ready`; `wait-for-services.sh` |
+| CI skeleton | Node 22 + Java 21 + Docker build (§15) |
+| PR template | §12.3 checklist embedded |
+
+**Exit criteria:** all prereq checks green; `docker compose up --build` reaches healthy;
+CI pipeline runs on PR.
+
+### Phase 0b — Platform skeleton (Sprints 1–2)
+
+**Goal:** authenticated API + generated frontend client + admin + AI router shell.
+
+**Sprint 1 — backend platform**
+
+| Deliverable | Detail |
+|---|---|
+| Gradle + Spring Boot | Package layout (§4), profiles `dev`/`docker`/`prod` |
+| Flyway + Postgres | `V1__create_user_table.sql`; pgvector enabled |
+| Domain VOs | `Money`, `DateRange`, `UserContext` + unit tests |
+| Error envelope | `DomainException`, `@ControllerAdvice`, `ApiErrorResponse` (§6.1) |
+| OpenAPI bootstrap | Spec in `api/openapi/`; health + auth + trip stub paths |
+| Auth (JWT cookie) | Login/logout/me endpoints (§4.0.5) |
+| MapStruct | Mapper config + example controller→response flow |
+| Trip scaffold | `GET/POST /api/v1/trips` — thin controller, service unit test |
+
+**Sprint 2 — AI + frontend platform**
+
+| Deliverable | Detail |
+|---|---|
+| Admin | Seed `ADMIN`/`123456` (dev only); admin APIs + audit (§4.0.6) |
+| AI platform | `LlmClient`/`EmbeddingClient`/`VectorStore` ports + `LlmClientRouter` |
+| LangChain4j | Anthropic + OpenAI adapters in `ai/langchain4j/` only |
+| AI observability | `ai_call_log`, `X-Request-Id` MDC, token/latency logging |
+| Next.js scaffold | App Router, `(planner)/` + `(admin)/` shells, trip stepper placeholder |
+| Design system | Tailwind + tokens + Ant overrides + `PageShell` (§4.2.9) |
+| i18n | next-intl, `en/` + `ms/` namespaces (§4.2.10) |
+| Codegen | OpenAPI → TS; `npm run codegen`; CI drift check (§15) |
+| API client | `lib/api/client.ts`, zod boundary, React Query setup |
+
+**Phase 0 exit criteria (gate before Phase 1):**
+- [ ] §12.3 checklist passes on a sample PR
+- [ ] Login as `ADMIN` works in docker profile; seed skipped in prod profile
+- [ ] Frontend calls backend with generated types (no hand-written API DTOs)
+- [ ] `LlmClientRouter` smoke test with config switch anthropic ↔ openai
+- [ ] OpenAPI codegen drift fails CI when spec changes without regen
+
+### Phase 1 — Core loop (Sprints 3–5)
+
+| Sprint | Feature | Outcome |
+|---|---|---|
+| 3 | **C1** Intake | `TripBrief` create/edit E2E with structured LLM extraction |
+| 4 | **C2** Research | Agent + **stub tools** → typed `RankedRecommendations` |
+| 5 | **C3** Itinerary | Day-by-day plan; intake → research → itinerary E2E test |
+
+**Phase 1 exit criteria:**
+- [ ] Happy path: create trip → brief → research → itinerary without manual DB edits
+- [ ] Each feature has service unit tests + frontend loading/error/empty states
+- [ ] Eval harness v0 runs in CI on prompt template changes (C2)
+
+### Phase 2 — Action + refine (Sprints 6–8)
+
+| Sprint | Feature | Outcome |
+|---|---|---|
+| 6 | **C4** search/quote | Booking state machine + stub suppliers; browse UI |
+| 7 | **C4** confirm | Idempotency, payment provider, audit trail (§7) |
+| 8 | **C5** Chat | SSE refinement + itinerary patch tool; Redis semantic cache (profile `cache`) |
+
+**Phase 2 exit criteria:**
+- [ ] Booking confirm is human-gated; no LLM auto-book
+- [ ] `Idempotency-Key` dedup verified in integration test
+- [ ] Chat markdown sanitized (DOMPurify)
+
+### Phase 3 — Later features
+
 Packing, review summaries, disruption replanning, narrative, translation, groups.
+(See §3 "Later" — no sprint allocation until Phase 2 exits.)
 
 ---
 
-## 11. Remaining open questions (non-blocking)
+## 11. Open questions & locked decisions
 
-1. **External providers:** which web-search API, flight/hotel supplier APIs (e.g.
-   Amadeus/Skyscanner-style), and payment provider (e.g. Stripe) to target?
-2. **Historical data source:** do we ingest a dataset / scrape over time to build
-   `price_history`, or rely on a supplier API that exposes trends?
-3. **Auth provider:** JWT self-issued vs OAuth (Google/GitHub) — user-based model locked (§4.0.5); provider TBD.
-4. **Build tool:** Maven vs Gradle.
-5. **Local model support** later (Ollama) — keep the router open for it?
+### Locked (resolved — do not re-open without ADR)
 
-**Locked (removed from open questions):**
-- ~~Auth: guest vs accounts~~ → **user accounts from v1, no tenant** (§4.0.5)
-- ~~BFF vs direct~~ → **direct to Spring Boot** (§4.0.5)
+| Topic | Decision | ADR / section |
+|---|---|---|
+| Build tool | **Gradle** (Kotlin DSL), wrapper committed | `docs/adr/001-gradle.md` |
+| Auth v1 | **Self-issued JWT** in httpOnly cookie | `docs/adr/002-jwt-auth.md`, §4.0.5 |
+| External APIs | **Stub-first** — features never blocked on vendor | §4.0.7 |
+| Guest vs accounts | User accounts from v1, no tenant | §4.0.5 |
+| BFF vs direct | Direct to Spring Boot | §4.0.5 |
+
+### Still open (non-blocking for Phase 0–1)
+
+| # | Question | Blocks | Default until decided |
+|---|---|---|---|
+| 1 | Web-search API vendor | Live C2 search adapter only | `StubSearchAdapter` (§4.0.7) |
+| 2 | Flight/hotel supplier APIs | Live C4 adapters only | `StubFlightSearchAdapter`, `StubHotelSearchAdapter` |
+| 3 | Payment provider (e.g. Stripe) | Live payment flow in Sprint 7 | Stub payment port returning fixture quotes |
+| 4 | Historical data source | Live `HistoricalPriceTool` data richness | Seed fixture rows in Flyway dev migration |
+| 5 | OAuth (Google/GitHub) | Social login only | JWT email/password auth (§4.0.5) |
+| 6 | Local model (Ollama) | Optional provider | Router interface stays open (§5.4) |
+
+**Rule:** open questions affect **live adapter** selection only — stub adapters and port
+interfaces ship regardless.
 
 ---
 
@@ -1896,7 +2022,7 @@ Before writing code, the AI/human reads this section and the relevant plan secti
 
 | Step | Action | Output / gate |
 |---|---|---|
-| **0 — Prereq** | Run `npm run prereq`. Install any missing tool (Node 22, Java 21, Docker). Verify `docker compose version`. | All checks green; Docker daemon running |
+| **0 — Prereq** | Run `npm run prereq`. Install any missing tool (Node 22, Java 21, Docker). Verify `./gradlew --version` and `docker compose version`. | All checks green; Docker daemon running |
 | **1 — Plan** | Name the feature (maps to C1–C5 or a sub-task). Read §1, §4, §4.0.1, §4.0.4, §4.2, §4.2.6. If the change alters architecture, **stop and update this plan first**. | One-line scope + affected packages listed |
 | **2 — Contract** | Add/update OpenAPI paths, request/response schemas, error codes. Run codegen. | OpenAPI diff + regenerated TS client; frontend/backend cannot compile against stale types |
 | **3 — Domain** | Add value objects, enums, aggregates, port interfaces in `domain/`. Pure algorithms in `domain/algorithm/` if needed (§4.0.3). Zero framework imports. | New/changed types in `domain/model`, `domain/valueobject`, `domain/port`, optionally `domain/algorithm/` |
@@ -1931,8 +2057,24 @@ Copy into PR description; all items must pass:
 - [ ] **Admin seed** — dev/docker only; `ADMIN` user after migrate; disabled in prod (§4.0.6)
 - [ ] **Admin audit** — password reset / user changes logged to `audit_event` (§4.0.6)
 - [ ] **No secrets** — API keys only via env/config; nothing committed
+- [ ] **Stub adapters** — if vendor undecided, port + `Stub*Adapter` ships (§4.0.7)
 
-### 12.4 AI-specific rules
+### 12.4 Feature definition of done (per C1–C5 story)
+
+In addition to §12.3, a **feature story** is done only when all apply:
+
+| Criterion | Required |
+|---|---|
+| OpenAPI paths + error codes registered | Yes |
+| Service unit tests with mocked ports | Yes |
+| Controller slice test (routing only) | Yes |
+| Stub adapter if external port introduced | Yes (§4.0.7) |
+| Frontend: loading / error / empty states | Yes |
+| i18n namespace complete for the feature | Yes |
+| Golden-file or schema test for LLM output | If feature calls LLM |
+| E2E or integration test on happy path | Phase 1+ features |
+
+### 12.5 AI-specific rules
 
 When an AI assistant generates or edits code:
 
@@ -1969,6 +2111,8 @@ at-a-glance checklist for humans and AI.
 | X8 | **Annotations OK** — Spring/Jakarta backend; interfaces + zod frontend |
 | X9 | **Prerequisites** — `npm run prereq` before dev; install missing tools (§4.0.0) |
 | X10 | **Docker** — full stack via `docker compose up` (§4.0.0) |
+| X11 | **Gradle** — backend builds via committed wrapper (§1) |
+| X12 | **Stub-first** — port + stub before live vendor adapter (§4.0.7) |
 
 ### 13.1 Backend coding rules
 
@@ -2002,6 +2146,8 @@ at-a-glance checklist for humans and AI.
 | B26 | **Annotations OK** — `@Valid`, `@Transactional`, `@ControllerAdvice` |
 | B27 | **Admin** — `ROLE_ADMIN` for user mgmt; seed `ADMIN`/`123456` dev only (§4.0.6) |
 | B28 | **Admin audit** — all admin mutations → `audit_event` |
+| B29 | **Gradle** — build via committed wrapper; Java 21 toolchain (§1, ADR 001) |
+| B30 | **Stub adapters** — ship `Stub*Adapter` when vendor undecided (§4.0.7) |
 
 ### 13.2 Frontend coding rules
 
@@ -2065,3 +2211,73 @@ at-a-glance checklist for humans and AI.
 | S8 | **`cn()`** — merge classes via `lib/utils/cn.ts` |
 | S9 | **Ant `classNames`** — instance tweaks only after global layer |
 
+---
+
+## 14. Non-functional requirements (NFRs)
+
+Initial targets — refine with production data; do not block Phase 0 on tuning.
+
+| Area | Target | Notes |
+|---|---|---|
+| **API latency** (excl. AI) | p95 < 500 ms | Measured at `/api/v1/` CRUD endpoints |
+| **Research agent** (C2) | p95 < 90 s | Bounded tool loop; show progress in UI |
+| **Itinerary generation** (C3) | p95 < 60 s | Structured output + validation |
+| **Booking confirm** (C4) | p95 < 10 s | Excludes payment provider redirect |
+| **Availability** (v1) | Best effort local/docker | No SLA until production deploy |
+| **Concurrent users** (v1) | ~50 simultaneous | Single-region; scale story post-v1 |
+| **Data retention** | User data until account delete | `ai_call_log` retained 90 days |
+| **Uptime monitoring** | `/health` + `/ready` polled | Compose healthchecks + CI smoke |
+| **Rate limits** | AI endpoints: 20 req/min/user | Booking confirm: 5 req/min/user |
+| **Security** | No PII in logs; secrets in env only | §4.0.2-J2, §4.0.5 |
+
+---
+
+## 15. CI/CD pipeline (LOCKED)
+
+Pipeline mirrors §12.2 workflow. Runs on every PR to `master`.
+
+### 15.1 Stages
+
+```
+lint → build → test → contract → docker → smoke
+```
+
+| Stage | Backend | Frontend | Gate |
+|---|---|---|---|
+| **lint** | Checkstyle/Spotless (Gradle) | ESLint + TypeScript `tsc --noEmit` | Fail on error |
+| **build** | `./gradlew build -x test` | `npm run build` | Compile success |
+| **test** | `./gradlew test` | `npm run test` (Vitest) | All pass |
+| **contract** | OpenAPI validate | `npm run codegen` + git diff check | No drift |
+| **migrate** | Flyway validate (Testcontainers) | — | Migrations valid |
+| **docker** | Build `docker/backend/Dockerfile` | Build `docker/frontend/Dockerfile` | Image builds |
+| **smoke** | Hit `/api/v1/ready` in compose | — | Healthy stack |
+
+### 15.2 Runtime version gates
+
+- Node **22.x** — `node --version` in CI
+- Java **21** — Gradle toolchain enforcement
+- Docker Compose **v2+** — for integration job
+
+### 15.3 Prompt & AI gates (Phase 1+)
+
+- Any change under `ai/prompt/` triggers **eval harness** job
+- Golden-file schema tests must pass before merge
+
+### 15.4 Branch policy
+
+- `master` — protected; PR required; CI green
+- Branch naming: `feature/{ticket}-short-desc`, `fix/{ticket}-short-desc`, `cursor/{desc}-{id}`
+
+---
+
+## 16. Architecture decision records (ADRs)
+
+Significant decisions are recorded in `docs/adr/` and referenced from §11.
+
+| ADR | Title | Status |
+|---|---|---|
+| [001](../../docs/adr/001-gradle.md) | Gradle as backend build tool | Accepted |
+| [002](../../docs/adr/002-jwt-auth.md) | JWT in httpOnly cookie for v1 auth | Accepted |
+
+**When to write an ADR:** changing a locked decision in §1, swapping LLM framework,
+adding a new runtime service, or altering API versioning strategy.

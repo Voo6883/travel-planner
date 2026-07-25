@@ -2,7 +2,7 @@
 
 An **LLM-powered travel planner** monorepo. Users describe where they want to go, budget, dates, and preferences. The system researches online and historical data, ranks destinations, builds itineraries, and supports in-app booking actions with human confirmation.
 
-> **Status:** Planning phase — architecture and rules are locked in [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md). Application code not yet scaffolded.
+> **Status:** Planning complete — architecture, delivery structure, and sprint backlog are locked. Application code not yet scaffolded. Start with **Phase 0a** (Sprint 0) per [`plans/BACKLOG.md`](plans/BACKLOG.md).
 
 ## Features (v1)
 
@@ -19,7 +19,7 @@ An **LLM-powered travel planner** monorepo. Users describe where they want to go
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js 15 (App Router), TypeScript, Ant Design, Tailwind CSS, TanStack Query, next-intl |
-| Backend | Java 21, Spring Boot 3.x, LangChain4j |
+| Backend | Java 21, Spring Boot 3.x, Gradle, LangChain4j |
 | Database | PostgreSQL + pgvector |
 | AI | Anthropic + OpenAI (switchable at runtime) |
 | Runtime | Docker Compose |
@@ -55,6 +55,7 @@ npm run prereq
 | Java JDK | 21 |
 | Docker + Compose | v2+ |
 | Git | 2.x+ |
+| Gradle | 8.x (wrapper in repo — no global install required) |
 
 ## Quick start (planned)
 
@@ -107,7 +108,9 @@ See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) for full coding rules
 
 | Document | Description |
 |---|---|
-| [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Master plan — architecture, rules, roadmap |
+| [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Master plan — architecture, rules, NFRs, CI/CD |
+| [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint-ready epics & stories (Sprints 0–8) |
+| [`docs/adr/`](docs/adr/) | Architecture decision records (Gradle, JWT auth) |
 
 ## License
 
