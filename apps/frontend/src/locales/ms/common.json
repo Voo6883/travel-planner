@@ -1,0 +1,16 @@
+{
+  "app_name": "Perancang Perjalanan",
+  "app_tagline": "Rancang perjalanan melalui sembang. Setiap cadangan berasaskan pengetahuan perjalanan yang sebenar.",
+  "skip_to_content": "Langkau ke kandungan utama",
+  "system_status_title": "Status sistem",
+  "system_status_frontend": "Bahagian hadapan",
+  "system_status_backend": "API bahagian belakang",
+  "status_ready": "Sedia",
+  "status_checking": "Menyemak…",
+  "status_unreachable": "Tidak dapat dihubungi",
+  "status_unreachable_hint": "Bahagian belakang tidak berjalan. Antara muka tetap berfungsi tanpanya.",
+  "scaffold_notice": "Rangka Fasa 0a — ciri perancangan belum dibina.",
+  "locale_label": "Bahasa",
+  "locale_en": "English",
+  "locale_ms": "Bahasa Melayu"
+}

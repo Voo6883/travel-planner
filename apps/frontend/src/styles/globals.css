@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Semantic tokens as CSS variables (docs/UI-UX-DESIGN-SYSTEM.md §3.1).
+ * Dark mode changes these values; component class names never change.
+ * Values are mirrored from src/styles/design-tokens.ts — that file stays the written source
+ * of truth, and tasks/11 replaces this hand-mirroring with generated output.
+ */
+:root {
+  --canvas: #f8fafc;
+  --surface: #ffffff;
+  --surface-subtle: #f1f5f9;
+  --surface-elevated: #ffffff;
+  --foreground: #0f172a;
+  --foreground-muted: #475569;
+  --foreground-subtle: #5f6f84;
+  --border: #64748b;
+  --border-subtle: #e2e8f0;
+  --success: #15803d;
+  --success-surface: #f0fdf4;
+  --warning: #ad4e00;
+  --warning-surface: #fff7e6;
+  --destructive: #b91c1c;
+  --destructive-surface: #fef2f2;
+  --info: #0369a1;
+  --info-surface: #f0f9ff;
+  --action-primary-fill: #0958d9;
+  --action-primary-fill-hover: #003eb3;
+  --action-primary-fill-active: #002c8c;
+  --action-primary-text: #0958d9;
+  --focus-ring: #1677ff;
+  --selection-surface: #e6f4ff;
+  --selection-border: #bae0ff;
+  --selection-text: #0958d9;
+  --ai-accent-text: #006d75;
+  --ai-accent-surface: #e6fffb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #0b1220;
+    --surface: #111827;
+    --surface-subtle: #172033;
+    --surface-elevated: #1e293b;
+    --foreground: #f8fafc;
+    --foreground-muted: #cbd5e1;
+    --foreground-subtle: #94a3b8;
+    --border: #94a3b8;
+    --border-subtle: #334155;
+    --success: #4ade80;
+    --success-surface: #052e16;
+    --warning: #fdba74;
+    --warning-surface: #431407;
+    --destructive: #f87171;
+    --destructive-surface: #450a0a;
+    --info: #7dd3fc;
+    --info-surface: #082f49;
+    --action-primary-text: #69b1ff;
+    --focus-ring: #69b1ff;
+    --selection-surface: #082f49;
+    --selection-border: #4096ff;
+    --selection-text: #bae0ff;
+    --ai-accent-text: #5eead4;
+    --ai-accent-surface: #042f2e;
+  }
+}
+
+@layer base {
+  html {
+    /* Prevent iOS text inflation without disabling user zoom (§4.4 safe areas). */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--canvas);
+    color: var(--foreground);
+    /* The 320 px floor is a hard requirement — nothing may force the page wider. */
+    overflow-x: hidden;
+  }
+
+  /* 2 px ring with a 2 px surface offset (§3.1 semantic usage). */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}

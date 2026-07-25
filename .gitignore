@@ -8,6 +8,10 @@ node_modules/
 apps/frontend/.next/
 apps/backend/build/
 apps/backend/.gradle/
+*.tsbuildinfo
+
+# next-env.d.ts is deliberately NOT ignored: it is committed so `npm ci && npm run typecheck`
+# succeeds without first running a build, which is the order CI uses (tasks/05).
 
 # Secrets
 secrets/

@@ -1,0 +1,16 @@
+{
+  "app_name": "Travel Planner",
+  "app_tagline": "Plan trips by chatting. Every recommendation is grounded in real travel knowledge.",
+  "skip_to_content": "Skip to main content",
+  "system_status_title": "System status",
+  "system_status_frontend": "Frontend",
+  "system_status_backend": "Backend API",
+  "status_ready": "Ready",
+  "status_checking": "Checking…",
+  "status_unreachable": "Not reachable",
+  "status_unreachable_hint": "The backend is not running. The frontend shell works without it.",
+  "scaffold_notice": "Phase 0a scaffold — planning features are not built yet.",
+  "locale_label": "Language",
+  "locale_en": "English",
+  "locale_ms": "Bahasa Melayu"
+}
