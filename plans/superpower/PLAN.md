@@ -1,9 +1,9 @@
 # Travel Planner — AI/LLM Integration Plan
 
-> An **LLM-powered travel planner**. The user states where they might want to go,
-> their budget, dates, and preferences. The system **researches online + uses
-> historical data**, **decides** on destinations/plans, **suggests actions**, and
-> lets the user perform **quick in-app actions to book flights and hotels**.
+> A **knowledge-based, LLM-powered travel planner**. Users chat to create and refine trips.
+> The system **retrieves facts from a Travel Knowledge Base** (destinations, food, areas,
+> POIs, seasonality, prices), **reasons with an LLM**, and returns **grounded**
+> recommendations — never invented places or prices.
 
 > **Status: PLAN — core features, system base, extensibility, and delivery structure are LOCKED (§1, §3, §4, §6.1, §10, §12, §13–§16).**
 > **Before coding:** run prerequisite check (§4.0.0). **Runtime:** Docker Compose (§4.0.0).
@@ -23,6 +23,7 @@
 | Backend runtime | **JDK 21** — enforced via toolchain / CI (see §4.0) |
 | Backend framework | **Spring Boot 3.x** |
 | **AI framework** | **LangChain4j** (chosen — wrapped behind our own interfaces so it stays isolated) |
+| **AI architecture** | **Knowledge-based (KB + RAG)** — retrieve facts first, LLM reasons second; every claim grounded (§4.1.0) |
 | **LLM providers** | **Anthropic + OpenAI, switchable** at runtime via config (§5.4) |
 | Frontend | **Next.js (App Router) + TypeScript + Ant Design** (strictly typed, contracts generated from backend) |
 | Frontend runtime | **Node.js 22** — enforced via `.nvmrc` / `engines` / CI (see §4.0) |
@@ -850,10 +851,11 @@ com.travelplanner
 │   ├── valueobject/        #   Money, DateRange, GeoLocation, PartySize, TripBrief
 │   ├── enums/              #   CabinClass, TripStyle, BookingStatus, Provider
 │   ├── algorithm/          #   pure DSA: ranking, scheduling, graph, interval, aggregation (§4.0.3)
-│   └── port/               #   interfaces the domain needs (SearchPort, BookingPort, LlmPort...)
+│   └── port/               #   KnowledgePort, SearchPort, BookingPort, LlmPort...
 │
-├── application/            # use-cases / orchestration (services); depends only on domain ports
+├── application/
 │   ├── intake/  research/  itinerary/  booking/  chat/
+│   └── knowledge/            # KnowledgeQueryService — TKB retrieve orchestration
 │
 ├── ai/                     # LLM concerns; implements domain LlmPort via LangChain4j
 │   ├── client/             #   LlmClient/EmbeddingClient interfaces + LlmClientRouter (§5.4)
@@ -868,7 +870,8 @@ com.travelplanner
 │   ├── search/             #   web search API client
 │   ├── flights/  hotels/   #   supplier API clients
 │   ├── payment/            #   payment provider client (tokenized; §7)
-│   └── history/            #   historical price/weather/seasonality data access
+│   ├── knowledge/          #   KnowledgePort adapter: JPA + pgvector RAG (§4.1.0)
+│   └── history/            #   price_history, seasonality repositories
 │
 ├── api/                    # REST layer
 │   ├── controller/  dto/  mapper/   # DTOs are separate from domain; MapStruct maps between
@@ -1681,6 +1684,65 @@ management:
       probes:
         enabled: true
 ```
+
+### 4.1.0 Knowledge-based architecture (LOCKED)
+
+The product is **knowledge-based**, not pure generative. The LLM is a **reasoning layer
+over a Travel Knowledge Base (TKB)** — it plans and explains; the KB supplies facts.
+
+```
+User query / TripBrief
+       │
+       ▼
+┌──────────────────┐     ┌─────────────────────────────────────────┐
+│  RETRIEVE (TKB)  │────►│ destination_guide · destination_area    │
+│  SQL + pgvector  │     │ poi · seasonality · price_history       │
+│  RAG             │     │ knowledge_source (provenance)             │
+└────────┬─────────┘     └─────────────────────────────────────────┘
+         │ retrieved chunks + structured rows
+         ▼
+┌──────────────────┐     optional: WebSearchTool (live supplement)
+│  REASON (LLM)    │────► rank · compare · narrate · propose itinerary
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  GROUNDED OUTPUT │  RankedRecommendations · TravelerGuide · Itinerary
+│  + source_refs[] │  every fact traceable to KB row or live source
+└──────────────────┘
+```
+
+**Non-negotiable rules:**
+
+| Rule | Enforcement |
+|---|---|
+| **Retrieve before claim** | Agent tools query TKB before stating food, areas, POIs, prices |
+| **No invented facts** | LLM must not fabricate places, ratings, or prices — use `low_confidence` / empty result |
+| **Provenance required** | Every recommendation field links `source_refs[]` → `knowledge_source` or live URL |
+| **KB primary, web secondary** | Web search supplements (events, advisories); core traveler intel from TKB |
+| **Structured output** | LLM emits typed DTOs validated by `Guardrails` — not free-text plans in DB |
+
+**Domain port** (features depend on this, not on pgvector/JPA directly):
+
+```java
+public interface KnowledgePort {
+    Optional<DestinationGuide> getGuide(DestinationId id);
+    List<DestinationArea> getAreas(DestinationId id, AreaQuery query);
+    List<Poi> searchPois(PoiSearchQuery query);           // SQL filters + tags
+    List<KnowledgeMatch> semanticSearch(SemanticQuery q); // pgvector RAG
+    Optional<Seasonality> getSeasonality(DestinationId id, Month month);
+    Optional<PriceTrend> getPriceTrend(DestinationId id, PriceQuery query);
+}
+```
+
+**Backend packages:**
+
+| Package | Role |
+|---|---|
+| `domain/port/KnowledgePort.java` | Interface |
+| `application/knowledge/KnowledgeQueryService.java` | Orchestrates retrieve + cache |
+| `infrastructure/knowledge/` | JPA repos, `PgVectorKnowledgeAdapter`, seed loaders |
+| `ai/tool/*GuideTool.java` | Agent tools call `KnowledgePort` via application layer |
 
 ### 4.1 The research & decision agent (C2) — how it works
 
@@ -2590,6 +2652,18 @@ const t = useTranslations('trip_brief');
 
 Even though LangChain4j is chosen, features depend on **our** interfaces, so a future
 swap or multi-provider setup costs one adapter package.
+
+### 5.0 Knowledge-based pattern (LOCKED)
+
+Every AI feature follows **RAG over TKB** (§4.1.0):
+
+1. **Build context** — `KnowledgePort` + optional live search → ranked chunks + rows.
+2. **Prompt** — system prompt includes retrieved context only; instruct: *cite sources, do not invent*.
+3. **Generate** — `LlmClient.completeStructured` or tool loop.
+4. **Validate** — `Guardrails` checks schema + `source_refs` present for factual fields.
+5. **Persist** — store structured result + provenance; never raw LLM prose as source of truth.
+
+`Retriever` (§5.2) wraps `KnowledgePort.semanticSearch` — LangChain4j never queries DB directly.
 
 ### 5.1 Provider-agnostic interfaces
 ```java

@@ -311,6 +311,23 @@ Phase 2 adds: booking quotes via chat → confirm in C4 UI.
 
 ---
 
+## G. Knowledge-based requirements (TKB)
+
+All factual claims in C2/C3/C5 must be **retrieved from the Travel Knowledge Base** (§4.1.0) — not LLM-generated.
+
+| ID | Use case | Priority | Phase | Acceptance criteria |
+|---|---|---|---|---|
+| UC-K01 | Retrieve destination guide | P0 | 1 | `KnowledgePort.getGuide` → overview, best_for, practical |
+| UC-K02 | Semantic POI search | P0 | 1 | `semanticSearch` — e.g. "street food", "temples" → ranked POIs with `source_ref` |
+| UC-K03 | Area lookup within destination | P0 | 1 | `getAreas` — stay / explore / day_trip with vibe tags |
+| UC-K04 | Seasonality + price from history | P0 | 1 | `getSeasonality` + `getPriceTrend` feed C2 ranking |
+| UC-K05 | Provenance on every fact | P0 | 1 | `source_refs[]` on recommendations, itinerary POIs, chat answers |
+| UC-K06 | No invented facts | P0 | 1 | Empty / `low_confidence` when KB has no match — never hallucinate |
+| UC-K07 | KB seed data (dev) | P0 | 1 | Flyway seed for ≥3 destinations with guides, areas, POIs |
+| UC-K08 | Live web supplements KB | P1 | 1 | WebSearchTool for events/advisories only — core intel from TKB |
+
+---
+
 ## Traceability
 
 | Use case range | Feature | PLAN section |
@@ -322,4 +339,4 @@ Phase 2 adds: booking quotes via chat → confirm in C4 UI.
 | UC-C3-* | C3 Itinerary | §3, §4.0.3 |
 | UC-C4-* | C4 Booking | §7 |
 | UC-C5-* | C5 Trip chat | §3.2 |
-| UC-N* | Mailer | §4.0.10 |
+| UC-K* | Travel Knowledge Base | §4.1.0, §4.1.2, §5.0 |

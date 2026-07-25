@@ -1,6 +1,6 @@
 # Travel Planner
 
-An **LLM-powered travel planner** monorepo. Users type *"help me create a plan"* (or similar) and the **LLM decides** what to do next — create a trip, ask questions, research, and build itineraries. Users continuously refine via chat. Booking requires explicit human confirmation.
+A **knowledge-based, LLM-powered travel planner**. Users chat to plan trips. Decisions are grounded in a **Travel Knowledge Base** — destinations, food, areas, POIs, seasonality, and prices — with the LLM reasoning over retrieved facts, not inventing them.
 
 > **Status:** Planning complete — architecture, delivery structure, and sprint backlog are locked. Application code not yet scaffolded. Start with **Phase 0a** (Sprint 0) per [`plans/BACKLOG.md`](plans/BACKLOG.md).
 
@@ -9,7 +9,7 @@ An **LLM-powered travel planner** monorepo. Users type *"help me create a plan"*
 | # | Feature | Description |
 |---|---|---|
 | C1 | **Intake** | Chat (primary) or form → structured `TripBrief` |
-| C2 | **Research** | Agent + traveler knowledge DB → where to go, what it's like, food, areas, highlights |
+| C2 | **Research** | Knowledge-based ranking — TKB + RAG → grounded destination guides |
 | C3 | **Itinerary** | Day-by-day plan grounded in real POIs |
 | C4 | **Booking** | Search + book flights/hotels — human-confirmed |
 | C5 | **Trip chat** | LLM-driven create + decisions across the full planning flow |
@@ -20,7 +20,7 @@ An **LLM-powered travel planner** monorepo. Users type *"help me create a plan"*
 |---|---|
 | Frontend | Next.js 15 (App Router), TypeScript, Ant Design, Tailwind CSS, TanStack Query, next-intl |
 | Backend | Java 21, Spring Boot 3.x, Gradle, LangChain4j |
-| Database | PostgreSQL + pgvector |
+| Database | PostgreSQL + pgvector | Travel Knowledge Base (TKB) + embeddings |
 | AI | Anthropic + OpenAI (switchable at runtime) |
 | Auth | Local password, **Gmail sign-up/login (Firebase)**, GitHub OAuth |
 | Mailer | Resend (`resend.com`) |

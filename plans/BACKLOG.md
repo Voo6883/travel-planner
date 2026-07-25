@@ -57,6 +57,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S1-8 | Trip scaffold | `GET/POST /api/v1/trips` | Thin controller; service unit test |
 | S1-9 | Checkstyle + transactions | `LineLength` 120; `@Transactional(rollbackFor)` template; Spring Retry | CI lint + integration rollback test |
 | S1-10 | ArchUnit + JaCoCo | `ArchitectureTest` layer rules; coverage ≥70% on domain/application | CI arch + coverage gates |
+| S1-11 | **KnowledgePort** | `KnowledgePort` + `PgVectorKnowledgeAdapter` stub | UC-K01–K07 |
 
 ---
 
