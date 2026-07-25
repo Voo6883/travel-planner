@@ -185,7 +185,42 @@ optimistic one corrupts every downstream task.
 
 | ID | Severity | Blocks | Issue |
 |---|---|---|---|
+| **B-4** | **High** | `16`, `17` outright; touches `06`, `09`, `10`, `12`, `14`, `18`, `20`, `22` | ADR 006–010 consequences were never propagated into the task briefs |
 | **B-3** | Low | Task 00 completeness | `gh` unauthenticated — open PRs not reviewed via API |
+
+### B-4 — the ADRs have outrun the task briefs
+
+ADRs 006–010 landed in `aa20043`, **after** the 40 briefs were written (`769fa90`, `c02c9e2`).
+Their `Consequences` sections name the tasks they affect, but no brief was updated. Authority
+order (§3) puts an accepted ADR at rank 3 and a task brief at rank 6, so an agent following a
+brief will build something an ADR forbids — and the conflict protocol then requires it to stop.
+The practical effect is that affected tasks stall at execution time instead of at review time.
+
+**Task 17 is the sharpest case:** its Scope asks for a "realistic `StubDestinationKnowledgeAdapter`",
+which ADR 010 §3 forbids outright (production must fail to start if one is wired; development
+must show a `sample_data` banner). `docs/AGENT-HARNESS.md` §7 already flags this as a hazard, so
+the harness catches it — but only by halting the task.
+
+Mandated by an accepted ADR and absent from every brief:
+
+| Missing item | Source | Belongs to |
+|---|---|---|
+| `destination.coverage_level`, typed `destination_not_covered`, `GET /destinations/supported` | ADR 010 §4 | 16, 17 |
+| Licence register (`licence`, `attribution_text`) and attribution in the UI | ADR 010 §2 | 16, 17 |
+| `content_hash` re-embed trigger, additive model-migration path | ADR 010 §5 | 16, 17 |
+| Freshness TTLs by data class, `stale: true` propagation | ADR 010 §6 | 17 |
+| `Flux<LlmEvent>` sealed event union, `Usage` → `ai_call_log` | ADR 007 | 14 |
+| `expected_version` / `409 version_conflict` in the error catalog | ADR 008 | 06, 18 |
+| `token_version`, `sessions_valid_after`, refresh rotation, logout-all | ADR 009 | 09, 12 |
+| Account-linking pre-hijack rules (verified-existing-account, GitHub primary+verified, Firebase `aud`) | ADR 009 §4 | 10 |
+
+**Two tasks required by ADR 010 do not exist at all** — its own Consequences section says so:
+the TKB refresh / re-embed pipeline, and admin knowledge curation. Neither appears among tasks
+00–39.
+
+**Resolution:** reconcile the ADR consequences into the affected briefs and add the two missing
+tasks, *before* reaching task 14. This is documentation work with no code impact and is cheapest
+now. Do not resolve it by editing an ADR to match a brief — the ADR is the higher authority.
 
 ### B-1 — Local toolchain below required versions — ✅ RESOLVED 2026-07-25
 
@@ -235,10 +270,17 @@ is lost by leaving `main` behind.
 
 | Branch | Role |
 |---|---|
-| `master` | **Trunk.** Protected; PR required; CI green before merge. |
-| `agent/task-NN-*` | One per task brief. Branch from `master`, merge to `master`. |
-| `dev` | Currently an exact mirror of `master`. No defined role — see follow-up **F-5**. |
+| `dev` | **Working trunk** — see the supersession note below. |
+| `master` | Baseline at `aa20043`; `dev` carries all implementation work forward from it. |
 | `main` | **Abandoned.** Stale snapshot, 38 commits behind. Not maintained. |
+
+> **Superseded 2026-07-26 (user decision): implementation work happens on `dev`.**
+> The `agent/task-NN-*` branch-per-task rule from `tasks/README.md` is not being followed;
+> commits land directly on `dev`, one commit per feature. Tasks 00 and 01 were created on
+> `agent/task-00-plan-baseline` / `agent/task-01-root-tooling` before this decision and were
+> fast-forwarded into `dev`. `master` is untouched since `aa20043`.
+> This contradicts `tasks/README.md` §"Execution rules" — recorded rather than silently
+> diverging. Reconciling the two (or promoting `dev` to trunk in the docs) is follow-up **F-8**.
 
 If the GitHub repository's default branch is still set to `main`, the landing page will show the
 old two-file snapshot rather than the plan set. Changing that default is a repository setting the
@@ -261,6 +303,14 @@ the stale `main`. **Resolution:** authenticate `gh`, or confirm no PRs are open.
 | **F-5** | `dev` mirrors `master` exactly and has no role under the B-2 decision. Delete it, or define its purpose, before it drifts |
 | **F-6** | 11 fully-merged `origin/cursor/*` branches are absorbed into `master` and can be pruned |
 | **F-7** | Task 01's prerequisite gate is unexecuted on Linux/macOS — no host available. Bash builtins only, so it should hold, but [Task 05](05-ci-repository-workflow.md) must run `npm run prereq` and `npm run prereq:test` on an Ubuntu runner to close this |
+| **F-8** | `tasks/README.md` still mandates one branch/PR per task against `master`; actual practice is feature commits on `dev`. Reconcile the docs or the practice |
+
+## 8a. Environment decisions (dev machine)
+
+| Item | Decision |
+|---|---|
+| **Host ports** | Oracle XE's APEX endpoint owns `8080`. `docker-compose.yml` publishes `${BACKEND_HOST_PORT:-8080}`, `${FRONTEND_HOST_PORT:-3000}`, `${POSTGRES_HOST_PORT:-5432}`. Committed defaults stay exactly as PLAN §4.0.0 locks them; the untracked local `.env` sets `8081`. `NEXT_PUBLIC_API_BASE_URL` must track the host port and is inlined at **build** time — changing it needs `docker compose build frontend`. |
+| **Docker Desktop** | Docker Model Runner ("Docker AI") must stay disabled on this machine: it builds an unquoted `unix://C:\Users\Voo Yi Sen\...` socket path and crashes at startup because the username contains spaces. Re-check after any Docker Desktop update or reinstall. |
 
 ---
 

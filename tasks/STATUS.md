@@ -33,10 +33,10 @@
 |---|---|---|---|---|
 | 00 | [Baseline and execution map](00-plan-baseline.md) | — | `done` | Commit `aa20043`. B-1 and B-2 resolved; open item B-3 does not affect this task's DoD. |
 | 01 | [Prerequisite and root tooling](01-prerequisite-root-tooling.md) | 00 | `review` | Commit `a6dcb3c`. Gate verified pass+fail on PowerShell 5.1 and Git Bash; 27/27 assertions per platform. Linux/macOS unexecuted — see **F-7**. |
-| 02 | [Backend minimal scaffold](02-backend-minimal-scaffold.md) | 01 | `not_started` | **Next executable task.** Gradle wrapper must be 8.x — the gate activates that check once `apps/backend/gradlew` exists. |
-| 03 | [Frontend minimal scaffold](03-frontend-minimal-scaffold.md) | 01 | `not_started` | Root `package.json` stays orchestration-only; deps go in `apps/frontend/`. May run in parallel with 02. |
-| 04 | [Docker runtime and orchestration](04-docker-runtime.md) | 01, 02, 03 | `not_started` | B-1 resolved. |
-| 05 | [CI and repository workflow](05-ci-repository-workflow.md) | 01, 02, 03, 04 | `not_started` | |
+| 02 | [Backend minimal scaffold](02-backend-minimal-scaffold.md) | 01 | `done` | Commit `daca342`. Spring Boot 3.5.3, Gradle 8.14.5 wrapper, Java 21 toolchain. 10/10 tests; health/ready/404 verified at runtime. |
+| 03 | [Frontend minimal scaffold](03-frontend-minimal-scaffold.md) | 01 | `done` | Commit `48f1388`. Next 15.5.21 / React 19. lint+typecheck+build clean, 9/9 tests; 320 px no-overflow verified in-browser for `en` and `ms`. |
+| 04 | [Docker runtime and orchestration](04-docker-runtime.md) | 01, 02, 03 | `done` | Commit `b83dd86`. All three services healthy; `ready` reports `database: UP`; volume survives restart; images non-root and secret-free. |
+| 05 | [CI and repository workflow](05-ci-repository-workflow.md) | 01, 02, 03, 04 | `not_started` | **Next executable task.** Must run `prereq` + `prereq:test` on an Ubuntu runner to close **F-7**. |
 
 ## Phase 0B/0C — platform
 
@@ -57,8 +57,8 @@
 
 | ID | Task | Depends on | Status | Notes |
 |---|---|---|---|---|
-| 16 | [Knowledge domain and schema](16-knowledge-domain-schema.md) | 07, 14, 15 | `not_started` | No `Validation` section. |
-| 17 | [Knowledge seed and retrieval](17-knowledge-seed-retrieval.md) | 14, 16 | `not_started` | ADR 010 — no stub Knowledge adapter in prod. |
+| 16 | [Knowledge domain and schema](16-knowledge-domain-schema.md) | 07, 14, 15 | `blocked` | **B-4** — brief predates ADR 010; missing `coverage_level`, licence register, embedding lifecycle columns. |
+| 17 | [Knowledge seed and retrieval](17-knowledge-seed-retrieval.md) | 14, 16 | `blocked` | **B-4** — Scope asks for a "realistic `StubDestinationKnowledgeAdapter`", which ADR 010 §3 forbids. Do not start until reconciled. |
 | 18 | [Trip and TripBrief core](18-trip-brief-core.md) | 06, 07, 11, 15, 17 | `not_started` | No `Validation` section. |
 | 19 | [LLM TripBrief extraction](19-llm-trip-brief-extraction.md) | 14, 18 | `not_started` | LLM output → schema/golden-file test required. |
 | 20 | [Conversation persistence and SSE](20-conversation-sse.md) | 06, 07, 11, 14, 15 | `not_started` | No `Validation` section. ADR 007 — `Flux<LlmEvent>`. |
@@ -98,14 +98,17 @@
 
 | Status | Count |
 |---|---|
-| `done` | 1 |
+| `done` | 4 |
 | `in_progress` | 0 |
-| `blocked` | 0 |
+| `blocked` | 2 |
 | `review` | 1 |
-| `not_started` | 38 |
+| `not_started` | 33 |
 
-**Active blockers:** B-3 (`gh` unauthenticated) only, and it does not gate execution.
+**Active blockers:** **B-4** (ADR 006–010 consequences never propagated into the task briefs) —
+blocks 16 and 17 outright and touches 06, 09, 10, 12, 14, 18, 20, 22. **B-3** (`gh`
+unauthenticated) does not gate execution.
 
-Resolved 2026-07-25: **B-1** (toolchain) — Node 22.23.1 and Temurin JDK 21.0.11 LTS verified.
-**B-2** (trunk) — `master` is the trunk; branch from and merge to `master`, `main` is abandoned.
+Resolved: **B-1** (toolchain) — Node 22.23.1, Temurin JDK 21.0.11 LTS. **B-2** (trunk) —
+superseded 2026-07-26: work happens on `dev`. **Port 8080** — Oracle XE owns it on the dev
+machine; host ports are env-driven with committed defaults unchanged.
 Full detail in [`EXECUTION-BASELINE.md`](EXECUTION-BASELINE.md) §7.
