@@ -105,9 +105,9 @@ flowchart LR
 **Gate:** Frontend and backend both compile against the same contract.
 
 ```yaml
-# ✅ path pattern
+# ✅ path pattern — list uses GET (mutations use POST action paths)
 /api/v1/trips/{tripId}/ranked-recommendations:
-  post: ...
+  get: ...
 ```
 
 ---
@@ -185,12 +185,11 @@ Result persistResult(Validated v, UserContext user) { ... }
 **Goal:** HTTP mapping only — ≤10 lines per endpoint.
 
 ```java
-@PostMapping("/api/v1/trips/{tripId}/ranked-recommendations")
-public ResearchResponse research(@PathVariable UUID tripId,
-        @Valid @RequestBody ResearchRequest req,
+@GetMapping("/api/v1/trips/{tripId}/ranked-recommendations")
+public RankedRecommendationsResponse list(@PathVariable UUID tripId,
         @AuthenticationPrincipal UserContext user) {
     return researchMapper.toResponse(
-        researchService.runResearch(req.toQuery(tripId), user));
+        researchService.listRecommendations(tripId, user));
 }
 ```
 
@@ -458,6 +457,7 @@ When presenting completed work, use this structure:
 | Document | Purpose |
 |---|---|
 | [`docs/UI-UX-DESIGN-SYSTEM.md`](UI-UX-DESIGN-SYSTEM.md) | Unified web and PWA design contract |
+| [`docs/PLAN-COMPATIBILITY.md`](PLAN-COMPATIBILITY.md) | Post-merge plan compatibility review |
 | [`docs/ADDING-A-FEATURE.md`](ADDING-A-FEATURE.md) | Adding C6+ features |
 | [`AGENTS.md`](../AGENTS.md) | Entry point — quick rules |
 | [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) | Full architecture & rules |

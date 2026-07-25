@@ -53,9 +53,9 @@
 | UC-A09 | Link Gmail to existing account | P1 | 0b | Same email → `provider_linked=true` |
 | UC-A10 | Log out | P0 | 0b | Cookie cleared; redirect to login |
 | UC-A11 | View profile / linked providers | P0 | 0b | `GET /auth/me` |
-| UC-A12 | Change password (logged in) | P1 | 1 | `PUT /auth/password` — current + new password 🆕 |
-| UC-A13 | Resend verification email | P1 | 1 | `POST /auth/verify-email/resend` 🆕 |
-| UC-A14 | Delete account | P1 | 1 | `DELETE /auth/me` — soft-delete user + anonymize PII 🆕 |
+| UC-A12 | Change password (logged in) | P1 | 0b | `PUT /auth/password` — current + new password 🆕 |
+| UC-A13 | Resend verification email | P1 | 0b | `POST /auth/verify-email/resend` 🆕 |
+| UC-A14 | Delete account | P1 | 0b | `DELETE /auth/me` — soft-delete user + anonymize PII 🆕 |
 | UC-A15 | Admin list users | P0 | 0b | `GET /admin/users` — `ROLE_ADMIN` |
 | UC-A16 | Admin reset password | P0 | 0b | `PUT /admin/users/{id}/reset-password` + audit |
 

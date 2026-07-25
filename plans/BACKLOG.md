@@ -68,7 +68,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | ID | Story | Tasks | DoD |
 |---|---|---|---|
 | S2-1 | Admin seed | `V2__seed_dev_admin_user.sql`, profile-gated | `ADMIN`/`123456` in docker only |
-| S2-2 | Admin APIs | `AdminUserService`, audit logging | `@PreAuthorize ADMIN` |
+| S2-2 | Admin APIs | `AdminUserService`, audit logging | `@PreAuthorize("hasRole('ADMIN')")` → `ROLE_ADMIN` |
 | S2-3 | LlmClient ports | Interfaces + `LlmClientRouter` | Unit test with mock |
 | S2-4 | LangChain4j adapters | Anthropic + OpenAI in `ai/langchain4j/` | Config switch works |
 | S2-5 | AI observability | `ai_call_log`, `X-Request-Id` MDC | Token count persisted |
@@ -114,7 +114,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S4-4d | **Locale app pack seed** | `travel_app` per country: CN (滴滴, 高德, 支付宝…), JP, TH | UC-K11, PM-K08/09 |
 | S4-5 | Research API | `POST .../research/run`, `GET .../jobs/{id}`, ranked list | User-scoped |
 | S4-6 | Select destination | `POST .../selected-recommendation` → DESTINATION_SELECTED | UC-C2-06 |
-| S4-7 | C2 frontend | `features/research/`; polling UI; traveler guide panels; "Plan this trip" CTA | UC-C2-10/13/14 |
+| S4-7 | C2 frontend | `features/research/`; polling UI; traveler guide panels; "Plan this trip" CTA | UC-C2-10/13/16 |
 | S4-8 | Research email | `research-complete` Resend template on job done | UC-N04 |
 | S4-9 | Eval harness v0 | CI on `ai/prompt/` changes | Schema regression fails CI |
 | S4-10 | **Chat research tools** | `start_research`, `select_recommendation` tools | UC-C5-03/05 |
@@ -137,7 +137,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 
 | ID | Story | Tasks | DoD |
 |---|---|---|---|
-| S6-1 | State machine | `DRAFT → QUOTED → HELD → CONFIRMED` (§7) | Persisted transitions |
+| S6-1 | State machine | `booking.status`: `DRAFT → QUOTED → HELD → CONFIRMED` (§7) | Persisted transitions; distinct from `trip.status` |
 | S6-2 | Stub suppliers | `StubFlightSearchAdapter`, `StubHotelSearchAdapter` | Fixture quotes |
 | S6-3 | Booking API | Search + quote endpoints | User-scoped |
 | S6-4 | C4 browse UI | `features/booking/` quote list | No optimistic confirm |
@@ -186,5 +186,5 @@ See PLAN §12.3 (PR checklist) + §12.4 (feature DoD).
 |---|---|
 | Phase 0 too large | Split 0a (Sprint 0) / 0b (Sprints 1–2) — done in plan |
 | Vendor API delays | Stub adapters §4.0.7 — S4-1, S6-2 |
-| LLM output drift | Golden files + eval harness — S4-6 |
+| LLM output drift | Golden files + eval harness — **S4-9** |
 | Admin seed in prod | Flyway profile gating — S2-1 |

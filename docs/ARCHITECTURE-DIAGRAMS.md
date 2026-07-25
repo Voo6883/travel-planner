@@ -69,8 +69,8 @@ DRAFT ────────────────────────�
 
 | Orchestrator | Scope | Tools |
 |---|---|---|
-| `PlannerChatOrchestrator` | Pre-trip (`/planner/chat`) | `create_trip` only |
-| `TripChatOrchestrator` | Per-trip (`/trips/{id}/chat`) | Status-gated tools per §3.2 |
+| `PlannerChatOrchestrator` | Pre-trip (`POST /api/v1/planner/chat/messages`) | `create_trip` only |
+| `TripChatOrchestrator` | Per-trip (`POST /api/v1/trips/{id}/chat/messages`) | Status-gated tools per §3.2 |
 
 **LLM decision policy** prevents premature actions:
 - Vague opener → ask 1–2 questions, no trip yet
@@ -94,7 +94,7 @@ All factual claims flow through `KnowledgePort`:
 | Scenario | Handling |
 |---|---|
 | User leaves during research | Poll job on return; optional research-complete email |
-| Research fails | `research_job.error_code`; trip stays in failed state; re-run allowed |
+| Research fails | `research_job.status=failed` + `error_code`; **`trip.status` stays at last valid value**; re-run allowed |
 | Quote expires at booking | Price re-validation at confirm; `quote_expired` error |
 | OAuth same email | Provider linking (`provider_linked=true`) |
 | Local sign-up unverified | Blocked from planner until `email_verified=true` |
@@ -112,12 +112,14 @@ flowchart TB
         Admin["Admin (browser)"]
     end
 
-    subgraph Frontend["apps/frontend — Next.js 15"]
+    subgraph Frontend["apps/frontend — Next.js 15 + Serwist PWA"]
         direction TB
-        AppRouter["App Router<br/>(auth) + (planner)"]
+        AppRouter["App Router<br/>(auth) · (planner) · (admin)"]
         Features["features/<br/>auth · intake · research · itinerary · booking · chat"]
         APIClient["lib/api + generated types"]
+        PWA["Serwist SW + manifest<br/>network-only /api/v1/**"]
         AppRouter --> Features --> APIClient
+        AppRouter --- PWA
     end
 
     subgraph Backend["apps/backend — Spring Boot 3"]
@@ -293,7 +295,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     subgraph PlannerLevel["Planner level (no trip)"]
-        PM[POST /planner/chat/messages]
+        PM[POST /api/v1/planner/chat/messages]
         PM --> PA[PlannerChatOrchestrator]
         PA --> CT{create_trip?}
         CT -->|Yes| NewTrip[Create trip DRAFT<br/>SSE trip_created]
@@ -301,7 +303,7 @@ flowchart TD
     end
 
     subgraph TripLevel["Trip level (status-gated)"]
-        TM[POST /trips/id/chat/messages]
+        TM[POST /api/v1/trips/id/chat/messages]
         TM --> TA[TripChatOrchestrator]
         TA --> Status{trip.status}
 
@@ -561,4 +563,6 @@ flowchart TB
 | [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) | Master architecture, rules, NFRs |
 | [`plans/USE-CASES.md`](../plans/USE-CASES.md) | Use case catalog, acceptance criteria |
 | [`plans/TRAVEL-KNOWLEDGE-CATALOG.md`](../plans/TRAVEL-KNOWLEDGE-CATALOG.md) | TKB entity catalog |
-| [`docs/adr/`](../docs/adr/) | JWT, auth, extensibility ADRs |
+| [`docs/UI-UX-DESIGN-SYSTEM.md`](UI-UX-DESIGN-SYSTEM.md) | Visual tokens, PWA presentation |
+| [`docs/PLAN-COMPATIBILITY.md`](PLAN-COMPATIBILITY.md) | Post-merge plan compatibility review |
+| [`docs/adr/`](adr/) | ADRs — Gradle, JWT, extensibility, auth, **PWA** |

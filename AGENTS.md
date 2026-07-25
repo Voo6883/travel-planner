@@ -50,6 +50,7 @@ npm run prereq                    # must pass before any code generation
 | [`docs/UI-UX-DESIGN-SYSTEM.md`](docs/UI-UX-DESIGN-SYSTEM.md) | **Any web or PWA UI work** |
 | [`docs/ADDING-A-FEATURE.md`](docs/ADDING-A-FEATURE.md) | **Adding C6+ or new capabilities** |
 | [`docs/ARCHITECTURE-DIAGRAMS.md`](docs/ARCHITECTURE-DIAGRAMS.md) | System, flow, and activity diagrams |
+| [`docs/PLAN-COMPATIBILITY.md`](docs/PLAN-COMPATIBILITY.md) | Post-merge plan compatibility review |
 | [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **Every code generation task** |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Architecture, rules, NFRs, CI |
 | [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint stories, DoD |
@@ -66,10 +67,15 @@ npm run prereq                    # must pass before any code generation
 
 ### Repository status: planning phase (no application code yet)
 
-This repo currently contains only documentation:
+This repo currently contains **planning documentation only** (no application scaffold):
 
-- `README.md` — product overview and planned quick start.
-- `plans/superpower/PLAN.md` — the locked architecture/plan (this is the source of truth).
+- `README.md` — product overview and planned quick start
+- `plans/superpower/PLAN.md` — locked architecture (source of truth for architecture)
+- `plans/USE-CASES.md`, `plans/BACKLOG.md`, `plans/TRAVEL-KNOWLEDGE-CATALOG.md`
+- `docs/AI-AGENT-WORKFLOW.md`, `docs/ADDING-A-FEATURE.md`
+- `docs/UI-UX-DESIGN-SYSTEM.md`, `docs/ARCHITECTURE-DIAGRAMS.md`
+- `docs/adr/` — locked ADRs (Gradle, JWT, extensibility, auth/Resend, PWA)
+- `docs/PLAN-COMPATIBILITY.md` — post-merge plan compatibility review
 
 There is **no scaffolded application yet**: no `package.json`, no `apps/frontend`
 (Next.js) or `apps/backend` (Spring Boot), no `docker-compose.yml`, no source, tests,

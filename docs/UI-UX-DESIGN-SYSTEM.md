@@ -15,8 +15,10 @@ behavior; this document governs exact visual tokens, responsive presentation, co
 appearance, interaction states, and accessibility. If an illustrative visual value in
 `PLAN.md` differs from this document, use this document.
 
-PWA requirements here describe presentation and interaction only. Manifest, service
-worker, caching, and offline data architecture require a separate implementation decision.
+PWA presentation and interaction rules are in this document. Manifest, service
+worker, caching, and offline architecture follow
+[`docs/adr/005-nextjs-pwa.md`](adr/005-nextjs-pwa.md) and PLAN §4.2.11 (Serwist,
+network-only `/api/v1/**`).
 
 ---
 

@@ -122,6 +122,11 @@ that gate feature delivery:
 | `DESTINATION_SELECTED` | C3 itinerary generation |
 | `ITINERARY_READY` | C5 enhance + C4 booking |
 | `BOOKING_IN_PROGRESS` / `BOOKED` | C4 confirm flow |
+| `ARCHIVED` | View only — no mutations |
+
+Full enum: [`USE-CASES.md`](../USE-CASES.md) trip status table. Research job
+failures use `research_job.status=failed` + `error_code` — **`trip.status` stays at
+the last valid value** (do not invent a trip-level failed status).
 
 #### C1 — clarification (not silent guess)
 
@@ -137,12 +142,13 @@ When `TripBrief` is incomplete, API returns typed **`ClarificationNeeded`** with
 - User **must select** one recommendation: `POST .../selected-recommendation` →
   `DESTINATION_SELECTED` before C3.
 
-#### Auth P1 (Phase 1)
+#### Auth P1 (Phase 0b / Sprint 1)
 
 - `PUT /auth/password` — change password when logged in
 - `POST /auth/verify-email/resend` — resend verification
 - `DELETE /auth/me` — account delete (soft-delete + PII anonymize)
 - Local sign-up **blocked from planner** until `email_verified=true`
+- Delivered with identity platform (story **S1-6e**), not deferred to Phase 1 features
 
 #### 3.2 Chat-first interaction (LOCKED)
 
@@ -198,6 +204,9 @@ The LLM is the primary planner; structured UI reflects the same state.
 | `get_destination_guide` | `RESEARCH_READY`+ | Food, areas, sights, mobility, apps — from TKB (§4.1.2) |
 | `get_route` | `ITINERARY_READY`+ | How to get from A → B — mode, duration, apps |
 | `get_travel_apps` | `RESEARCH_READY`+ | **Locale app pack** — local apps by country & usage (ride, maps, pay, food…) |
+
+> **Naming:** `patch_itinerary` is an **LLM tool** name. HTTP stays **PUT** (or a dedicated
+> POST action) — §6.1 forbids the HTTP `PATCH` verb.
 
 **Example — create from opener:**
 
@@ -499,17 +508,17 @@ the **Service layer** (`application/` use-cases).
 
 ```java
 // ✅ Controller — routing only; kebab-case URL; ≤3 service args via DTOs
-@PostMapping("/api/v1/trips/{tripId}/ranked-recommendations")
-public ResearchResponse research(@PathVariable UUID tripId,
-        @Valid @RequestBody ResearchRequest req,
+@GetMapping("/api/v1/trips/{tripId}/ranked-recommendations")
+public RankedRecommendationsResponse list(
+        @PathVariable UUID tripId,
         @AuthenticationPrincipal UserContext user) {
     return researchMapper.toResponse(
-        researchService.runResearch(req.toQuery(tripId), user));
+        researchService.listRecommendations(tripId, user));
 }
 
 // ❌ Controller — business logic belongs in ResearchService, not here
-@PostMapping("/api/v1/trips/{id}/research")
-public ResearchResponse research(@PathVariable UUID id, @RequestBody ResearchRequest req) {
+@PostMapping("/api/v1/trips/{id}/research/run")
+public JobAcceptedResponse run(@PathVariable UUID id, @RequestBody ResearchRequest req) {
     var trip = tripRepo.findById(id).orElseThrow();
     if (trip.getBudget().isLessThan(req.getMaxSpend())) { ... }  // NO
     return llmClient.complete(...);                                // NO
@@ -524,13 +533,13 @@ counts as **3** — the maximum for controller methods. Path id is not a separat
 argument; bind into `*Query` inside the mapper when possible.
 
 ```java
-// ✅ 3 params max at controller boundary
-@PostMapping("/api/v1/trips/{tripId}/ranked-recommendations")
-public ResearchResponse research(@PathVariable UUID tripId,
-        @Valid @RequestBody ResearchRequest req,
+// ✅ 3 params max at controller boundary (mutation example)
+@PostMapping("/api/v1/trips/{tripId}/research/run")
+public JobAcceptedResponse runResearch(@PathVariable UUID tripId,
+        @Valid @RequestBody ResearchRunRequest req,
         @AuthenticationPrincipal UserContext user) {
-    return researchMapper.toResponse(
-        researchService.runResearch(req.toQuery(tripId), user));
+    return researchMapper.toAccepted(
+        researchService.startResearch(req.toCommand(tripId), user));
 }
 ```
 
@@ -1418,7 +1427,12 @@ tenant/org hierarchies.
 |---|---|---|
 | **Username** | `ADMIN` | Unique; login is case-insensitive |
 | **Password** | `123456` | **Dev/docker seed only** — BCrypt-hashed in DB, never stored plain |
-| **Role** | `ROLE_ADMIN` | Spring Security authority |
+| **Role (DB / JWT claim)** | `ADMIN` | Stored value and JWT `roles[]` entry |
+| **Spring authority** | `ROLE_ADMIN` | `hasRole('ADMIN')` → authority `ROLE_ADMIN` |
+
+> **Role naming:** one logical admin role. Persist and emit **`ADMIN`**; Spring Security
+> maps it to authority **`ROLE_ADMIN`**. Use `@PreAuthorize("hasRole('ADMIN')")` —
+> never mix a second role string.
 
 > **Security:** `ADMIN` / `123456` is intentionally weak for **local development and
 > Docker only**. Production deployments **must** disable this seed (see below) or force
@@ -1440,6 +1454,7 @@ apps/backend/src/main/resources/db/
 - **Idempotent** — `INSERT ... ON CONFLICT (username) DO NOTHING` (or equivalent).
 - Stores **BCrypt hash** of `123456` — generate hash at build time or use a known test hash.
 - Sets `role = 'ADMIN'`, `enabled = true`.
+- Spring Security loads claim `ADMIN` → authority `ROLE_ADMIN`.
 
 **Profile gating:**
 
@@ -2919,7 +2934,7 @@ hand-rolled Workbox configs, Capacitor/native wrappers for v1.
 | Web App Manifest + theme color | Background sync of mutations |
 | Precache of app shell + static assets | Push notifications |
 | Offline fallback page (`/~offline`) | Caching authenticated API bodies |
-| Network-first for `/api/v1/**` | Storing JWT/PII in Cache Storage |
+| **Network-only** for `/api/v1/**` | Storing JWT/PII in Cache Storage |
 
 ##### Caching rules
 
@@ -2927,7 +2942,7 @@ hand-rolled Workbox configs, Capacitor/native wrappers for v1.
 |---|---|---|
 | App shell / static assets | Precache (Serwist manifest) | Fast reload, offline shell |
 | Next.js `_next/static/**` | Cache-first (Serwist default) | Immutable hashed assets |
-| `GET /api/v1/**` | **Network-only** (or network-first, no cache of auth responses) | Auth cookies + fresh trip data |
+| `GET /api/v1/**` | **Network-only** — never cache API responses | Auth cookies + fresh trip data |
 | Mutations (POST/PUT/DELETE) | Network-only — never cache | Correctness + CSRF |
 | Offline navigation | Fallback to `/~offline` | Clear UX when disconnected |
 
@@ -2953,11 +2968,11 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Travel Planner',
-    short_name: 'Travel',
+    short_name: 'Trips',
     start_url: '/',
     display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#0f172a',
+    background_color: '#F8FAFC',
+    theme_color: '#0958D9',
     icons: [
       { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -3295,22 +3310,26 @@ CI pipeline runs on PR.
 
 | Sprint | Feature | Outcome |
 |---|---|---|
-| 3 | **C1** Intake | `TripBrief` create/edit E2E with structured LLM extraction |
-| 4 | **C2** Research | Agent + **stub tools** → typed `RankedRecommendations` |
-| 5 | **C3** Itinerary | Day-by-day plan; intake → research → itinerary E2E test |
+| 3 | **C1** Intake + **C5** chat bootstrap | `TripBrief` E2E; planner/trip SSE + `create_trip` (S3-7) |
+| 4 | **C2** Research + chat tools | Agent + stub tools → ranked list; `start_research` / select tools |
+| 5 | **C3** Itinerary + chat tools | Day-by-day plan; `generate_itinerary` / `patch_itinerary` |
 
 **Phase 1 exit criteria:**
 - [ ] Happy path: create trip → brief → research → itinerary without manual DB edits
 - [ ] Each feature has service unit tests + frontend loading/error/empty states
 - [ ] Eval harness v0 runs in CI on prompt template changes (C2)
+- [ ] Chat-first create + status-gated tools for C1–C3 work end-to-end
 
 ### Phase 2 — Action + refine (Sprints 6–8)
 
 | Sprint | Feature | Outcome |
 |---|---|---|
-| 6 | **C4** search/quote | Booking state machine + stub suppliers; browse UI |
+| 6 | **C4** search/quote | `booking.status` machine + stub suppliers; browse UI |
 | 7 | **C4** confirm | Idempotency, payment provider, audit trail (§7) |
-| 8 | **C5** Chat | SSE refinement + itinerary patch tool; Redis semantic cache (profile `cache`) |
+| 8 | **C5** advanced refine | SSE polish, deeper itinerary patch UX; Redis semantic cache (profile `cache`) |
+
+> **C5 spans Phase 1–2:** base chat ships in Sprint 3; research/itinerary tools in
+> Sprints 4–5; advanced refinement in Sprint 8 (epic **E-21**).
 
 **Phase 2 exit criteria:**
 - [ ] Booking confirm is human-gated; no LLM auto-book
@@ -3337,6 +3356,8 @@ Packing, review summaries, disruption replanning, narrative, translation, groups
 | Guest vs accounts | User accounts from v1, no tenant | §4.0.5 |
 | BFF vs direct | Direct to Spring Boot | §4.0.5 |
 | Frontend PWA | **Serwist** — installable Next.js PWA | ADR 005, §4.2.11 |
+| API style | **REST + OpenAPI only** — no GraphQL in v1 | §6.1 |
+| UI visual contract | [`docs/UI-UX-DESIGN-SYSTEM.md`](../../docs/UI-UX-DESIGN-SYSTEM.md) | §4.2.9 |
 
 ### Still open (non-blocking for Phase 0–1)
 
