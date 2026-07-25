@@ -155,7 +155,7 @@ Raw palette values may appear only in `design-tokens.ts`. Components use semanti
 | `surface-elevated` | `#FFFFFF` | `#1E293B` | Popover, modal, floating panel |
 | `foreground` | `#0F172A` | `#F8FAFC` | Primary text |
 | `foreground-muted` | `#475569` | `#CBD5E1` | Secondary text |
-| `foreground-subtle` | `#64748B` | `#94A3B8` | Metadata and placeholders |
+| `foreground-subtle` | `#5F6F84` | `#94A3B8` | Metadata and placeholders |
 | `border` | `#64748B` | `#94A3B8` | Control boundary; at least 3:1 against its surface |
 | `border-subtle` | `#E2E8F0` | `#334155` | Cards and separators |
 | `success` | `#15803D` | `#4ADE80` | Completed and available |
