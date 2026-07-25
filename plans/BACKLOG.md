@@ -14,7 +14,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | API Platform | E-01 | 0b | `/api/v1/`, error envelope, health |
 | Identity & Admin | E-02 | 0b | Multi-provider auth + Resend mailer + admin CRUD |
 | AI Platform | E-03 | 0b | `LlmClient` router + logging |
-| Frontend Platform | E-04 | 0b | App shell, design system, codegen |
+| Frontend Platform | E-04 | 0b | App shell, design system, codegen, **PWA** |
 | C1 Intake | E-10 | 1 | TripBrief E2E |
 | C2 Research | E-11 | 1 | Ranked recommendations E2E |
 | C3 Itinerary | E-12 | 1 | Day-by-day plan E2E |
@@ -81,6 +81,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S2-11 | Admin UI | `features/admin/`, reset password | Non-admin redirected |
 | S2-12 | Lint config | ESLint `max-len` 120, Prettier printWidth 100 | CI enforces line length |
 | S2-13 | Platform extensibility | `features/_template/`, `ToolRegistry`, `features.yml`, actuator/prometheus | Ready for C6+ slices |
+| S2-14 | **PWA (Serwist)** | `@serwist/next`, `src/sw.ts`, `app/manifest.ts`, icons, `/~offline` | Prod build emits SW; installable; API network-only (§4.2.11) |
 
 **Phase 0 gate:** all S0 + S1 + S2 DoD met; §10 Phase 0 exit criteria checked.
 

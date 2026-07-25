@@ -27,7 +27,7 @@ Run once at the start of every coding session.
 |---|---|
 | Any | `AGENTS.md`, this file §1–§7 |
 | Backend endpoint | PLAN §4.0.1, §4.0.2, §6.1, §13.1 |
-| Frontend screen | PLAN §4.2.6, §4.2.9, §4.2.10, §13.2 |
+| Frontend screen | PLAN §4.2.6, §4.2.9, §4.2.10, §4.2.11, §13.2 |
 | AI / agent feature | PLAN §4.1, §5, §4.0.7 + `ai/` package layout |
 | DB migration | PLAN §4.0.2-H, §4.0.2-E2, §8 |
 | Infra / Docker | PLAN §4.0.0, §15 |
