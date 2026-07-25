@@ -185,7 +185,6 @@ optimistic one corrupts every downstream task.
 
 | ID | Severity | Blocks | Issue |
 |---|---|---|---|
-| **B-2** | Medium | Release / PR hygiene | Trunk branch ambiguity: `master` vs `main` |
 | **B-3** | Low | Task 00 completeness | `gh` unauthenticated — open PRs not reviewed via API |
 
 ### B-1 — Local toolchain below required versions — ✅ RESOLVED 2026-07-25
@@ -221,19 +220,29 @@ The Adoptium `bin` directory precedes both Oracle `javapath` shims in the machin
 > all lock **Java 21**. Installing 22 would have failed the very gate Task 01 builds. Confirmed
 > with the user before installing (see follow-up **F-4** for the leftover stale `PATH` entry).
 
-### B-2 — Trunk branch ambiguity
+### B-2 — Trunk branch ambiguity — ✅ RESOLVED 2026-07-25 (user decision)
 
-`tasks/README.md`, `AGENTS.md`, and every task brief instruct work to start from **`master`**.
-The GitHub repository's default branch is **`main`**, which sits 38 commits behind `master` and
-contributes no unique file content (`git diff master...main` is empty). `dev` is an exact mirror of
-`master`.
+> **`master` is the trunk. All implementation branches start from `master` and target `master`.
+> `main` is out of use — do not branch from it, merge to it, or update it.**
 
-Left unresolved, PRs will target the wrong base and the plan documentation will appear absent on
-the repository's landing page.
+This matches `tasks/README.md`, `AGENTS.md`, every task brief, and `plans/superpower/PLAN.md`
+§"`master` — protected; PR required; CI green". No documentation change was required.
 
-**Resolution required from the user:** either fast-forward `main` to `master` and switch all
-documentation to `main`, or change the GitHub default branch to `master`. Do not resolve by
-guessing — this is a repository-level decision.
+`main` was verified to be a stale snapshot, not a divergent line of work: its tree is byte-identical
+to commit `533ba25`, an ancestor on `master`'s own history, and it contains only older copies of
+`README.md` and `plans/superpower/PLAN.md`. Both files exist in newer form on `master`, so nothing
+is lost by leaving `main` behind.
+
+| Branch | Role |
+|---|---|
+| `master` | **Trunk.** Protected; PR required; CI green before merge. |
+| `agent/task-NN-*` | One per task brief. Branch from `master`, merge to `master`. |
+| `dev` | Currently an exact mirror of `master`. No defined role — see follow-up **F-5**. |
+| `main` | **Abandoned.** Stale snapshot, 38 commits behind. Not maintained. |
+
+If the GitHub repository's default branch is still set to `main`, the landing page will show the
+old two-file snapshot rather than the plan set. Changing that default is a repository setting the
+owner applies directly; it does not affect local execution.
 
 ### B-3 — Open PRs not reviewed through the GitHub API
 
@@ -249,6 +258,8 @@ the stale `main`. **Resolution:** authenticate `gh`, or confirm no PRs are open.
 | **F-2** | Baseline validation (link/ID/cycle checks) was run from a throwaway script. Consider promoting it to `scripts/` under Task 01 or Task 05 so the ledger stays verifiable |
 | **F-3** | 23 briefs lack a `Validation` section; the §6 universal gate covers this, but per-brief validation would be stronger |
 | **F-4** | Stale user-`PATH` entry `C:\Program Files\Java\jdk-18.0.1.1\bin` remains. Harmless — machine `PATH` puts JDK 21 ahead of it — but worth removing to avoid confusion |
+| **F-5** | `dev` mirrors `master` exactly and has no role under the B-2 decision. Delete it, or define its purpose, before it drifts |
+| **F-6** | 11 fully-merged `origin/cursor/*` branches are absorbed into `master` and can be pruned |
 
 ---
 

@@ -104,6 +104,8 @@
 | `review` | 0 |
 | `not_started` | 39 |
 
-**Active blockers:** B-2 (trunk branch ambiguity), B-3 (`gh` unauthenticated). Neither gates
-Phase 0A execution. **B-1 (toolchain) resolved 2026-07-25** — Node 22.23.1 and Temurin JDK
-21.0.11 LTS verified. Full detail in [`EXECUTION-BASELINE.md`](EXECUTION-BASELINE.md) §7.
+**Active blockers:** B-3 (`gh` unauthenticated) only, and it does not gate execution.
+
+Resolved 2026-07-25: **B-1** (toolchain) — Node 22.23.1 and Temurin JDK 21.0.11 LTS verified.
+**B-2** (trunk) — `master` is the trunk; branch from and merge to `master`, `main` is abandoned.
+Full detail in [`EXECUTION-BASELINE.md`](EXECUTION-BASELINE.md) §7.
