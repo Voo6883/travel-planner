@@ -140,7 +140,7 @@ When brief is ambiguous or incomplete, backend returns **typed** `ClarificationN
 | UC-C2-11 | **Compare places by interests** | P0 | 1 | Rank uses seasonality + price + POI/food match to brief |
 | UC-C2-12 | **Ask about a place in chat** | P0 | 1 | `get_destination_guide` — *"what's good to eat?"*, *"best area to stay?"* |
 | UC-C2-13 | **See best areas within destination** | P0 | 1 | `traveler_guide.areas[]` — stay vs explore vs day-trip |
-| UC-C2-15 | **See transport & apps for destination** | P0 | 1 | `traveler_guide.mobility` — modes + app chips (maps, transit…) |
+| UC-C2-16 | **Download local apps checklist** | P0 | 1 | `local_app_pack` on destination card — essential apps by usage (e.g. 滴滴 for China) |
 | UC-C2-05 | No confident result | P0 | 1 | Typed empty result — not hallucination |
 | UC-C2-06 | **Select destination** | P0 | 1 | See below 🆕 |
 | UC-C2-07 | Re-run research | P1 | 1 | New job; previous results kept as history |
@@ -205,7 +205,7 @@ UI: expandable sections on research cards + chat can summarize any section.
 | UC-C3-08 | **Day timeline view** | P0 | 1 | `scheduled_start` / `scheduled_end` per item — vertical timeline UI |
 | UC-C3-09 | **Travel route between stops** | P0 | 1 | `itinerary_leg` — mode, duration, instructions between items |
 | UC-C3-10 | **Transport mode per leg** | P0 | 1 | `transport_mode` enum: WALK, METRO, TRAIN, BUS, TAXI, RIDE_HAIL, FERRY… |
-| UC-C3-11 | **App suggestion per leg** | P0 | 1 | Leg shows recommended apps (e.g. Google Maps, Grab) from `travel_app` KB |
+| UC-C3-11 | **Local app per leg** | P0 | 1 | Leg shows **locale** app (e.g. 滴滴 on ride leg in Shanghai, not Uber) |
 | UC-C3-12 | **Ask route in chat** | P0 | 1 | `get_route` — *"how do I get from Gion to Arashiyama?"* |
 | UC-C3-04 | Regenerate itinerary | P1 | 1 | `POST .../itinerary/regenerate` |
 | UC-C3-05 | Regenerate single day | P2 | 2 | Via C5 chat or dedicated action |

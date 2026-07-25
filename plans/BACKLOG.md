@@ -110,7 +110,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S4-4 | DSA ranking | `DestinationRanker` + interest/seasonality/price weights | Table-driven tests |
 | S4-4b | **Traveler knowledge DB** | `destination_guide`, `destination_area`, `poi`, embeddings; seed data | §4.1.2 stub adapter |
 | S4-4c | **Knowledge tools** | Guide, Food, Area, POI, **Transport, Route, TravelApp** tools | Agent retrieves for C2 |
-| S4-4d | **Mobility KB seed** | `transport_mode`, `route_segment`, `travel_app` seed data | UC-K09–K11, PM-K03/04 |
+| S4-4d | **Locale app pack seed** | `travel_app` per country: CN (滴滴, 高德, 支付宝…), JP, TH | UC-K11, PM-K08/09 |
 | S4-5 | Research API | `POST .../research/run`, `GET .../jobs/{id}`, ranked list | User-scoped |
 | S4-6 | Select destination | `POST .../selected-recommendation` → DESTINATION_SELECTED | UC-C2-06 |
 | S4-7 | C2 frontend | `features/research/`; polling UI; traveler guide panels; "Plan this trip" CTA | UC-C2-10/13/14 |
