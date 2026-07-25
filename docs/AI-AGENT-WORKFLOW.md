@@ -214,6 +214,7 @@ lib/api/<resource>-api.ts →  zod validate, 1 param per function
 ```
 
 **Mandatory patterns:**
+- Follow `UI-UX-DESIGN-SYSTEM.md` for visual tokens, responsive behavior, and interaction states
 - Ant Design `Form` + `onValuesChange` — debounced save in parent hook
 - `useTranslations('namespace')` — no hardcoded UI strings
 - Tailwind from design tokens — no arbitrary hex values
@@ -320,6 +321,7 @@ If you generate any of these, **fix before finishing**:
 
 ### Frontend
 
+- [ ] UI follows `UI-UX-DESIGN-SYSTEM.md` tokens, states, responsive, and accessibility rules
 - [ ] Page ≤20 lines, no data fetching
 - [ ] Feature code in `features/<name>/`
 - [ ] Hook → `lib/api/` → generated types
@@ -453,6 +455,7 @@ When presenting completed work, use this structure:
 
 | Document | Purpose |
 |---|---|
+| [`docs/UI-UX-DESIGN-SYSTEM.md`](UI-UX-DESIGN-SYSTEM.md) | Unified web and PWA design contract |
 | [`docs/ADDING-A-FEATURE.md`](ADDING-A-FEATURE.md) | Adding C6+ features |
 | [`AGENTS.md`](../AGENTS.md) | Entry point — quick rules |
 | [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) | Full architecture & rules |

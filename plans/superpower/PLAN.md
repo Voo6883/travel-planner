@@ -2624,6 +2624,10 @@ and keeps the **whole app on one unified design system**.
 Goal: one consistent look (spacing, color, type, radius, shadows) everywhere — planner
 screens, admin panel, marketing — without mixing ad-hoc CSS approaches.
 
+Exact visual tokens, responsive behavior, component states, accessibility, and PWA
+presentation are defined in [`docs/UI-UX-DESIGN-SYSTEM.md`](../../docs/UI-UX-DESIGN-SYSTEM.md).
+This section governs the styling architecture; the design-system document governs visual values.
+
 ##### Stack (LOCKED)
 
 | Layer | Tool | Role |
@@ -2688,7 +2692,7 @@ Shared layout components in `components/layout/` encode these patterns once
 ```typescript
 // styles/design-tokens.ts — single source
 export const tokens = {
-  color: { primary: '#1677ff', foreground: '#0f172a', muted: '#64748b', destructive: '#dc2626' },
+  color: { primary: '#0958d9', foreground: '#0f172a', muted: '#64748b', destructive: '#b91c1c' },
   radius: { sm: '0.375rem', md: '0.5rem', lg: '0.75rem' },
   spacing: { page: '1.5rem', section: '1.5rem' },
   font: { sans: 'Inter, system-ui, sans-serif' },
