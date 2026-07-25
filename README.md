@@ -28,17 +28,26 @@ A **knowledge-based, LLM-powered travel planner**. Users chat to plan trips. Dec
 
 ## Repository layout (planned)
 
+**Monorepo with separate app folders** — frontend and backend never mixed.
+
 ```
 travel-planner/
 ├── apps/
-│   ├── frontend/          # Next.js — Node 22
-│   └── backend/           # Spring Boot — Java 21
-├── docker/                # Dockerfiles
+│   ├── frontend/          # Next.js only — Node 22
+│   └── backend/           # Spring Boot only — Java 21
+├── docker/                # Dockerfiles (one per app)
 ├── scripts/               # check-prerequisites, wait-for-services
 ├── plans/                 # Architecture & feature plans
 ├── docker-compose.yml
-└── package.json           # root scripts
+└── package.json           # root orchestration scripts only
 ```
+
+| Folder | Stack | Rule |
+|---|---|---|
+| `apps/frontend/` | Next.js, TypeScript, Ant Design | No Java/backend code |
+| `apps/backend/` | Spring Boot, Java 21, Gradle | No React/frontend code |
+
+Apps communicate via **`/api/v1/`** + OpenAPI codegen only. See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) §4.0.
 
 ## Prerequisites
 

@@ -19,7 +19,7 @@
 
 | Area | Decision |
 |---|---|
-| **Repository layout** | **Monorepo** — single repo for frontend + backend (§4.0) |
+| **Repository layout** | **Monorepo** — single repo; **separate folders** `apps/frontend/` + `apps/backend/` (§4.0) |
 | Backend language | **Java 21** (records, sealed types, pattern matching, virtual threads) |
 | Backend runtime | **JDK 21** — enforced via toolchain / CI (see §4.0) |
 | Backend framework | **Spring Boot 3.x** |
@@ -353,13 +353,15 @@ Both modes require **`npm run prereq`** to pass first.
 ### 4.0 Monorepo layout & runtime requirements (LOCKED)
 
 This project lives in **one monorepo** that owns both the frontend and backend.
+**Frontend and backend are separate folders** — different runtimes, builds, and
+dependencies. They communicate only via the HTTP API + OpenAPI contract.
 No split repos, no duplicated contracts, no drift between apps.
 
 ```
-travel-planner/                    # monorepo root
+travel-planner/                    # monorepo root — shared docs, docker, scripts ONLY
 ├── apps/
-│   ├── frontend/                  # Next.js + TypeScript  →  Node.js 22
-│   └── backend/                   # Spring Boot 3.x        →  Java 21
+│   ├── frontend/                  # ← ALL frontend code (Next.js, Node 22)
+│   └── backend/                   # ← ALL backend code (Spring Boot, Java 21)
 ├── docker/                        # Dockerfiles (§4.0.0)
 ├── scripts/                       # check-prerequisites, wait-for-services
 ├── docs/adr/                      # architecture decision records
@@ -372,6 +374,37 @@ travel-planner/                    # monorepo root
 ├── package.json                   # root scripts: prereq, dev, codegen, docker:*
 ├── docker-compose.yml             # full stack (§4.0.0)
 └── docker-compose.dev.yml         # postgres only
+```
+
+#### 4.0.0.1 Frontend / backend folder separation (LOCKED)
+
+| Folder | Runtime | Build entry | Contains |
+|---|---|---|---|
+| **`apps/frontend/`** | Node.js 22 | `package.json`, `next.config.ts` | Next.js App Router, `features/`, `components/`, generated API client, i18n, Tailwind |
+| **`apps/backend/`** | Java 21 | `build.gradle.kts`, `./gradlew` | Spring Boot API, `domain/`, `application/`, `ai/`, `infrastructure/`, Flyway, OpenAPI source |
+
+**Separation rules (non-negotiable):**
+
+| Rule | Detail |
+|---|---|
+| **One stack per folder** | No Java/Spring in `apps/frontend/`; no React/Next.js in `apps/backend/` |
+| **No cross-imports** | Frontend never imports backend source; backend never imports frontend source |
+| **API boundary only** | Integration via **`/api/v1/`** + OpenAPI codegen → `apps/frontend/src/generated/` |
+| **Separate Docker images** | `docker/frontend/Dockerfile` · `docker/backend/Dockerfile` |
+| **Separate CI jobs** | Lint/test/build frontend and backend independently; both required on PR |
+| **OpenAPI lives in backend** | `apps/backend/src/main/java/.../api/openapi/` — single contract source |
+| **Root is orchestration only** | `package.json` at repo root runs scripts; no app business logic at root |
+
+```
+apps/frontend/                         apps/backend/
+├── src/app/                           ├── src/main/java/com/travelplanner/
+├── src/features/                      │   ├── domain/
+├── src/generated/api/  ◄── codegen ───│   ├── application/
+├── package.json                       │   ├── api/
+└── next.config.ts                     │   └── infrastructure/
+                                       ├── src/main/resources/db/migration/
+                                       └── build.gradle.kts
+              HTTP /api/v1/  ──────────────────►
 ```
 
 | App | Runtime | Enforcement |
