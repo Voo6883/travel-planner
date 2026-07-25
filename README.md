@@ -22,7 +22,7 @@ An **LLM-powered travel planner** monorepo. Users describe where they want to go
 | Backend | Java 21, Spring Boot 3.x, Gradle, LangChain4j |
 | Database | PostgreSQL + pgvector |
 | AI | Anthropic + OpenAI (switchable at runtime) |
-| Auth | Local (email/username + password), Firebase Google, GitHub OAuth |
+| Auth | Local password, **Gmail sign-up/login (Firebase)**, GitHub OAuth |
 | Mailer | Resend (`resend.com`) |
 | Runtime | Docker Compose |
 
@@ -93,7 +93,7 @@ docker compose up --build
 - **Clean/hexagonal backend** — Controller routes only; Service owns business logic
 - **Feature-based frontend** — `features/` modules aligned to C1–C5
 - **Tailwind + Ant Design** — unified design tokens; Tailwind overrides Ant by default
-- **Multi-provider auth** — email/username + password, Firebase Google, GitHub; JWT session cookie
+- **Gmail sign-up & login** — Firebase Google; one button on login and register pages
 - **Resend mailer** — welcome, verify, password-reset emails
 - **API** — `/api/v1/`, GET/POST/PUT/DELETE, standard error `{ code, message, details }`
 - **Vertical-slice extensibility** — add C6+ without editing existing features (§4.0.8)

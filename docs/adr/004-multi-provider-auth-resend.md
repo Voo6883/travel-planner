@@ -9,7 +9,7 @@ Accepted — supersedes the OAuth deferral in ADR 002 (JWT session transport unc
 v1 requires three sign-in methods:
 
 1. **Email or username + password** (local)
-2. **Google (Gmail) via Firebase Authentication**
+2. **Gmail sign-up & sign-in** via Firebase Authentication (Google provider)
 3. **GitHub OAuth**
 
 Transactional email (welcome, verify, password reset) uses **Resend** (`resend.com`).
@@ -30,7 +30,7 @@ IdentityProviderPort  →  LocalPassword | Firebase | GitHub adapters
 | Provider | Enum | Client flow | Backend |
 |---|---|---|---|
 | Local | `LOCAL` | Form: email/username + password | BCrypt verify |
-| Google | `FIREBASE_GOOGLE` | Firebase JS SDK → `idToken` | Firebase Admin verify |
+| Google / Gmail | `FIREBASE_GOOGLE` | `GmailSignInButton` on login **and** register → `idToken` | Verify token; create user if new; welcome email |
 | GitHub | `GITHUB` | OAuth2 redirect | Code exchange + user API |
 
 - One `user` row per person; multiple `user_identity` rows per linked provider.
@@ -50,7 +50,7 @@ MailerPort  →  ResendMailerAdapter  (production)
 
 | Email | When |
 |---|---|
-| Welcome | After registration |
+| Welcome | After local register **or** first Gmail sign-up (`is_new_user`) |
 | Verify email | Registration (signed link) |
 | Password reset | Forgot password flow |
 
@@ -59,7 +59,7 @@ MailerPort  →  ResendMailerAdapter  (production)
 
 ### Frontend
 
-- `features/auth/` — login panel with local form + Google button (Firebase) + GitHub button (redirect).
+- `features/auth/` — `GmailSignInButton` on **login and register** pages; shared `use-firebase-google-auth` hook.
 - `NEXT_PUBLIC_FIREBASE_*` for Firebase client config only.
 - No Resend or GitHub secret in browser.
 

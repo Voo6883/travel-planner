@@ -35,8 +35,10 @@ npm run prereq                    # must pass before any code generation
 | Business rules | `application/<feature>/*Service.java` |
 | Domain model | `domain/model/`, `domain/valueobject/` |
 | Port interface | `domain/port/` |
+| Identity / mail | `domain/port/IdentityProviderPort`, `MailerPort` → `infrastructure/auth/`, `infrastructure/mail/` |
 | DB / external API | `infrastructure/` |
 | LLM / agent | `ai/agent/`, `ai/langchain4j/` |
+| Auth UI | `features/auth/` — local, Firebase Google, GitHub |
 | Frontend screen | `features/<feature>/` — page stays in `app/` only |
 | API client (FE) | `lib/api/<resource>-api.ts` |
 

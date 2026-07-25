@@ -49,8 +49,9 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S1-4 | Error envelope | `DomainException`, `@ControllerAdvice` | Contract test for 404 shape |
 | S1-5 | OpenAPI bootstrap | Health, auth (local/firebase/github), trip paths | Spec validates |
 | S1-6 | Auth core | `IdentityProviderPort`, local login/register, JWT cookie, `user` + `user_identity` migrations | Local login works |
-| S1-6b | Firebase + GitHub | `FirebaseIdentityAdapter`, `GithubOAuthIdentityAdapter`, account linking | Google + GitHub login E2E |
-| S1-6c | Mailer | `MailerPort`, `ResendMailerAdapter`, `StubMailerAdapter`, password-reset token table | Reset email in stub mode |
+| S1-6b | Gmail (Firebase) | `FirebaseIdentityAdapter`, `POST /auth/firebase`, sign-up + sign-in upsert, welcome email | New + returning Gmail users |
+| S1-6c | GitHub OAuth | `GithubOAuthIdentityAdapter`, account linking | GitHub sign-up + sign-in E2E |
+| S1-6d | Mailer | `MailerPort`, Resend + stub, welcome on Gmail sign-up | Reset + welcome in stub mode |
 | S1-7 | MapStruct | Mapper config + example flow | Compile-time mapping works |
 | S1-8 | Trip scaffold | `GET/POST /api/v1/trips` | Thin controller; service unit test |
 | S1-9 | Checkstyle + transactions | `LineLength` 120; `@Transactional(rollbackFor)` template; Spring Retry | CI lint + integration rollback test |
@@ -74,7 +75,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S2-8 | i18n | next-intl, `en/` + `ms/` | No hardcoded strings on scaffold |
 | S2-9 | Codegen pipeline | `npm run codegen`, CI drift check | Fails when spec stale |
 | S2-10 | API client layer | `lib/api/client.ts`, zod, React Query | Cookie auth + request ID |
-| S2-10b | Auth UI | `features/auth/` — local, Firebase Google, GitHub, forgot password | All login paths |
+| S2-10b | Auth UI | `app/(auth)/login` + `register`, `GmailSignInButton` both pages, GitHub | Gmail sign-up & sign-in E2E |
 | S2-11 | Admin UI | `features/admin/`, reset password | Non-admin redirected |
 | S2-12 | Lint config | ESLint `max-len` 120, Prettier printWidth 100 | CI enforces line length |
 | S2-13 | Platform extensibility | `features/_template/`, `ToolRegistry`, `features.yml`, actuator/prometheus | Ready for C6+ slices |

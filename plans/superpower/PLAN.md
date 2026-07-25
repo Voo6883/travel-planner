@@ -37,7 +37,7 @@
 | **Naming** | **camelCase** functions · **kebab-case** files & URLs · **snake_case** i18n files (§4.0.4) |
 | **i18n** | **next-intl** — required from v1; no hardcoded user-facing strings (§4.2.10) |
 | **Auth** | **User-based accounts** — one user owns their trips; **no multi-tenant** (§4.0.5) |
-| **Auth mechanism** | **Multi-provider** — local (email/username + password), **Firebase Google**, **GitHub OAuth**; session = JWT httpOnly cookie (§4.0.5) |
+| **Auth mechanism** | **Multi-provider** — local (email/username + password), **Gmail sign-up & login (Firebase Google)**, **GitHub OAuth**; JWT cookie (§4.0.5) |
 | **Mailer** | **Resend** (`resend.com`) — behind `MailerPort`; welcome, verify, password-reset (§4.0.10) |
 | **Build tool** | **Gradle** (Kotlin DSL) — Java 21 toolchain; wrapper committed (§4.0) |
 | **External adapters** | **Port + stub first** — real vendor APIs wired when chosen; never block features (§4.0.7) |
@@ -869,13 +869,13 @@ package-visible test fixtures.
 This is a **single-user-account** system — not multi-tenant SaaS. Users may sign in via
 **multiple providers**; all paths issue the same **self-issued JWT** session (httpOnly cookie).
 
-#### Login providers (v1 — all three)
+#### Sign-up & login providers (v1 — all three)
 
-| Provider | ID | Flow | Backend adapter |
-|---|---|---|---|
-| **Email or username + password** | `LOCAL` | `POST /api/v1/auth/login` with `{ login, password }` | `LocalPasswordIdentityAdapter` |
-| **Google (Gmail) via Firebase** | `FIREBASE_GOOGLE` | Frontend Firebase Auth → `POST /api/v1/auth/firebase` with `{ idToken }` | `FirebaseIdentityAdapter` |
-| **GitHub** | `GITHUB` | `GET /api/v1/auth/oauth/github/start` → callback → JWT cookie | `GithubOAuthIdentityAdapter` |
+| Provider | ID | Sign-up | Sign-in | Backend |
+|---|---|---|---|---|
+| **Email or username + password** | `LOCAL` | `POST /auth/register` | `POST /auth/login` | `LocalPasswordIdentityAdapter` |
+| **Gmail (Google account)** | `FIREBASE_GOOGLE` | Same button — `POST /auth/firebase` | Same button — `POST /auth/firebase` | `FirebaseIdentityAdapter` |
+| **GitHub** | `GITHUB` | OAuth start (auto-register) | OAuth start | `GithubOAuthIdentityAdapter` |
 
 **Design pattern:** same as LLM routing (§5.4) — `IdentityProviderPort` + adapters in
 `infrastructure/auth/`; **never** vendor SDKs in `application/` or controllers.
@@ -922,19 +922,143 @@ public record LocalLoginRequest(
 ) {}
 ```
 
-#### Firebase Google (Gmail)
+#### Gmail sign-up & sign-in via Firebase (LOCKED)
 
-| Step | Detail |
+**One button, two outcomes** — Firebase Google Auth handles both registration and login.
+The same `Continue with Gmail` control appears on **login** and **register** pages.
+
+| Scenario | Backend behaviour |
 |---|---|
-| 1 | Frontend: Firebase JS SDK `signInWithPopup(GoogleAuthProvider)` |
-| 2 | Frontend: `user.getIdToken()` → `POST /api/v1/auth/firebase` `{ idToken }` |
-| 3 | Backend: `FirebaseIdentityAdapter.verify(idToken)` → email, `firebase_uid` |
-| 4 | Backend: find or create `user` + `user_identity` row; issue JWT cookie |
+| **First-time Gmail user** (no `user_identity` for this `firebase_uid`) | Create `user` + `user_identity`; set `email_verified=true` (Google verified); send **welcome email** via Resend (§4.0.10); return `is_new_user: true` |
+| **Returning Gmail user** | Find existing `user_identity`; issue JWT; return `is_new_user: false` |
+| **Gmail matches existing local account email** | Link `FIREBASE_GOOGLE` to existing `user` (account linking); return `is_new_user: false`, `linked: true` |
 
-**Env:** `FIREBASE_PROJECT_ID`, service account JSON or `GOOGLE_APPLICATION_CREDENTIALS`.
+**Supported accounts:** any Google account (personal `@gmail.com` and Google Workspace).
+Firebase `GoogleAuthProvider` — no separate Gmail-only filter required.
+
+##### Flow (frontend + backend)
+
+```
+Register or Login page
+    │
+    ▼
+[Continue with Gmail]  ──►  Firebase signInWithPopup(GoogleAuthProvider)
+    │                              │
+    │                              ▼
+    │                        user.getIdToken()
+    │                              │
+    ▼                              ▼
+POST /api/v1/auth/firebase  { "idToken": "..." }
+    │
+    ▼
+FirebaseIdentityAdapter.verify(idToken)  →  email, firebase_uid, email_verified
+    │
+    ▼
+AuthService.authenticateWithFirebase(claims)
+    ├── new user  → create user + identity + welcome mail
+    ├── existing  → load user
+    └── link      → add identity to matched email
+    │
+    ▼
+Set JWT httpOnly cookie  →  redirect to /trips
+```
+
+##### API
+
+```java
+// POST /api/v1/auth/firebase — sign-up AND sign-in
+public record FirebaseAuthRequest(@NotBlank String idToken) {}
+
+public record AuthResponse(
+    UserSummary user,
+    boolean isNewUser,           // true = just registered via Gmail
+    boolean providerLinked,      // true = linked to existing email account
+    List<String> linkedProviders // e.g. ["FIREBASE_GOOGLE", "LOCAL"]
+) {}
+```
+
+| Error code | When |
+|---|---|
+| `invalid_firebase_token` | Token verify failed |
+| `firebase_email_not_verified` | Google account email not verified |
+| `identity_already_linked` | `firebase_uid` tied to different user |
+
+##### Firebase Console setup (required before Gmail works)
+
+1. Create Firebase project; enable **Authentication** → **Google** provider.
+2. Add authorized domains: `localhost`, production frontend domain.
+3. Download service account JSON → `GOOGLE_APPLICATION_CREDENTIALS`.
+4. Copy web app config → `NEXT_PUBLIC_FIREBASE_*` in `.env`.
+
+##### Frontend (`features/auth/`)
+
+| Page | Gmail UI |
+|---|---|
+| `app/(auth)/login/page.tsx` | `GmailSignInButton` — label `t('auth.continue_with_gmail')` |
+| `app/(auth)/register/page.tsx` | **Same** `GmailSignInButton` — label `t('auth.sign_up_with_gmail')` |
+
+```tsx
+// features/auth/components/gmail-sign-in-button.tsx
+'use client';
+
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { Button } from 'antd';
+import { useFirebaseGoogleAuth } from '../hooks/use-firebase-google-auth';
+
+interface GmailSignInButtonProps {
+  mode: 'login' | 'register';
+}
+
+export function GmailSignInButton({ mode }: GmailSignInButtonProps) {
+  const t = useTranslations('auth');
+  const { authenticateWithGmail, isPending } = useFirebaseGoogleAuth();
+
+  const handleClick = async () => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const credential = await signInWithPopup(auth, provider);
+    const idToken = await credential.user.getIdToken();
+    await authenticateWithGmail({ idToken });  // POST /auth/firebase → sets cookie
+  };
+
+  return (
+    <Button block loading={isPending} onClick={handleClick} icon={<GoogleIcon />}>
+      {mode === 'register' ? t('sign_up_with_gmail') : t('continue_with_gmail')}
+    </Button>
+  );
+}
+```
+
+```typescript
+// features/auth/hooks/use-firebase-google-auth.ts
+export function useFirebaseGoogleAuth() {
+  const router = useRouter();
+  const mutation = useMutation({
+    mutationFn: (request: FirebaseAuthRequest) => authenticateWithFirebase(request),
+    onSuccess: (data) => {
+      // isNewUser → optional onboarding toast t('auth.gmail_sign_up_success')
+      router.push('/trips');
+    },
+  });
+  return { authenticateWithGmail: mutation.mutateAsync, isPending: mutation.isPending };
+}
+```
+
+**i18n** (`locales/en/auth.json`):
+
+```json
+{
+  "continue_with_gmail": "Continue with Gmail",
+  "sign_up_with_gmail": "Sign up with Gmail",
+  "gmail_sign_up_success": "Welcome! Your Gmail account is ready.",
+  "gmail_sign_in_success": "Signed in with Gmail."
+}
+```
+
+**Env:** `FIREBASE_PROJECT_ID`, `GOOGLE_APPLICATION_CREDENTIALS`.
 Firebase Admin SDK imports **only** in `infrastructure/auth/firebase/`.
 
-#### GitHub OAuth
+#### GitHub OAuth (sign-up & sign-in)
 
 | Step | Detail |
 |---|---|
@@ -959,7 +1083,7 @@ Firebase Admin SDK imports **only** in `infrastructure/auth/firebase/`.
 |---|---|---|
 | POST | `/api/v1/auth/register` | Local sign-up |
 | POST | `/api/v1/auth/login` | Local email/username + password |
-| POST | `/api/v1/auth/firebase` | Exchange Firebase `idToken` for session |
+| POST | `/api/v1/auth/firebase` | **Gmail / Google sign-up OR sign-in** (single endpoint) |
 | GET | `/api/v1/auth/oauth/github/start` | Start GitHub OAuth |
 | GET | `/api/v1/auth/oauth/github/callback` | GitHub OAuth callback |
 | POST | `/api/v1/auth/logout` | Clear session cookie |
@@ -967,24 +1091,35 @@ Firebase Admin SDK imports **only** in `infrastructure/auth/firebase/`.
 | POST | `/api/v1/auth/password/forgot` | Send reset email (Resend) |
 | POST | `/api/v1/auth/password/reset` | Reset with token from email |
 
-#### Frontend login (`features/auth/`)
+#### Frontend auth pages (`features/auth/`)
 
 ```
+app/(auth)/
+├── layout.tsx                    # minimal shell — no planner sidebar
+├── login/page.tsx                # LocalLoginForm + GmailSignInButton(mode=login) + GitHub
+└── register/page.tsx             # RegisterForm + GmailSignInButton(mode=register) + GitHub
+
 features/auth/
 ├── components/
-│   ├── login-panel.tsx           # tabs or buttons: local | Google | GitHub
+│   ├── login-panel.tsx
 │   ├── local-login-form.tsx
 │   ├── register-form.tsx
+│   ├── gmail-sign-in-button.tsx    # shared — sign-up & sign-in
+│   ├── github-sign-in-button.tsx
 │   └── forgot-password-form.tsx
 ├── hooks/
 │   ├── use-local-login.ts
-│   ├── use-firebase-google-login.ts   # Firebase SDK wrapper
-│   └── use-github-login.ts            # redirect to /auth/oauth/github/start
+│   ├── use-local-register.ts
+│   ├── use-firebase-google-auth.ts # Gmail sign-up + sign-in
+│   └── use-github-login.ts
+├── lib/
+│   └── firebase-client.ts          # Firebase app init (NEXT_PUBLIC_*)
 └── index.ts
 ```
 
-- Firebase config via `NEXT_PUBLIC_FIREBASE_*` env vars only — no secrets in bundle beyond public Firebase keys.
-- GitHub: full redirect flow — no GitHub secret in frontend.
+- **Gmail button on both pages** — same hook; copy differs via `mode` prop.
+- Firebase config via `NEXT_PUBLIC_FIREBASE_*` only.
+- GitHub: redirect — no secret in frontend.
 
 ```java
 public record UserContext(@NotNull UUID userId, String email, List<String> roles) {}
@@ -1010,7 +1145,7 @@ All transactional email goes through **Resend** (`https://resend.com`) behind a 
 
 | Mail | Trigger | Template |
 |---|---|---|
-| **Welcome** | After `POST /auth/register` | `mail/templates/welcome.html` |
+| **Welcome** | After local `POST /auth/register` **or** first-time Gmail sign-up (`is_new_user`) | `mail/templates/welcome.html` |
 | **Email verification** | Registration; link with signed token | `mail/templates/verify-email.html` |
 | **Password reset** | `POST /auth/password/forgot` | `mail/templates/reset-password.html` |
 | **Admin password reset** | Admin action (§4.0.6) — optional notify user | `mail/templates/admin-reset-notify.html` |
