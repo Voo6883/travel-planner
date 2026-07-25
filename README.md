@@ -9,7 +9,7 @@ An **LLM-powered travel planner** monorepo. Users type *"help me create a plan"*
 | # | Feature | Description |
 |---|---|---|
 | C1 | **Intake** | Chat (primary) or form → structured `TripBrief` |
-| C2 | **Research** | Agent with tools → ranked destinations with rationale |
+| C2 | **Research** | Agent + traveler knowledge DB → where to go, what it's like, food, areas, highlights |
 | C3 | **Itinerary** | Day-by-day plan grounded in real POIs |
 | C4 | **Booking** | Search + book flights/hotels — human-confirmed |
 | C5 | **Trip chat** | LLM-driven create + decisions across the full planning flow |

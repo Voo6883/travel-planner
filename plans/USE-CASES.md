@@ -134,7 +134,12 @@ When brief is ambiguous or incomplete, backend returns **typed** `ClarificationN
 | UC-C2-01 | Start research | P0 | 1 | `POST .../research/run` → `job_id` (async) 🆕 |
 | UC-C2-02 | Poll research progress | P0 | 1 | `GET .../research/jobs/{jobId}` → `queued|running|completed|failed` 🆕 |
 | UC-C2-03 | View ranked recommendations | P0 | 1 | `GET .../ranked-recommendations` when `RESEARCH_READY` |
-| UC-C2-04 | See rationale, est. cost, sources | P0 | 1 | Each item has `rationale`, `est_cost`, `source_refs[]` |
+| UC-C2-04 | See rationale, est. cost, sources | P0 | 1 | Each item has `rationale`, `est_cost`, `traveler_guide`, `source_refs[]` |
+| UC-C2-10 | **View traveler guide on recommendation** | P0 | 1 | Overview, food, areas, highlights, practical — per §4.1.2 |
+| UC-C2-11 | **Compare places by interests** | P0 | 1 | Rank uses seasonality + price + POI/food match to brief |
+| UC-C2-12 | **Ask about a place in chat** | P0 | 1 | `get_destination_guide` — *"what's good to eat?"*, *"best area to stay?"* |
+| UC-C2-13 | **See best areas within destination** | P0 | 1 | `traveler_guide.areas[]` — stay vs explore vs day-trip |
+| UC-C2-14 | **See food recommendations** | P0 | 1 | `traveler_guide.food` — must-try dishes + food districts + POI refs |
 | UC-C2-05 | No confident result | P0 | 1 | Typed empty result — not hallucination |
 | UC-C2-06 | **Select destination** | P0 | 1 | See below 🆕 |
 | UC-C2-07 | Re-run research | P1 | 1 | New job; previous results kept as history |
@@ -159,6 +164,21 @@ GET /api/v1/trips/{tripId}/ranked-recommendations
 
 Frontend: React Query polling while `RESEARCH_RUNNING`; show progress component.
 
+### UC-C2-10 — Traveler guide (what travellers want to know)
+
+Each ranked recommendation includes a structured **`traveler_guide`**:
+
+| Section | Answers |
+|---|---|
+| `overview` | What the place is like — culture, vibe, who it's for |
+| `why_now` | Why this timing fits (seasonality + price from historical data) |
+| `areas` | Best neighborhoods to stay / explore / day-trip within the destination |
+| `food` | Must-try dishes, food districts, dietary notes |
+| `highlights` | Top sights & activities matched to trip interests |
+| `practical` | Getting around, daily budget band, crowds, safety |
+
+UI: expandable sections on research cards + chat can summarize any section.
+
 ### UC-C2-06 — Select destination 🆕
 
 | Step | Action |
@@ -178,6 +198,8 @@ Frontend: React Query polling while `RESEARCH_RUNNING`; show progress component.
 | UC-C3-01 | Generate itinerary | P0 | 1 | Requires `DESTINATION_SELECTED` |
 | UC-C3-02 | View by day | P0 | 1 | `itinerary_day` + `itinerary_item` |
 | UC-C3-03 | POI grounded with source ref | P0 | 1 | Each item has `source_ref` (place id / URL) 🆕 |
+| UC-C3-06 | **Food slots in itinerary** | P0 | 1 | Meal items from `poi.category=food`; area-clustered with sights |
+| UC-C3-07 | **Area-clustered days** | P0 | 1 | Days grouped by `destination_area` — minimize cross-city transit |
 | UC-C3-04 | Regenerate itinerary | P1 | 1 | `POST .../itinerary/regenerate` |
 | UC-C3-05 | Regenerate single day | P2 | 2 | Via C5 chat or dedicated action |
 
@@ -203,7 +225,8 @@ Persistent conversation per trip. User chats to **create** the plan (C1) and
 
 | ID | Use case | Priority | Phase | Acceptance criteria |
 |---|---|---|---|---|
-| UC-C5-01 | **Chat to plan a trip** (intake) | P0 | 1 | Natural language → `update_trip_brief`; syncs brief form |
+| UC-C5-00 | **Start from planner chat** | P0 | 1 | `POST /planner/chat/messages`; *"help me create a plan"* → LLM decides |
+| UC-C5-01 | **Chat to plan a trip** (intake) | P0 | 1 | `create_trip` + `update_trip_brief`; syncs brief form |
 | UC-C5-02 | **Chat clarification** | P0 | 1 | Agent asks in chat; `answer_clarification` tool; typed fallback UI |
 | UC-C5-03 | **LLM decides to start research** | P0 | 1 | When `BRIEF_COMPLETE`, agent offers or runs `start_research` per §3.2 policy |
 | UC-C5-04 | **Chat during research** | P1 | 1 | Explain progress; answer questions while job runs |

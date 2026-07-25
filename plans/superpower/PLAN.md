@@ -71,8 +71,9 @@ PLANNER CHAT (home — no trip yet)
 USER CHAT (persistent per trip, SSE stream)
   │
   ├─ INTAKE       LLM extracts intent → TripBrief (+ clarification)
-  ├─ RESEARCH     LLM may offer or run research when brief is ready
-  ├─ DECIDE       LLM ranks options; user confirms destination
+  ├─ RESEARCH     LLM + tools: live search + **traveler knowledge DB**
+  │               (where to go, what the place is like, food, best areas, POIs)
+  ├─ DECIDE       LLM ranks options with traveler-facing rationale; user confirms
   ├─ ITINERARY    LLM generates day-by-day plan
   ├─ ENHANCE      ongoing chat edits ("cheaper day 2", "add beach day")
   └─ BOOK         agent proposes quotes; user explicitly confirms (§7)
@@ -91,7 +92,7 @@ they prefer structured editing.
 | # | Feature | Primary AI pattern |
 |---|---|---|
 | C1 | **Requirement intake & clarification** — chat (primary) or form → strict `TripBrief` | Chat + structured extraction |
-| C2 | **Research & decision engine** — online search + historical data → ranked destinations/plans with rationale | **Agent** (tools + loop) |
+| C2 | **Research & decision engine** — live search + **traveler knowledge** (historical price/seasonality, place guides, food, areas, POIs) → ranked destinations with rationale | **Agent** (tools + RAG + loop) |
 | C3 | **Itinerary generation** — day-by-day plan grounded in real POIs | Structured output + tools |
 | C4 | **Booking quick actions** — search + book flights & hotels in-app, human-confirmed | Tools + strict workflow (§7) |
 | C5 | **Trip chat** — primary LLM conversation for create + continuous enhancement across C1–C4 | Chat memory + status-gated tools |
@@ -190,6 +191,7 @@ The LLM is the primary planner; structured UI reflects the same state.
 | `generate_itinerary` | `DESTINATION_SELECTED` | Run C3 → `ITINERARY_READY` |
 | `patch_itinerary` | `ITINERARY_READY`+ | Structured diff — not free-text replace |
 | `search_booking_quotes` | `ITINERARY_READY`+ | Return quotes; confirm via C4 UI |
+| `get_destination_guide` | `RESEARCH_READY`+ | Food, areas, sights, practical — from traveler knowledge DB (§4.1.2) |
 
 **Example — create from opener:**
 
@@ -795,7 +797,8 @@ domain/
 |---|---|---|
 | **C2 Research** | Weighted scoring + **priority queue / partial sort** for top-K | Rank destinations by budget fit, season, interests |
 | **C2 Historical** | **Sliding window** / time-series aggregation on `price_history` | Trend direction, best booking window |
-| **C3 Itinerary** | **Greedy + constraints** or TSP heuristic on POI graph | Minimize transit; respect opening hours & pace |
+| **C2 Traveler knowledge** | **Weighted score** + pgvector ANN on `poi_embedding` | Interest match, food/sight retrieval |
+| **C3 Itinerary** | **Greedy + constraints** or TSP heuristic on POI graph | Minimize transit; cluster by `destination_area` |
 | **C3 Itinerary** | **Interval tree** or sorted intervals on `DateRange` | Detect day overlap, travel-day conflicts |
 | **C4 Booking** | Sort + **hash map** lookup by quote id; dedup via idempotency set | Compare quotes; prevent double-submit |
 | **RAG / search** | pgvector **ANN index** (HNSW/IVFFlat) — DB structure, not app heap | Fast similarity search at scale |
@@ -1686,19 +1689,36 @@ A **bounded** LangChain4j agent (max N tool calls, hard token/step budget):
 ```
 TripBrief ──► TravelResearchAgent
                  loops with tools:
-                   • WebSearchTool          (live info: events, advisories, deals)
-                   • HistoricalPriceTool     (our DB: price trend & best-time-to-buy)
-                   • SeasonalityWeatherTool  (climate, crowd levels by month)
-                   • FlightSearchTool        (indicative fares)
-                   • HotelSearchTool         (indicative rates)
-                   • CurrencyTool            (normalize to user's currency)
+                   • WebSearchTool              (live: events, advisories, deals)
+                   • HistoricalPriceTool        (DB: price trend & best-time-to-buy)
+                   • SeasonalityWeatherTool     (DB: climate, crowd levels by month)
+                   • DestinationGuideTool       (DB+RAG: place overview, vibe, culture)
+                   • AreaGuideTool              (DB: neighborhoods, where to stay/explore)
+                   • FoodGuideTool              (DB+RAG: must-try dishes, food districts)
+                   • PoiKnowledgeTool           (DB+RAG: sights, activities by interest)
+                   • FlightSearchTool           (indicative fares)
+                   • HotelSearchTool            (indicative rates)
+                   • CurrencyTool               (normalize to user's currency)
                  ──► emits RankedRecommendations (STRUCTURED, validated):
                      [{ destination, estCost(Money), fitScore, rationale,
-                        bestWindow, risks }]
+                        traveler_guide, bestWindow, risks, source_refs[] }]
 ```
 
+**`traveler_guide`** (per recommendation — what travellers want to know):
+
+| Section | Content |
+|---|---|
+| `overview` | What the place is like — vibe, culture, who it's best for |
+| `why_now` | Seasonality + price signal — why this window fits the brief |
+| `areas` | Best neighborhoods/regions **within** the destination (stay vs day-trip) |
+| `food` | Must-try dishes, food scenes, dietary notes — matched to brief interests |
+| `highlights` | Top POIs/activities ranked to user interests (sight, nature, food, nightlife) |
+| `practical` | Getting around, typical daily budget band, crowd level, safety notes |
+| `source_refs` | Grounding links / POI ids for every claim |
+
 - **Live vs historical are distinct data classes.** "Online search" = fresh facts;
-  "historical data" = stored trends we own (price index, seasonality). The agent
+  **"traveler knowledge"** = our DB: price index, seasonality, destination guides,
+  areas, food intel, POI catalog — retrieved via SQL + pgvector RAG. The agent
   combines both; each recommendation cites which sources it used.
 - Output is a typed `RankedRecommendations` object — **never** free text — so the UI
   and downstream itinerary step consume it safely.
@@ -1721,9 +1741,90 @@ On job complete: `RESEARCH_READY`; optional **research-complete email** (§4.0.1
 
 `POST .../selected-recommendation` `{ recommendation_id }` → `DESTINATION_SELECTED`.
 
-Each recommendation includes `source_refs[]` for grounding (UI + C3 POI linkage).
+Each recommendation includes `traveler_guide` + `source_refs[]` for grounding (UI + C3 POI linkage).
 
-### 4.1.1 C1 clarification (UC-C1-04)
+### 4.1.2 Traveler knowledge base (LOCKED)
+
+Historical and curated data that answers **what a traveller wants to know** — used by
+C2 (choose where), C3 (plan within the place), and C5 (chat Q&A).
+
+#### Knowledge layers
+
+| Layer | Tables | Used for |
+|---|---|---|
+| **Macro — where to go** | `destination`, `seasonality`, `price_history` | Destination fit, best time, cost trend |
+| **Place — what it's like** | `destination_guide` | Overview, culture, vibe, who it's for |
+| **Micro — within the place** | `destination_area`, `poi` | Neighborhoods, day-trip zones, sights, food spots |
+| **Semantic retrieval** | `destination_embedding`, `poi_embedding` (pgvector) | RAG: "romantic areas", "street food", "temples" |
+| **Ingestion audit** | `knowledge_source` | Source URL/dataset, `refreshed_at`, trust tier |
+
+#### `destination_guide` (one row per destination, versioned)
+
+```json
+{
+  "overview": "Kyoto blends temples, gardens, and traditional culture…",
+  "best_for": ["culture", "food", "photography"],
+  "avoid_if": ["nightlife-only", "beach"],
+  "getting_around": "Bus + walk in central districts; JR for day trips",
+  "typical_daily_budget": { "budget": 80, "mid": 150, "luxury": 300, "currency": "USD" }
+}
+```
+
+#### `destination_area` (neighborhoods / sub-regions)
+
+| Field | Example |
+|---|---|
+| `name` | Gion, Arashiyama, Fushimi |
+| `area_type` | `stay` \| `explore` \| `day_trip` |
+| `vibe_tags` | `["traditional", "quiet", "foodie"]` |
+| `why_visit` | "Best for evening strolls and tea houses" |
+| `best_for_interests` | `["culture", "food"]` |
+
+#### `poi` categories (sights + food + experiences)
+
+| `category` | Traveler question answered |
+|---|---|
+| `sight` | What to see |
+| `food` | What / where to eat |
+| `experience` | What to do (workshop, onsen, market) |
+| `nature` | Parks, hikes, beaches |
+| `nightlife` | Bars, districts |
+
+Each POI: `name`, `description`, `area_id`, `tags[]`, `best_time`, `avg_visit_mins`,
+`price_band`, `source_ref`, optional `embedding`.
+
+#### Agent usage by feature
+
+| Feature | Knowledge used |
+|---|---|
+| **C2 — pick destination** | Compare `traveler_guide` across candidates; rank by brief interests + seasonality + price |
+| **C3 — itinerary** | `PoiKnowledgeTool` + `AreaGuideTool` — schedule POIs by area cluster, meal slots from `food` POIs |
+| **C5 — chat** | `get_destination_guide` tool — *"what's good to eat in Kyoto?"*, *"best area to stay?"* |
+
+#### Ingestion (Phase 1 — stub + seed; live pipelines post-v1)
+
+| Phase | Source | Method |
+|---|---|---|
+| 1 | Curated JSON seed per top destination | Flyway `V*__seed_destination_knowledge.sql` + stub adapter |
+| 2+ | Web crawl / licensed datasets / periodic refresh job | `KnowledgeIngestionJob` → upsert guides + embeddings |
+
+**Stub-first (§4.0.7):** `StubDestinationKnowledgeAdapter` ships with realistic fixture
+data so C2/C3 work without external ingest APIs.
+
+#### Ranking signal (C2)
+
+`DestinationRanker` (§4.0.3) weights:
+
+```
+fitScore = w1·interest_match(poi_tags, brief.interests)
+         + w2·seasonality_fit(seasonality, brief.dates)
+         + w3·price_fit(price_history, brief.budget)
+         + w4·area_coverage(destination_area, brief.party_size + pace)
+```
+
+LLM writes `rationale` and `traveler_guide` narrative; DSA computes `fitScore`.
+
+### 4.1.3 C1 clarification (UC-C1-04)
 
 When extraction cannot produce a complete `TripBrief`, return **`ClarificationNeeded`**:
 
@@ -2673,8 +2774,9 @@ DRAFT ─(search/quote)→ QUOTED ─(optional hold)→ HELD ─(USER confirms)�
 - `itinerary_day`, `itinerary_item` — `source_ref` on POI items
 - Booking: `booking` (+ `booking_status` history), `payment_reference`
 - Chat: `planner_session`, `conversation`, `message`
-- Knowledge/RAG: `destination`, `destination_embedding` (pgvector), `poi`
-- History: `price_history`, `seasonality`  (the "historical data" backing C2)
+- Knowledge/RAG: `destination`, `destination_guide`, `destination_area`, `poi`,
+  `destination_embedding`, `poi_embedding` (pgvector), `knowledge_source`
+- History: `price_history`, `seasonality` (macro signals for C2)
 - Ops: `ai_call_log` (tokens/cost/provider)
 
 ---
