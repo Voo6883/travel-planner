@@ -132,6 +132,8 @@ See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) for full coding rules
 | [`plans/TRAVEL-KNOWLEDGE-CATALOG.md`](plans/TRAVEL-KNOWLEDGE-CATALOG.md) | **TKB catalog** — PM review: timeline, routes, transport, apps |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Master plan — architecture, rules, NFRs, CI/CD |
 | [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint-ready epics & stories (Sprints 0–8) |
+| [`docs/UI-UX-DESIGN-SYSTEM.md`](docs/UI-UX-DESIGN-SYSTEM.md) | **UI/UX design system** — tokens, layouts, PWA presentation |
+| [`docs/ARCHITECTURE-DIAGRAMS.md`](docs/ARCHITECTURE-DIAGRAMS.md) | **Architecture diagrams** — system, flow, activity (Mermaid) |
 | [`docs/adr/`](docs/adr/) | Architecture decision records (Gradle, JWT, extensibility, auth, Resend, **PWA**) |
 
 ## License
