@@ -1,2 +1,114 @@
-# travel-planner
-AI Integrated Travel Planner for user to get suggestions and assist in planning for travelling
+# Travel Planner
+
+An **LLM-powered travel planner** monorepo. Users describe where they want to go, budget, dates, and preferences. The system researches online and historical data, ranks destinations, builds itineraries, and supports in-app booking actions with human confirmation.
+
+> **Status:** Planning phase — architecture and rules are locked in [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md). Application code not yet scaffolded.
+
+## Features (v1)
+
+| # | Feature | Description |
+|---|---|---|
+| C1 | **Intake** | Free-text + form → structured `TripBrief` |
+| C2 | **Research** | Agent with tools → ranked destinations with rationale |
+| C3 | **Itinerary** | Day-by-day plan grounded in real POIs |
+| C4 | **Booking** | Search + book flights/hotels — human-confirmed |
+| C5 | **Chat refine** | Multi-turn conversational plan edits |
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 15 (App Router), TypeScript, Ant Design, Tailwind CSS, TanStack Query, next-intl |
+| Backend | Java 21, Spring Boot 3.x, LangChain4j |
+| Database | PostgreSQL + pgvector |
+| AI | Anthropic + OpenAI (switchable at runtime) |
+| Runtime | Docker Compose |
+
+## Repository layout (planned)
+
+```
+travel-planner/
+├── apps/
+│   ├── frontend/          # Next.js — Node 22
+│   └── backend/           # Spring Boot — Java 21
+├── docker/                # Dockerfiles
+├── scripts/               # check-prerequisites, wait-for-services
+├── plans/                 # Architecture & feature plans
+├── docker-compose.yml
+└── package.json           # root scripts
+```
+
+## Prerequisites
+
+Run before any development:
+
+```bash
+npm run prereq
+# or
+./scripts/check-prerequisites.sh      # Unix / Git Bash
+./scripts/check-prerequisites.ps1     # Windows PowerShell
+```
+
+| Tool | Version |
+|---|---|
+| Node.js | 22.x |
+| Java JDK | 21 |
+| Docker + Compose | v2+ |
+| Git | 2.x+ |
+
+## Quick start (planned)
+
+```bash
+# 1. Check prerequisites
+npm run prereq
+
+# 2. Copy environment template
+cp .env.example .env
+
+# 3. Start full stack
+docker compose up --build
+```
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:8080/api/v1 |
+| PostgreSQL | localhost:5432 |
+
+### Dev admin account (local / Docker only)
+
+| Field | Value |
+|---|---|
+| Username | `ADMIN` |
+| Password | `123456` |
+
+> Do not use these credentials in production.
+
+## Architecture highlights
+
+- **Monorepo** — frontend + backend, OpenAPI as single contract source
+- **Clean/hexagonal backend** — Controller routes only; Service owns business logic
+- **Feature-based frontend** — `features/` modules aligned to C1–C5
+- **Tailwind + Ant Design** — unified design tokens; Tailwind overrides Ant by default
+- **User-based auth** — no multi-tenant; admin can manage accounts (dev seed)
+- **API** — `/api/v1/`, GET/POST/PUT/DELETE, standard error `{ code, message, details }`
+
+## Development workflow
+
+Every feature and AI-generated change follows the mandatory workflow in **§12** of the plan:
+
+```
+PREREQ → PLAN → CONTRACT → DOMAIN → SERVICE → ADAPTERS → ROUTE → FRONTEND → VERIFY
+```
+
+See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) for full coding rules, layer boundaries, and checklists.
+
+## Documentation
+
+| Document | Description |
+|---|---|
+| [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Master plan — architecture, rules, roadmap |
+
+## License
+
+Private repository — all rights reserved.
