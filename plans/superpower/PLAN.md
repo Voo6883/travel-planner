@@ -55,18 +55,25 @@
 
 ## 2. Product vision & core user flow
 
-**Primary UX: chat with the AI.** The user converses with an LLM trip assistant to
-create and continuously improve a plan. The stepper and structured screens (brief
-form, research cards, itinerary view) are **synced mirrors** of chat-driven state —
-not a separate workflow.
+**Primary UX: chat with the AI.** The user opens the planner and types intent like
+*"help me create a plan"* or *"2 weeks in Japan next spring"*. The **LLM decides**
+what to do next — create a trip, ask clarifying questions, start research, or
+advance the plan — via status-gated tools. No empty "New Trip" form required.
+
+The stepper and structured screens (brief form, research cards, itinerary view) are
+**synced mirrors** of chat-driven state — not a separate workflow.
 
 ```
+PLANNER CHAT (home — no trip yet)
+  │  User: "help me create a plan"
+  │  LLM decides → create_trip + ask next question(s)
+  ▼
 USER CHAT (persistent per trip, SSE stream)
   │
-  ├─ INTAKE       natural language → structured TripBrief (+ clarification)
-  ├─ RESEARCH     agent tools: live search + historical data → ranked options
-  ├─ DECIDE       user picks destination via chat or UI card
-  ├─ ITINERARY    day-by-day plan grounded in POIs
+  ├─ INTAKE       LLM extracts intent → TripBrief (+ clarification)
+  ├─ RESEARCH     LLM may offer or run research when brief is ready
+  ├─ DECIDE       LLM ranks options; user confirms destination
+  ├─ ITINERARY    LLM generates day-by-day plan
   ├─ ENHANCE      ongoing chat edits ("cheaper day 2", "add beach day")
   └─ BOOK         agent proposes quotes; user explicitly confirms (§7)
 ```
@@ -134,47 +141,69 @@ When `TripBrief` is incomplete, API returns typed **`ClarificationNeeded`** with
 
 #### 3.2 Chat-first interaction (LOCKED)
 
-One **persistent conversation per trip** from `POST /trips` until archived.
+**Entry:** authenticated planner home (`/trips`) shows a **chat composer** with
+suggested prompts (*"Help me plan a trip"*, *"Surprise me with a weekend getaway"*).
+User never needs to click "New Trip" first — the LLM creates the trip when intent
+is clear enough.
+
+**Per-trip:** one persistent conversation from `create_trip` until archived.
 The LLM is the primary planner; structured UI reflects the same state.
 
 | Concern | Rule |
 |---|---|
-| **Transport** | SSE stream from `POST /api/v1/trips/{tripId}/chat/messages` |
-| **Persistence** | `conversation` + `message` tables; full history per trip |
-| **Context** | Each turn includes `trip.status`, current `TripBrief`, latest research/itinerary snapshot |
-| **Tools (gated by status)** | See table below — agent calls tools; never mutates state via free text |
-| **UI** | `(planner)/trips/[tripId]/layout.tsx` — **chat panel always visible** (sidebar or split); stepper pages update when tools run |
+| **Planner transport** | SSE: `POST /api/v1/planner/chat/messages` (no `tripId`) |
+| **Trip transport** | SSE: `POST /api/v1/trips/{tripId}/chat/messages` |
+| **Handoff** | `create_trip` tool → creates trip + links conversation → SSE event `{ type: "trip_created", trip_id }` → UI navigates to trip |
+| **Persistence** | `planner_session` (pre-trip) + `conversation` + `message` per trip |
+| **Context** | Each turn: user message history, `trip.status` (if any), `TripBrief`, research/itinerary snapshot |
+| **LLM decisions** | Agent picks the **next best action** from allowed tools — see decision policy below |
+| **Tools** | Status-gated — agent calls tools; never mutates state via free text |
+| **UI** | Planner home = chat-first; trip layout = chat panel + stepper (§4.2.3) |
 | **Safety** | Booking always ends in explicit UI confirm (§7); chat may only *propose* quotes |
 
-**Status-gated chat tools** (LangChain4j tools behind `TripChatOrchestrator`):
+**LLM decision policy** (`TripPlannerAgent` system prompt — LOCKED behavior):
+
+| Situation | LLM should |
+|---|---|
+| Vague opener (*"help me create a plan"*) | Greet; ask **1–2** high-impact questions (where, when, budget) — do not create trip yet |
+| Partial info (*"Japan in spring, ~$4k"*) | `create_trip` (auto-name) + `update_trip_brief` + ask remaining gaps |
+| Enough for research | `start_research` **or** ask *"Shall I research options now?"* if user seemed hesitant |
+| `RESEARCH_READY` | Summarize top picks; recommend one with rationale; wait for user confirmation before `select_recommendation` |
+| User says *"just pick for me"* | `select_recommendation` on highest-ranked + explain why |
+| Ambiguous brief | `update_trip_brief` → `CLARIFICATION_NEEDED` — **never silent guess** |
+| Missing critical field | Ask in chat **before** calling `start_research` |
+
+**Planner-level tools** (`PlannerChatOrchestrator` — no trip yet):
+
+| Tool | Effect |
+|---|---|
+| `create_trip` | `POST /trips` → `DRAFT`; link session messages → trip conversation; return `trip_id` |
+
+**Trip-level tools** (`TripChatOrchestrator` — status-gated):
 
 | Tool | Allowed when | Effect |
 |---|---|---|
 | `update_trip_brief` | `DRAFT`, `CLARIFICATION_NEEDED` | Merge user intent → `TripBrief`; may set `CLARIFICATION_NEEDED` |
 | `answer_clarification` | `CLARIFICATION_NEEDED` | Apply answers → re-validate → `BRIEF_COMPLETE` or more questions |
-| `start_research` | `BRIEF_COMPLETE` | `POST` research job → `RESEARCH_QUEUED` |
-| `select_recommendation` | `RESEARCH_READY` | User picks via chat or card → `DESTINATION_SELECTED` |
+| `start_research` | `BRIEF_COMPLETE` | Research job → `RESEARCH_QUEUED` |
+| `select_recommendation` | `RESEARCH_READY` | User confirms (chat or card) → `DESTINATION_SELECTED` |
 | `generate_itinerary` | `DESTINATION_SELECTED` | Run C3 → `ITINERARY_READY` |
-| `patch_itinerary` | `ITINERARY_READY`+ | Structured diff on itinerary (deterministic — not free-text replace) |
-| `search_booking_quotes` | `ITINERARY_READY`+ | Return quotes for chat; confirm still via C4 UI |
+| `patch_itinerary` | `ITINERARY_READY`+ | Structured diff — not free-text replace |
+| `search_booking_quotes` | `ITINERARY_READY`+ | Return quotes; confirm via C4 UI |
 
-**Example turns:**
+**Example — create from opener:**
 
 ```
-User: "2 weeks in Japan next spring, ~$4k, love food and temples"
-  → update_trip_brief → CLARIFICATION_NEEDED (dates flexible?)
+User: "help me create a plan"
+  → (no tools) "I'd love to help! Where are you thinking of going, and when?"
 
-User: "Flexible within March, flying from SFO"
+User: "Maybe Japan, 2 weeks, spring, around $4k, love food"
+  → create_trip(name: "Japan spring trip")
+  → update_trip_brief → CLARIFICATION_NEEDED (departure city?)
+
+User: "Flying from SFO, dates flexible in March"
   → answer_clarification → BRIEF_COMPLETE
-
-User: "Find me the best options"
-  → start_research → RESEARCH_QUEUED (async; chat explains polling)
-
-User: "Tokyo looks good — build the itinerary"
-  → select_recommendation + generate_itinerary → ITINERARY_READY
-
-User: "Make day 3 less rushed and add a ramen spot"
-  → patch_itinerary → updated day view + chat summary
+  → "I have enough to research — want me to find the best options?"
 ```
 
 C1 form (`features/intake/`) remains for users who prefer structured editing;
@@ -1769,8 +1798,7 @@ app/
 ├── (planner)/                # authenticated trip planning shell (shared layout)
 │   ├── layout.tsx            #   Ant Design Layout: sidebar, header, trip context
 │   ├── trips/
-│   │   ├── page.tsx          #   trip list
-│   │   ├── new/page.tsx      #   C1 intake — create TripBrief
+│   │   ├── page.tsx          #   trip list + **planner chat composer** (§3.2 entry)
 │   │   └── [tripId]/
 │   │       ├── layout.tsx              #   trip shell: stepper + **persistent chat panel** (C5)
 │   │       ├── page.tsx                #   trip overview
@@ -2644,7 +2672,7 @@ DRAFT ─(search/quote)→ QUOTED ─(optional hold)→ HELD ─(USER confirms)�
 - `ranked_recommendation` — per research run; `source_refs` JSON
 - `itinerary_day`, `itinerary_item` — `source_ref` on POI items
 - Booking: `booking` (+ `booking_status` history), `payment_reference`
-- Chat: `conversation`, `message`
+- Chat: `planner_session`, `conversation`, `message`
 - Knowledge/RAG: `destination`, `destination_embedding` (pgvector), `poi`
 - History: `price_history`, `seasonality`  (the "historical data" backing C2)
 - Ops: `ai_call_log` (tokens/cost/provider)

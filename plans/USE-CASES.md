@@ -70,7 +70,8 @@
 
 | ID | Use case | Priority | Phase | Acceptance criteria |
 |---|---|---|---|---|
-| UC-T01 | Create trip | P0 | 0b | `POST /trips` → `status=DRAFT` |
+| UC-T01 | Create trip via **LLM** (`create_trip` tool) | P0 | 1 | User types intent on planner home; LLM creates trip when ready — not manual `POST /trips` |
+| UC-T01b | Create trip manually (fallback) | P2 | 1 | `POST /trips` → `DRAFT` — optional "blank trip" for power users |
 | UC-T02 | List my trips | P0 | 0b | `GET /trips` — user-scoped, paginated |
 | UC-T03 | Open trip stepper | P0 | 1 | Overview shows `status`; stepper reflects progress 🆕 |
 | UC-T04 | Rename trip | P2 | 1 | `PUT /trips/{id}` — `name` field |
@@ -204,9 +205,9 @@ Persistent conversation per trip. User chats to **create** the plan (C1) and
 |---|---|---|---|---|
 | UC-C5-01 | **Chat to plan a trip** (intake) | P0 | 1 | Natural language → `update_trip_brief`; syncs brief form |
 | UC-C5-02 | **Chat clarification** | P0 | 1 | Agent asks in chat; `answer_clarification` tool; typed fallback UI |
-| UC-C5-03 | **Chat to start research** | P0 | 1 | "Find options" → `start_research` when `BRIEF_COMPLETE` |
+| UC-C5-03 | **LLM decides to start research** | P0 | 1 | When `BRIEF_COMPLETE`, agent offers or runs `start_research` per §3.2 policy |
 | UC-C5-04 | **Chat during research** | P1 | 1 | Explain progress; answer questions while job runs |
-| UC-C5-05 | **Chat to select destination** | P0 | 1 | "Plan Tokyo" → `select_recommendation` or card click |
+| UC-C5-05 | **LLM recommends destination** | P0 | 1 | Summarize options + rationale; `select_recommendation` after user confirms |
 | UC-C5-06 | **Chat to generate itinerary** | P0 | 1 | After selection → `generate_itinerary` |
 | UC-C5-07 | **Chat to enhance itinerary** | P0 | 1 | `patch_itinerary` — structured diff, not free-text replace |
 | UC-C5-08 | **Chat history per trip** | P0 | 1 | `conversation` + `message` persisted; reload restores thread |
@@ -214,14 +215,23 @@ Persistent conversation per trip. User chats to **create** the plan (C1) and
 | UC-C5-10 | **Chat booking suggestions** | P1 | 2 | `search_booking_quotes`; confirm still via C4 UI button |
 | UC-C5-11 | Undo last change | P2 | 3 | Deferred |
 
+### UC-C5-00 — Create from natural language
+
+| Step | Actor | Action |
+|---|---|---|
+| 1 | User | Lands on `/trips` — sees chat composer + suggestion chips |
+| 2 | User | Types *"help me create a plan"* or similar |
+| 3 | LLM | Asks 1–2 questions (no trip yet) **or** calls `create_trip` if enough info |
+| 4 | System | SSE `trip_created` → navigate to `/trips/{id}`; conversation continues |
+| 5 | LLM | Decides next action per §3.2 policy (clarify, research, etc.) |
+
 ### UC-C5-01 — Chat-first intake
 
 | Step | Actor | Action |
 |---|---|---|
-| 1 | User | Creates trip → lands on trip page with **chat panel open** |
-| 2 | User | Describes trip in natural language |
-| 3 | LLM | Calls `update_trip_brief` → brief form updates; status may → `CLARIFICATION_NEEDED` |
-| 4 | User | Continues chatting or edits form — both stay in sync |
+| 1 | User | Describes trip in chat (on trip page or after create) |
+| 2 | LLM | Calls `update_trip_brief` → brief form updates; may → `CLARIFICATION_NEEDED` |
+| 3 | User | Continues chatting or edits form — both stay in sync |
 
 ### UC-C5-07 — Continuous enhancement
 
@@ -252,12 +262,13 @@ Same chat thread from trip creation; no separate "refine mode".
 
 ```
 Sign up (email / Gmail / GitHub)
-  → Create trip → **chat opens**
-  → Chat to build brief → clarify if needed (BRIEF_COMPLETE)
-  → Chat or UI: start research (async job)
+  → Planner home → type "help me create a plan" (or similar)
+  → LLM asks questions / creates trip when ready
+  → Chat builds brief → clarify if needed (BRIEF_COMPLETE)
+  → LLM offers or runs research (async job)
   → Poll / email notification (RESEARCH_READY)
-  → Chat or UI: select destination (DESTINATION_SELECTED)
-  → Chat or UI: generate & view itinerary (ITINERARY_READY)
+  → LLM recommends; user confirms destination (DESTINATION_SELECTED)
+  → LLM generates itinerary (ITINERARY_READY)
   → Keep chatting to enhance plan
 ```
 

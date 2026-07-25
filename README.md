@@ -1,6 +1,6 @@
 # Travel Planner
 
-An **LLM-powered travel planner** monorepo. Users **chat with an AI assistant** to create trips and continuously refine them. The system researches online and historical data, ranks destinations, builds itineraries, and supports in-app booking with human confirmation.
+An **LLM-powered travel planner** monorepo. Users type *"help me create a plan"* (or similar) and the **LLM decides** what to do next — create a trip, ask questions, research, and build itineraries. Users continuously refine via chat. Booking requires explicit human confirmation.
 
 > **Status:** Planning complete — architecture, delivery structure, and sprint backlog are locked. Application code not yet scaffolded. Start with **Phase 0a** (Sprint 0) per [`plans/BACKLOG.md`](plans/BACKLOG.md).
 
@@ -12,7 +12,7 @@ An **LLM-powered travel planner** monorepo. Users **chat with an AI assistant** 
 | C2 | **Research** | Agent with tools → ranked destinations with rationale |
 | C3 | **Itinerary** | Day-by-day plan grounded in real POIs |
 | C4 | **Booking** | Search + book flights/hotels — human-confirmed |
-| C5 | **Trip chat** | Primary LLM conversation — create + continuously enhance the plan |
+| C5 | **Trip chat** | LLM-driven create + decisions across the full planning flow |
 
 ## Tech stack
 

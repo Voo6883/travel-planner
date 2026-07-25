@@ -94,8 +94,8 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S3-3 | Extraction service | `IntakeService` + Guardrails; clarification branch | Golden-file test |
 | S3-4 | C1 API | Thin controller; trip status transitions | Service tests |
 | S3-5 | C1 frontend | `features/intake/`; clarification UI component | All UI states |
-| S3-6 | C1 pages | `trips/new`, `trips/[id]/brief` | E2E: brief → clarify → BRIEF_COMPLETE |
-| S3-7 | **Trip chat v1** | `TripChatOrchestrator`, SSE endpoint, chat panel in trip layout | UC-C5-01/02/08/09; intake via chat |
+| S3-6 | C1 pages | `trips/[id]/brief` (no `/trips/new` — create via chat) | E2E: planner chat → trip → BRIEF_COMPLETE |
+| S3-7 | **Planner + trip chat** | `PlannerChatOrchestrator`, `TripChatOrchestrator`, SSE, `create_trip` tool | UC-C5-00/01/08/09; LLM creates trip from intent |
 
 ---
 
@@ -123,7 +123,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S5-1 | Data model | `itinerary_day`, `itinerary_item` migrations | Flyway + domain |
 | S5-2 | Itinerary service | `ItineraryDayPlanner`, LLM structured output | Overlap checks |
 | S5-3 | C3 API + frontend | `features/itinerary/` | Day-by-day from server |
-| S5-4 | E2E | chat → research → itinerary | Playwright happy path |
+| S5-4 | E2E | "help me create a plan" → research → itinerary | Playwright happy path |
 | S5-5 | **Chat itinerary tools** | `generate_itinerary`, `patch_itinerary` | UC-C5-06/07 |
 
 ---
