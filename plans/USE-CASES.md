@@ -84,7 +84,7 @@
 
 | ID | Use case | Priority | Phase | Acceptance criteria |
 |---|---|---|---|---|
-| UC-C1-01 | Enter preferences (form + free text) | P0 | 1 | Auto-save brief; Ant Design `onValuesChange` |
+| UC-C1-01 | Describe trip via **chat** (primary) or form | P0 | 1 | Chat → `update_trip_brief` tool; form auto-save mirrors same `TripBrief` |
 | UC-C1-02 | AI extract structured `TripBrief` | P0 | 1 | Guardrails validate JSON schema |
 | UC-C1-03 | Edit brief | P0 | 1 | `PUT .../brief` |
 | UC-C1-04 | **Answer clarification questions** | P0 | 1 | See below 🆕 |
@@ -117,7 +117,7 @@ When brief is ambiguous or incomplete, backend returns **typed** `ClarificationN
 
 | Step | Actor | Action |
 |---|---|---|
-| 1 | User | Submits brief (form or free text) |
+| 1 | User | Describes trip in **chat** or submits brief form |
 | 2 | System | Extraction → if gaps → `trip.status=CLARIFICATION_NEEDED` |
 | 3 | User | Answers questions inline (`PUT .../brief/clarification`) |
 | 4 | System | Re-validates → `BRIEF_COMPLETE` or more questions |
@@ -195,14 +195,44 @@ Frontend: React Query polling while `RESEARCH_RUNNING`; show progress component.
 
 ---
 
-## C5 — Conversational refinement
+## C5 — Trip chat (primary LLM interface)
+
+Persistent conversation per trip. User chats to **create** the plan (C1) and
+**continuously enhance** it through research, itinerary, and booking prep.
 
 | ID | Use case | Priority | Phase | Acceptance criteria |
 |---|---|---|---|---|
-| UC-C5-01 | Chat to tweak plan | P0 | 2 | SSE stream |
-| UC-C5-02 | Structured itinerary patch | P0 | 2 | Deterministic diff — not free-text replace |
-| UC-C5-03 | Chat history per trip | P0 | 2 | Persisted messages |
-| UC-C5-04 | Undo last change | P2 | 3 | Deferred |
+| UC-C5-01 | **Chat to plan a trip** (intake) | P0 | 1 | Natural language → `update_trip_brief`; syncs brief form |
+| UC-C5-02 | **Chat clarification** | P0 | 1 | Agent asks in chat; `answer_clarification` tool; typed fallback UI |
+| UC-C5-03 | **Chat to start research** | P0 | 1 | "Find options" → `start_research` when `BRIEF_COMPLETE` |
+| UC-C5-04 | **Chat during research** | P1 | 1 | Explain progress; answer questions while job runs |
+| UC-C5-05 | **Chat to select destination** | P0 | 1 | "Plan Tokyo" → `select_recommendation` or card click |
+| UC-C5-06 | **Chat to generate itinerary** | P0 | 1 | After selection → `generate_itinerary` |
+| UC-C5-07 | **Chat to enhance itinerary** | P0 | 1 | `patch_itinerary` — structured diff, not free-text replace |
+| UC-C5-08 | **Chat history per trip** | P0 | 1 | `conversation` + `message` persisted; reload restores thread |
+| UC-C5-09 | SSE streaming responses | P0 | 1 | `POST .../chat/messages` streams tokens + tool events |
+| UC-C5-10 | **Chat booking suggestions** | P1 | 2 | `search_booking_quotes`; confirm still via C4 UI button |
+| UC-C5-11 | Undo last change | P2 | 3 | Deferred |
+
+### UC-C5-01 — Chat-first intake
+
+| Step | Actor | Action |
+|---|---|---|
+| 1 | User | Creates trip → lands on trip page with **chat panel open** |
+| 2 | User | Describes trip in natural language |
+| 3 | LLM | Calls `update_trip_brief` → brief form updates; status may → `CLARIFICATION_NEEDED` |
+| 4 | User | Continues chatting or edits form — both stay in sync |
+
+### UC-C5-07 — Continuous enhancement
+
+After `ITINERARY_READY`, user keeps chatting to refine:
+
+```
+User: "Day 2 is too packed — move the museum to day 3"
+  → patch_itinerary → itinerary view refreshes + assistant summarizes change
+```
+
+Same chat thread from trip creation; no separate "refine mode".
 
 ---
 
@@ -222,15 +252,16 @@ Frontend: React Query polling while `RESEARCH_RUNNING`; show progress component.
 
 ```
 Sign up (email / Gmail / GitHub)
-  → Create trip (DRAFT)
-  → Fill brief → clarify if needed (BRIEF_COMPLETE)
-  → Start research (async job)
+  → Create trip → **chat opens**
+  → Chat to build brief → clarify if needed (BRIEF_COMPLETE)
+  → Chat or UI: start research (async job)
   → Poll / email notification (RESEARCH_READY)
-  → Select destination (DESTINATION_SELECTED)
-  → Generate & view itinerary (ITINERARY_READY)
+  → Chat or UI: select destination (DESTINATION_SELECTED)
+  → Chat or UI: generate & view itinerary (ITINERARY_READY)
+  → Keep chatting to enhance plan
 ```
 
-Phase 2 adds: refine (C5) → book (C4).
+Phase 2 adds: booking quotes via chat → confirm in C4 UI.
 
 ---
 
@@ -256,5 +287,5 @@ Phase 2 adds: refine (C5) → book (C4).
 | UC-C2-* | C2 Research | §4.1, §14 |
 | UC-C3-* | C3 Itinerary | §3, §4.0.3 |
 | UC-C4-* | C4 Booking | §7 |
-| UC-C5-* | C5 Chat | §3 |
+| UC-C5-* | C5 Trip chat | §3.2 |
 | UC-N* | Mailer | §4.0.10 |

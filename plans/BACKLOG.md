@@ -19,7 +19,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | C2 Research | E-11 | 1 | Ranked recommendations E2E |
 | C3 Itinerary | E-12 | 1 | Day-by-day plan E2E |
 | C4 Booking | E-20 | 2 | Quote → confirm flow |
-| C5 Chat | E-21 | 2 | SSE refinement |
+| C5 Trip Chat | E-21 | 1–2 | Chat-first planning + continuous enhancement |
 
 ---
 
@@ -95,6 +95,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S3-4 | C1 API | Thin controller; trip status transitions | Service tests |
 | S3-5 | C1 frontend | `features/intake/`; clarification UI component | All UI states |
 | S3-6 | C1 pages | `trips/new`, `trips/[id]/brief` | E2E: brief → clarify → BRIEF_COMPLETE |
+| S3-7 | **Trip chat v1** | `TripChatOrchestrator`, SSE endpoint, chat panel in trip layout | UC-C5-01/02/08/09; intake via chat |
 
 ---
 
@@ -111,6 +112,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S4-7 | C2 frontend | `features/research/`; polling UI; "Plan this trip" CTA | Loading/error/empty |
 | S4-8 | Research email | `research-complete` Resend template on job done | UC-N04 |
 | S4-9 | Eval harness v0 | CI on `ai/prompt/` changes | Schema regression fails CI |
+| S4-10 | **Chat research tools** | `start_research`, `select_recommendation` tools | UC-C5-03/05 |
 
 ---
 
@@ -121,7 +123,8 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S5-1 | Data model | `itinerary_day`, `itinerary_item` migrations | Flyway + domain |
 | S5-2 | Itinerary service | `ItineraryDayPlanner`, LLM structured output | Overlap checks |
 | S5-3 | C3 API + frontend | `features/itinerary/` | Day-by-day from server |
-| S5-4 | E2E | intake → research → itinerary | Playwright happy path |
+| S5-4 | E2E | chat → research → itinerary | Playwright happy path |
+| S5-5 | **Chat itinerary tools** | `generate_itinerary`, `patch_itinerary` | UC-C5-06/07 |
 
 ---
 
@@ -147,15 +150,14 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 
 ---
 
-## Sprint 8 — C5 Chat (E-21)
+## Sprint 8 — C5 Chat advanced (E-21)
 
 | ID | Story | Tasks | DoD |
 |---|---|---|---|
-| S8-1 | SSE endpoint | Stream from backend | `use-chat-stream.ts` |
-| S8-2 | Persistence | `conversation`, `message` tables | Multi-turn memory |
-| S8-3 | Itinerary patch | Deterministic diff tool | Not free-text replace |
-| S8-4 | XSS guard | DOMPurify on markdown | Sanitized render |
-| S8-5 | Redis cache | Compose profile `cache` | Semantic cache optional |
+| S8-1 | Chat during research | Progress explanations; UC-C5-04 | Helpful while polling |
+| S8-2 | Booking chat tools | `search_booking_quotes` | UC-C5-10; confirm via C4 UI |
+| S8-3 | XSS guard | DOMPurify on markdown | Sanitized render |
+| S8-4 | Redis cache | Compose profile `cache` | Semantic cache optional |
 
 ---
 

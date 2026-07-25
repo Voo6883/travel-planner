@@ -55,26 +55,26 @@
 
 ## 2. Product vision & core user flow
 
+**Primary UX: chat with the AI.** The user converses with an LLM trip assistant to
+create and continuously improve a plan. The stepper and structured screens (brief
+form, research cards, itinerary view) are **synced mirrors** of chat-driven state —
+not a separate workflow.
+
 ```
-1. INTAKE      user states: candidate destinations (or "surprise me"),
-               dates/flexibility, budget, party size, interests, constraints
-                 │
-2. RESEARCH     agent gathers: live online search + historical data
-               (price trends, seasonality, weather, crowd levels)
-                 │
-3. DECIDE       score candidates vs budget + preferences → ranked
-               recommendations, each with rationale + est. cost
-                 │
-4. SUGGEST      build a concrete itinerary + suggested flights/hotels
-                 │
-5. QUICK ACTION user confirms → in-app booking of flights / hotels
-               (human-in-the-loop; payment via provider; see §7)
-                 │
-6. REFINE       conversational tweaks ("cheaper day 2", "add a beach day")
+USER CHAT (persistent per trip, SSE stream)
+  │
+  ├─ INTAKE       natural language → structured TripBrief (+ clarification)
+  ├─ RESEARCH     agent tools: live search + historical data → ranked options
+  ├─ DECIDE       user picks destination via chat or UI card
+  ├─ ITINERARY    day-by-day plan grounded in POIs
+  ├─ ENHANCE      ongoing chat edits ("cheaper day 2", "add beach day")
+  └─ BOOK         agent proposes quotes; user explicitly confirms (§7)
 ```
 
-Steps 2–3 are the flagship agentic capability; step 5 is the differentiator
-(actionable, not just advisory).
+Steps 2–3 are the flagship agentic capability; step 5 (booking) is the
+differentiator (actionable, not just advisory). **Chat spans all steps** — the user
+never leaves the conversation to plan; they may also use the stepper/forms when
+they prefer structured editing.
 
 ---
 
@@ -83,11 +83,11 @@ Steps 2–3 are the flagship agentic capability; step 5 is the differentiator
 ### Core (v1 — the system must do these)
 | # | Feature | Primary AI pattern |
 |---|---|---|
-| C1 | **Requirement intake & clarification** — turn free-text + form into a strict `TripBrief` | Structured extraction |
+| C1 | **Requirement intake & clarification** — chat (primary) or form → strict `TripBrief` | Chat + structured extraction |
 | C2 | **Research & decision engine** — online search + historical data → ranked destinations/plans with rationale | **Agent** (tools + loop) |
 | C3 | **Itinerary generation** — day-by-day plan grounded in real POIs | Structured output + tools |
 | C4 | **Booking quick actions** — search + book flights & hotels in-app, human-confirmed | Tools + strict workflow (§7) |
-| C5 | **Conversational refinement** — multi-turn edits to the plan | Chat memory + tools |
+| C5 | **Trip chat** — primary LLM conversation for create + continuous enhancement across C1–C4 | Chat memory + status-gated tools |
 
 ### Later (post-v1)
 Packing lists, review summarization, real-time replanning on disruptions,
@@ -108,7 +108,7 @@ that gate feature delivery:
 | `RESEARCH_QUEUED` / `RESEARCH_RUNNING` | Poll job status only |
 | `RESEARCH_READY` | View recommendations + **select destination** |
 | `DESTINATION_SELECTED` | C3 itinerary generation |
-| `ITINERARY_READY` | C5 chat + C4 booking |
+| `ITINERARY_READY` | C5 enhance + C4 booking |
 | `BOOKING_IN_PROGRESS` / `BOOKED` | C4 confirm flow |
 
 #### C1 — clarification (not silent guess)
@@ -131,6 +131,54 @@ When `TripBrief` is incomplete, API returns typed **`ClarificationNeeded`** with
 - `POST /auth/verify-email/resend` — resend verification
 - `DELETE /auth/me` — account delete (soft-delete + PII anonymize)
 - Local sign-up **blocked from planner** until `email_verified=true`
+
+#### 3.2 Chat-first interaction (LOCKED)
+
+One **persistent conversation per trip** from `POST /trips` until archived.
+The LLM is the primary planner; structured UI reflects the same state.
+
+| Concern | Rule |
+|---|---|
+| **Transport** | SSE stream from `POST /api/v1/trips/{tripId}/chat/messages` |
+| **Persistence** | `conversation` + `message` tables; full history per trip |
+| **Context** | Each turn includes `trip.status`, current `TripBrief`, latest research/itinerary snapshot |
+| **Tools (gated by status)** | See table below — agent calls tools; never mutates state via free text |
+| **UI** | `(planner)/trips/[tripId]/layout.tsx` — **chat panel always visible** (sidebar or split); stepper pages update when tools run |
+| **Safety** | Booking always ends in explicit UI confirm (§7); chat may only *propose* quotes |
+
+**Status-gated chat tools** (LangChain4j tools behind `TripChatOrchestrator`):
+
+| Tool | Allowed when | Effect |
+|---|---|---|
+| `update_trip_brief` | `DRAFT`, `CLARIFICATION_NEEDED` | Merge user intent → `TripBrief`; may set `CLARIFICATION_NEEDED` |
+| `answer_clarification` | `CLARIFICATION_NEEDED` | Apply answers → re-validate → `BRIEF_COMPLETE` or more questions |
+| `start_research` | `BRIEF_COMPLETE` | `POST` research job → `RESEARCH_QUEUED` |
+| `select_recommendation` | `RESEARCH_READY` | User picks via chat or card → `DESTINATION_SELECTED` |
+| `generate_itinerary` | `DESTINATION_SELECTED` | Run C3 → `ITINERARY_READY` |
+| `patch_itinerary` | `ITINERARY_READY`+ | Structured diff on itinerary (deterministic — not free-text replace) |
+| `search_booking_quotes` | `ITINERARY_READY`+ | Return quotes for chat; confirm still via C4 UI |
+
+**Example turns:**
+
+```
+User: "2 weeks in Japan next spring, ~$4k, love food and temples"
+  → update_trip_brief → CLARIFICATION_NEEDED (dates flexible?)
+
+User: "Flexible within March, flying from SFO"
+  → answer_clarification → BRIEF_COMPLETE
+
+User: "Find me the best options"
+  → start_research → RESEARCH_QUEUED (async; chat explains polling)
+
+User: "Tokyo looks good — build the itinerary"
+  → select_recommendation + generate_itinerary → ITINERARY_READY
+
+User: "Make day 3 less rushed and add a ramen spot"
+  → patch_itinerary → updated day view + chat summary
+```
+
+C1 form (`features/intake/`) remains for users who prefer structured editing;
+changes sync both ways via the same `TripBrief` APIs.
 
 ---
 
@@ -1724,19 +1772,20 @@ app/
 │   │   ├── page.tsx          #   trip list
 │   │   ├── new/page.tsx      #   C1 intake — create TripBrief
 │   │   └── [tripId]/
-│   │       ├── page.tsx        #   trip overview / stepper
-│   │       ├── brief/page.tsx          #   C1 — edit TripBrief
+│   │       ├── layout.tsx              #   trip shell: stepper + **persistent chat panel** (C5)
+│   │       ├── page.tsx                #   trip overview
+│   │       ├── brief/page.tsx          #   C1 — structured TripBrief editor (synced with chat)
 │   │       ├── research/page.tsx       #   C2 — ranked recommendations
 │   │       ├── itinerary/page.tsx      #   C3 — day-by-day plan
-│   │       ├── booking/page.tsx        #   C4 — flights/hotels + confirm
-│   │       └── chat/page.tsx           #   C5 — conversational refinement
+│   │       └── booking/page.tsx        #   C4 — flights/hotels + confirm
 │   └── settings/page.tsx
 └── api/                      # optional Next.js route handlers (BFF) — use sparingly
     └── health/route.ts       #   prefer calling Spring Boot directly from browser/server
 ```
 
-Use a **stepper / wizard** in `(planner)/trips/[tripId]/layout.tsx` to guide users
-through C1→C5 without forcing a linear lock (user can jump back to brief or chat).
+Use a **stepper / wizard** in `(planner)/trips/[tripId]/layout.tsx` alongside the
+**chat panel** (§3.2). Users plan via conversation; the stepper shows progress and
+offers structured views. User can jump between steps; chat tools keep state in sync.
 
 #### 4.2.4 Directory layout (Option A — LOCKED)
 
@@ -2110,7 +2159,7 @@ return <RecommendationList items={data.items} />;
 
 | Rule | Detail |
 |---|---|
-| **C5 chat stream** | Dedicated hook in `features/chat/hooks/use-chat-stream.ts` — SSE from backend |
+| **C5 trip chat** | Dedicated hook `features/chat/hooks/use-chat-stream.ts` — SSE; panel in trip layout (§3.2) |
 | **Markdown render** | Sanitize LLM HTML (DOMPurify) before render — prevent XSS |
 | **a11y** | Ant Design components + `aria-label={t('...')}` on icon-only buttons |
 | **Ant Design locale** | Sync `ConfigProvider locale` with next-intl active locale |
