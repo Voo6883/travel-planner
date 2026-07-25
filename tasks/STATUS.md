@@ -31,8 +31,8 @@
 
 | ID | Task | Depends on | Status | Notes |
 |---|---|---|---|---|
-| 00 | [Baseline and execution map](00-plan-baseline.md) | — | `done` | Commit `aa20043`. Open items B-2, B-3 do not affect this task's DoD. |
-| 01 | [Prerequisite and root tooling](01-prerequisite-root-tooling.md) | 00 | `not_started` | **Next executable task.** Not blocked by B-1 — it authors the gate rather than passing it. |
+| 00 | [Baseline and execution map](00-plan-baseline.md) | — | `done` | Commit `aa20043`. B-1 and B-2 resolved; open item B-3 does not affect this task's DoD. |
+| 01 | [Prerequisite and root tooling](01-prerequisite-root-tooling.md) | 00 | `not_started` | **Next executable task.** Nothing blocking. |
 | 02 | [Backend minimal scaffold](02-backend-minimal-scaffold.md) | 01 | `not_started` | B-1 resolved — JDK 21.0.11 LTS installed. |
 | 03 | [Frontend minimal scaffold](03-frontend-minimal-scaffold.md) | 01 | `not_started` | B-1 resolved — Node 22.23.1. May run in parallel with 02. |
 | 04 | [Docker runtime and orchestration](04-docker-runtime.md) | 01, 02, 03 | `not_started` | B-1 resolved. |

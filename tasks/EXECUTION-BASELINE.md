@@ -64,7 +64,7 @@ No remote branch carries implementation work that supersedes a task brief.
 | `origin/cursor/single-env-config-5b6b` | 0 | Fully merged |
 | `origin/cursor/ui-design-theme-9aec` | 0 | Fully merged |
 | `origin/dev` | 0 | Mirror of `master` |
-| `origin/main` | 2 | Stale default branch — see blocker **B-2** |
+| `origin/main` | 2 | Abandoned — stale snapshot, see **B-2** decision |
 
 > **Coverage gap:** the open-PR review required by Task 00's Scope could not be performed through
 > the GitHub API — `gh` is not authenticated in this environment (`gh auth login` required). It was
@@ -268,5 +268,6 @@ the stale `main`. **Resolution:** authenticate `gh`, or confirm no PRs are open.
 > **[Task 01 — Prerequisite and Root Tooling](01-prerequisite-root-tooling.md)** — branch
 > `agent/task-01-root-tooling`.
 
-Task 00's only dependent is Task 01, and Task 00 is `done`. Task 01 is **not** blocked by B-1: it
-authors the prerequisite gate rather than satisfying it. B-1 must be resolved before Task 02.
+Task 00's only dependent is Task 01, and Task 00 is `done`. Nothing blocks it: B-1 (toolchain) and
+B-2 (trunk) are both resolved, and B-3 does not gate execution. Branch from `master`, merge to
+`master`.
