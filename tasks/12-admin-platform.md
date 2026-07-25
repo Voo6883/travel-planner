@@ -10,6 +10,7 @@ Implement the planned development/admin account-management slice with strict aut
 
 ## Required reading
 
+- **[`docs/adr/009-session-lifecycle-revocation.md`](../docs/adr/009-session-lifecycle-revocation.md) — Accepted; extends ADR 002/004 and overrides this brief where they differ**
 - `plans/superpower/PLAN.md` §4.0.6
 - `plans/USE-CASES.md` UC-A15 and UC-A16
 - `plans/BACKLOG.md` S2-1, S2-2, S2-11
@@ -22,6 +23,7 @@ Implement the planned development/admin account-management slice with strict aut
 - Dev/Docker/local-only ADMIN seed using an idempotent and profile-gated mechanism.
 - Store role value `ADMIN`; expose Spring authority `ROLE_ADMIN`; enforce with `hasRole('ADMIN')`.
 - Admin APIs for paginated user list, user detail, enable/disable, and password reset.
+- **Admin actions must terminate sessions (ADR 009):** disable-user and reset-password bump `user.token_version`. Without it a disabled or compromised account keeps working until its token expires — unacceptable for an account that can spend money.
 - Do not grant cross-user trip access.
 - Audit every admin mutation with actor, target, action, time, and result.
 - Typed `forbidden`, `user_not_found`, conflict, and validation errors.

@@ -10,6 +10,7 @@ Add Gmail/Google and GitHub sign-up/login adapters while preserving the common u
 
 ## Required reading
 
+- **[`docs/adr/009-session-lifecycle-revocation.md`](../docs/adr/009-session-lifecycle-revocation.md) — Accepted; extends ADR 002/004 and overrides this brief where they differ**
 - `plans/superpower/PLAN.md` §4.0.5
 - `docs/adr/004-multi-provider-auth-resend.md`
 - `plans/USE-CASES.md` UC-A02, A03, A05, A06, A09
@@ -31,9 +32,19 @@ Add Gmail/Google and GitHub sign-up/login adapters while preserving the common u
 - Normalize provider claims to the internal identity model.
 - Issue the same internal JWT session used by local login.
 
-### Account linking
+### Account linking — ADR 009 §4 overrides the original rule
 
-- Link a provider to an existing user only under the documented verified-email rules.
+> **Email equality is not proof of ownership.** The pre-ADR rule required only that the *incoming*
+> provider email be verified. That is the documented pre-hijack takeover pattern: an attacker
+> registers locally as `victim@gmail.com`, the victim later signs in with Google and is auto-linked
+> **into the attacker's account**, leaving the attacker with password access to the victim's trips.
+
+- Auto-link permitted **only** when the **existing** account has `email_verified = true` **and** the incoming provider email is verified.
+- Otherwise require an explicit, authenticated "link this provider?" confirmation while signed in to the existing account.
+- **GitHub:** use the **primary AND verified** email only. Ignore `@users.noreply.github.com` and any unverified address.
+- **Firebase:** assert `firebase.sign_in_provider == 'google.com'` **and** `aud == <project_id>` — otherwise enabling Email/Password in the Firebase console opens an unvetted registration path into this system.
+- `DELETE /api/v1/auth/providers/{provider}` to unlink; refused if it would leave the account with no usable sign-in method; bumps `token_version`.
+- A username may not contain `@`; both username and email get case-insensitive unique indexes.
 - Prevent one external identity from linking to multiple users.
 - Handle missing/private provider email and identity conflicts with typed errors.
 - Audit security-sensitive linking events.
