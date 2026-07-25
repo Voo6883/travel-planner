@@ -9,6 +9,7 @@
 > **Before coding:** run prerequisite check (§4.0.0). **Runtime:** Docker Compose (§4.0.0).
 > **Kickoff gate:** Phase 0a starts when this plan is merged to `master` (sign-off = merge approval).
 > Sprint-ready tasks live in [`plans/BACKLOG.md`](../BACKLOG.md).
+> **AI agents:** start with [`AGENTS.md`](../../AGENTS.md) → [`docs/AI-AGENT-WORKFLOW.md`](../../docs/AI-AGENT-WORKFLOW.md).
 
 ---
 
@@ -2137,6 +2138,10 @@ interfaces ship regardless.
 code MUST follow this workflow.** No shortcuts. If a step is skipped, the change is
 not merge-ready.
 
+**AI agents:** use [`docs/AI-AGENT-WORKFLOW.md`](../../docs/AI-AGENT-WORKFLOW.md) —
+the operational guide for code generation (task classification, gates, forbidden
+patterns, self-check matrix). Entry point: [`AGENTS.md`](../../AGENTS.md).
+
 This applies equally to human developers and AI assistants (Cursor, Copilot, etc.).
 Before writing code, the AI/human reads this section and the relevant plan sections.
 
@@ -2221,6 +2226,7 @@ In addition to §12.3, a **feature story** is done only when all apply:
 
 When an AI assistant generates or edits code:
 
+0. **Start with** [`AGENTS.md`](../../AGENTS.md) and [`docs/AI-AGENT-WORKFLOW.md`](../../docs/AI-AGENT-WORKFLOW.md) — classify task, run pipeline in order.
 1. **Read first** — load `plans/superpower/PLAN.md` (this file) and the target package before writing.
 2. **Prerequisites** — if starting a new session or Phase 0, run `npm run prereq` first (§4.0.0).
 3. **Follow order** — §12.2 steps 2→6; never scaffold a fat controller and "refactor later."
@@ -2430,6 +2436,9 @@ Significant decisions are recorded in `docs/adr/` and referenced from §11.
 |---|---|---|
 | [001](../../docs/adr/001-gradle.md) | Gradle as backend build tool | Accepted |
 | [002](../../docs/adr/002-jwt-auth.md) | JWT in httpOnly cookie for v1 auth | Accepted |
+
+**AI agent workflow:** [`docs/AI-AGENT-WORKFLOW.md`](../../docs/AI-AGENT-WORKFLOW.md) (v1.0) —
+entry point [`AGENTS.md`](../../AGENTS.md). Update workflow version when §12 changes.
 
 **When to write an ADR:** changing a locked decision in §1, swapping LLM framework,
 adding a new runtime service, or altering API versioning strategy.

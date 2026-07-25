@@ -96,7 +96,8 @@ docker compose up --build
 
 ## Development workflow
 
-Every feature and AI-generated change follows the mandatory workflow in **§12** of the plan:
+Every feature and AI-generated change follows the mandatory workflow in **§12** of the plan.
+**AI agents:** read [`AGENTS.md`](AGENTS.md) → [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) first.
 
 ```
 PREREQ → PLAN → CONTRACT → DOMAIN → SERVICE → ADAPTERS → ROUTE → FRONTEND → VERIFY
@@ -108,6 +109,8 @@ See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) for full coding rules
 
 | Document | Description |
 |---|---|
+| [`AGENTS.md`](AGENTS.md) | **AI agent entry point** — quick rules & doc index |
+| [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **AI code generation workflow** — pipeline, gates, forbidden patterns |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Master plan — architecture, rules, NFRs, CI/CD |
 | [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint-ready epics & stories (Sprints 0–8) |
 | [`docs/adr/`](docs/adr/) | Architecture decision records (Gradle, JWT auth) |
