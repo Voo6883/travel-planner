@@ -52,6 +52,7 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 | S1-6b | Gmail (Firebase) | `FirebaseIdentityAdapter`, `POST /auth/firebase`, sign-up + sign-in upsert, welcome email | New + returning Gmail users |
 | S1-6c | GitHub OAuth | `GithubOAuthIdentityAdapter`, account linking | GitHub sign-up + sign-in E2E |
 | S1-6d | Mailer | `MailerPort`, Resend + stub, welcome on Gmail sign-up | Reset + welcome in stub mode |
+| S1-6e | Auth P1 APIs | Change password, resend verify, delete account; email verify gate | UC-A12–A14 |
 | S1-7 | MapStruct | Mapper config + example flow | Compile-time mapping works |
 | S1-8 | Trip scaffold | `GET/POST /api/v1/trips` | Thin controller; service unit test |
 | S1-9 | Checkstyle + transactions | `LineLength` 120; `@Transactional(rollbackFor)` template; Spring Retry | CI lint + integration rollback test |
@@ -88,12 +89,12 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 
 | ID | Story | Tasks | DoD |
 |---|---|---|---|
-| S3-1 | Contract | `TripBrief` schemas, `PUT .../brief` | Codegen regenerated |
-| S3-2 | Domain | `TripBrief` aggregate + invariants | Domain unit tests |
-| S3-3 | Extraction service | `IntakeService` + structured LLM + Guardrails | Golden-file test |
-| S3-4 | C1 API | Thin controller, mappers | Service tests |
-| S3-5 | C1 frontend | `features/intake/`, form `onValuesChange`, debounced save | All UI states |
-| S3-6 | C1 pages | `trips/new`, `trips/[id]/brief` | E2E: create + save brief |
+| S3-1 | Contract | `TripBrief`, `ClarificationNeeded`, `PUT .../brief`, `PUT .../brief/clarification` | Codegen regenerated |
+| S3-2 | Domain | `TripBrief` aggregate; `TripStatus` enum; clarification types | Domain unit tests |
+| S3-3 | Extraction service | `IntakeService` + Guardrails; clarification branch | Golden-file test |
+| S3-4 | C1 API | Thin controller; trip status transitions | Service tests |
+| S3-5 | C1 frontend | `features/intake/`; clarification UI component | All UI states |
+| S3-6 | C1 pages | `trips/new`, `trips/[id]/brief` | E2E: brief → clarify → BRIEF_COMPLETE |
 
 ---
 
@@ -101,12 +102,15 @@ Sprint-ready epics and stories derived from [`plans/superpower/PLAN.md`](superpo
 
 | ID | Story | Tasks | DoD |
 |---|---|---|---|
-| S4-1 | Stub ports | `StubSearchAdapter`, `StubHistoricalAdapter`, etc. | Local dev without API keys |
-| S4-2 | Agent loop | `TravelResearchAgent`, tool budget | Bounded loop |
-| S4-3 | DSA ranking | `DestinationRanker` in `domain/algorithm/` | Table-driven tests |
-| S4-4 | Research API | `POST .../research/run`, `GET .../ranked-recommendations` | User-scoped |
-| S4-5 | C2 frontend | `features/research/` | Loading/error/empty |
-| S4-6 | Eval harness v0 | CI on `ai/prompt/` changes | Schema regression fails CI |
+| S4-1 | Stub ports | `StubSearchAdapter`, etc. | Local dev without API keys |
+| S4-2 | Research job | `research_job` table; async runner; poll API | UC-C2-01/02 |
+| S4-3 | Agent loop | `TravelResearchAgent`, tool budget | Bounded loop |
+| S4-4 | DSA ranking | `DestinationRanker` | Table-driven tests |
+| S4-5 | Research API | `POST .../research/run`, `GET .../jobs/{id}`, ranked list | User-scoped |
+| S4-6 | Select destination | `POST .../selected-recommendation` → DESTINATION_SELECTED | UC-C2-06 |
+| S4-7 | C2 frontend | `features/research/`; polling UI; "Plan this trip" CTA | Loading/error/empty |
+| S4-8 | Research email | `research-complete` Resend template on job done | UC-N04 |
+| S4-9 | Eval harness v0 | CI on `ai/prompt/` changes | Schema regression fails CI |
 
 ---
 

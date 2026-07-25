@@ -11,7 +11,7 @@ npm run prereq                    # must pass before any code generation
 
 | Step | Action |
 |---|---|
-| 1 | Read task → map to feature **C1–C5** or **C6+** (see [`docs/ADDING-A-FEATURE.md`](docs/ADDING-A-FEATURE.md)) |
+| 1 | Read task → map to feature **C1–C5** or **C6+**; check [`plans/USE-CASES.md`](plans/USE-CASES.md) for acceptance criteria |
 | 2 | Read [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) sections for your layer |
 | 3 | Follow workflow: **CONTRACT → DOMAIN → SERVICE → ADAPTERS → ROUTE → FRONTEND → VERIFY** |
 | 4 | Self-check [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) §7 before finishing |
@@ -46,6 +46,7 @@ npm run prereq                    # must pass before any code generation
 
 | Document | When to read |
 |---|---|
+| [`plans/USE-CASES.md`](plans/USE-CASES.md) | Use cases & acceptance criteria |
 | [`docs/ADDING-A-FEATURE.md`](docs/ADDING-A-FEATURE.md) | **Adding C6+ or new capabilities** |
 | [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **Every code generation task** |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Architecture, rules, NFRs, CI |

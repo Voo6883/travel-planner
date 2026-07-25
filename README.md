@@ -117,6 +117,7 @@ See [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) for full coding rules
 | [`AGENTS.md`](AGENTS.md) | **AI agent entry point** — quick rules & doc index |
 | [`docs/ADDING-A-FEATURE.md`](docs/ADDING-A-FEATURE.md) | How to add C6+ features (vertical slice) |
 | [`docs/AI-AGENT-WORKFLOW.md`](docs/AI-AGENT-WORKFLOW.md) | **AI code generation workflow** — pipeline, gates, forbidden patterns |
+| [`plans/USE-CASES.md`](plans/USE-CASES.md) | **Use case catalog** — acceptance criteria & MVP funnel |
 | [`plans/superpower/PLAN.md`](plans/superpower/PLAN.md) | Master plan — architecture, rules, NFRs, CI/CD |
 | [`plans/BACKLOG.md`](plans/BACKLOG.md) | Sprint-ready epics & stories (Sprints 0–8) |
 | [`docs/adr/`](docs/adr/) | Architecture decision records (Gradle, JWT, extensibility, auth, Resend) |

@@ -1,0 +1,260 @@
+# Travel Planner — Use Cases
+
+> Product use case catalog with acceptance criteria. Implements PM review P0/P1 items.
+> Technical rules: [`superpower/PLAN.md`](superpower/PLAN.md). Delivery: [`BACKLOG.md`](BACKLOG.md).
+
+**Legend:** ✅ In plan (locked) · 🆕 Added this doc · ⏳ Phase · ❌ Deferred post-v1
+
+---
+
+## Personas
+
+| Persona | Description |
+|---|---|
+| **Planner** | Primary user — plans and books personal trips |
+| **Returning user** | Has existing trips; resumes planning |
+| **Admin** | Internal — manages user accounts (dev/docker seed) |
+
+---
+
+## Trip status (wizard progress) 🆕
+
+`trip.status` drives stepper UI and allowed actions.
+
+| Status | Meaning | User can |
+|---|---|---|
+| `DRAFT` | Trip created, brief incomplete | Edit brief (C1) |
+| `BRIEF_COMPLETE` | Valid `TripBrief` saved | Start research (C2) |
+| `CLARIFICATION_NEEDED` | Brief incomplete — questions returned | Answer clarification (C1) |
+| `RESEARCH_QUEUED` | Job submitted | Wait / leave page |
+| `RESEARCH_RUNNING` | Agent in progress | Poll status |
+| `RESEARCH_READY` | Ranked recommendations available | View & **select destination** (C2) |
+| `DESTINATION_SELECTED` | User picked a recommendation | Generate itinerary (C3) |
+| `ITINERARY_READY` | Day-by-day plan exists | Refine (C5), book (C4) |
+| `BOOKING_IN_PROGRESS` | Quotes held / confirm pending | Complete booking (C4) |
+| `BOOKED` | At least one confirmed booking | View confirmations |
+| `ARCHIVED` | User archived trip | View only |
+
+---
+
+## A. Authentication & account
+
+| ID | Use case | Priority | Phase | Acceptance criteria |
+|---|---|---|---|---|
+| UC-A01 | Sign up with email, username, password | P0 | 0b | `POST /auth/register` → verify email sent; `email_verified=false` until confirmed |
+| UC-A02 | Sign up with Gmail | P0 | 0b | `POST /auth/firebase` → `is_new_user=true` → welcome email |
+| UC-A03 | Sign up with GitHub | P0 | 0b | OAuth callback → auto-register → welcome email |
+| UC-A04 | Log in with email or username + password | P0 | 0b | `POST /auth/login` → JWT cookie |
+| UC-A05 | Log in with Gmail | P0 | 0b | Same as UC-A02 with `is_new_user=false` |
+| UC-A06 | Log in with GitHub | P0 | 0b | OAuth → JWT cookie |
+| UC-A07 | Forgot password | P0 | 0b | Email with reset link via Resend; token 1h expiry |
+| UC-A08 | Verify email (local) | P0 | 0b | Link in email → `email_verified=true`; block login until verified 🆕 |
+| UC-A09 | Link Gmail to existing account | P1 | 0b | Same email → `provider_linked=true` |
+| UC-A10 | Log out | P0 | 0b | Cookie cleared; redirect to login |
+| UC-A11 | View profile / linked providers | P0 | 0b | `GET /auth/me` |
+| UC-A12 | Change password (logged in) | P1 | 1 | `PUT /auth/password` — current + new password 🆕 |
+| UC-A13 | Resend verification email | P1 | 1 | `POST /auth/verify-email/resend` 🆕 |
+| UC-A14 | Delete account | P1 | 1 | `DELETE /auth/me` — soft-delete user + anonymize PII 🆕 |
+| UC-A15 | Admin list users | P0 | 0b | `GET /admin/users` — `ROLE_ADMIN` |
+| UC-A16 | Admin reset password | P0 | 0b | `PUT /admin/users/{id}/reset-password` + audit |
+
+### UC-A08 acceptance (email verification gate) 🆕
+
+- Local sign-up cannot access planner until `email_verified=true`.
+- Gmail/GitHub sign-up: `email_verified=true` immediately (provider verified).
+- Resend verification from login error state.
+
+---
+
+## B. Trip lifecycle
+
+| ID | Use case | Priority | Phase | Acceptance criteria |
+|---|---|---|---|---|
+| UC-T01 | Create trip | P0 | 0b | `POST /trips` → `status=DRAFT` |
+| UC-T02 | List my trips | P0 | 0b | `GET /trips` — user-scoped, paginated |
+| UC-T03 | Open trip stepper | P0 | 1 | Overview shows `status`; stepper reflects progress 🆕 |
+| UC-T04 | Rename trip | P2 | 1 | `PUT /trips/{id}` — `name` field |
+| UC-T05 | Archive trip | P2 | 1 | `PUT /trips/{id}` → `status=ARCHIVED` |
+| UC-T06 | Delete trip | P2 | 1 | `DELETE /trips/{id}` — soft delete |
+| UC-T07 | Resume after leaving mid-research | P0 | 1 | Poll job or return to trip → `RESEARCH_RUNNING` or `RESEARCH_READY` 🆕 |
+
+---
+
+## C1 — Intake & clarification
+
+| ID | Use case | Priority | Phase | Acceptance criteria |
+|---|---|---|---|---|
+| UC-C1-01 | Enter preferences (form + free text) | P0 | 1 | Auto-save brief; Ant Design `onValuesChange` |
+| UC-C1-02 | AI extract structured `TripBrief` | P0 | 1 | Guardrails validate JSON schema |
+| UC-C1-03 | Edit brief | P0 | 1 | `PUT .../brief` |
+| UC-C1-04 | **Answer clarification questions** | P0 | 1 | See below 🆕 |
+| UC-C1-05 | “Surprise me” (open destination) | P1 | 1 | `destinations=[]` + flag `surprise_me=true` |
+| UC-C1-06 | Validate budget/dates | P0 | 1 | Domain rejects invalid `Money` / `DateRange` |
+
+### UC-C1-04 — Clarification flow 🆕
+
+When brief is ambiguous or incomplete, backend returns **typed** `ClarificationNeeded` — never silent guess.
+
+```json
+{
+  "status": "CLARIFICATION_NEEDED",
+  "questions": [
+    {
+      "id": "budget_max",
+      "prompt_key": "trip_brief.clarify_budget",
+      "type": "money",
+      "required": true
+    },
+    {
+      "id": "date_flexibility",
+      "prompt_key": "trip_brief.clarify_dates",
+      "type": "choice",
+      "options": ["fixed", "flexible_week", "flexible_month"]
+    }
+  ]
+}
+```
+
+| Step | Actor | Action |
+|---|---|---|
+| 1 | User | Submits brief (form or free text) |
+| 2 | System | Extraction → if gaps → `trip.status=CLARIFICATION_NEEDED` |
+| 3 | User | Answers questions inline (`PUT .../brief/clarification`) |
+| 4 | System | Re-validates → `BRIEF_COMPLETE` or more questions |
+
+**Unlock rule:** C2 research disabled until `status=BRIEF_COMPLETE`.
+
+---
+
+## C2 — Research & decision
+
+| ID | Use case | Priority | Phase | Acceptance criteria |
+|---|---|---|---|---|
+| UC-C2-01 | Start research | P0 | 1 | `POST .../research/run` → `job_id` (async) 🆕 |
+| UC-C2-02 | Poll research progress | P0 | 1 | `GET .../research/jobs/{jobId}` → `queued|running|completed|failed` 🆕 |
+| UC-C2-03 | View ranked recommendations | P0 | 1 | `GET .../ranked-recommendations` when `RESEARCH_READY` |
+| UC-C2-04 | See rationale, est. cost, sources | P0 | 1 | Each item has `rationale`, `est_cost`, `source_refs[]` |
+| UC-C2-05 | No confident result | P0 | 1 | Typed empty result — not hallucination |
+| UC-C2-06 | **Select destination** | P0 | 1 | See below 🆕 |
+| UC-C2-07 | Re-run research | P1 | 1 | New job; previous results kept as history |
+| UC-C2-08 | Email when research completes | P1 | 1 | Resend notification if user offline 🆕 |
+| UC-C2-09 | Compare recommendations | P2 | 1 | Card grid UI — no new API |
+
+### UC-C2-01/02 — Async research job 🆕
+
+Long-running agent (up to 90s §14) **must not** block HTTP.
+
+```
+POST /api/v1/trips/{tripId}/research/run
+  → 202 { job_id, status: "queued" }
+  → trip.status = RESEARCH_QUEUED
+
+GET /api/v1/trips/{tripId}/research/jobs/{jobId}
+  → { status, progress_pct?, error_code? }
+
+GET /api/v1/trips/{tripId}/ranked-recommendations
+  → 200 when completed; 409 research_not_ready otherwise
+```
+
+Frontend: React Query polling while `RESEARCH_RUNNING`; show progress component.
+
+### UC-C2-06 — Select destination 🆕
+
+| Step | Action |
+|---|---|
+| 1 | User views recommendation cards on research page |
+| 2 | User clicks **“Plan this trip”** on one card |
+| 3 | `POST .../selected-recommendation` `{ recommendation_id }` |
+| 4 | `trip.status=DESTINATION_SELECTED`; stores chosen destination on trip |
+| 5 | Stepper unlocks **Itinerary** (C3) |
+
+---
+
+## C3 — Itinerary
+
+| ID | Use case | Priority | Phase | Acceptance criteria |
+|---|---|---|---|---|
+| UC-C3-01 | Generate itinerary | P0 | 1 | Requires `DESTINATION_SELECTED` |
+| UC-C3-02 | View by day | P0 | 1 | `itinerary_day` + `itinerary_item` |
+| UC-C3-03 | POI grounded with source ref | P0 | 1 | Each item has `source_ref` (place id / URL) 🆕 |
+| UC-C3-04 | Regenerate itinerary | P1 | 1 | `POST .../itinerary/regenerate` |
+| UC-C3-05 | Regenerate single day | P2 | 2 | Via C5 chat or dedicated action |
+
+---
+
+## C4 — Booking
+
+| ID | Use case | Priority | Phase | Acceptance criteria |
+|---|---|---|---|---|
+| UC-C4-01 | Search flights/hotels | P0 | 2 | Stub quotes in Phase 2 sprint 6 |
+| UC-C4-02 | Compare quotes | P0 | 2 | List with price, terms |
+| UC-C4-03 | Confirm booking (explicit) | P0 | 2 | Human button; idempotency key |
+| UC-C4-04 | Price re-validation at confirm | P0 | 2 | `quote_expired` error if stale |
+| UC-C4-05 | View booking confirmation | P1 | 2 | Status + provider reference |
+| UC-C4-06 | Cancel booking | P2 | 3 | Post-v1 unless vendor supports |
+
+---
+
+## C5 — Conversational refinement
+
+| ID | Use case | Priority | Phase | Acceptance criteria |
+|---|---|---|---|---|
+| UC-C5-01 | Chat to tweak plan | P0 | 2 | SSE stream |
+| UC-C5-02 | Structured itinerary patch | P0 | 2 | Deterministic diff — not free-text replace |
+| UC-C5-03 | Chat history per trip | P0 | 2 | Persisted messages |
+| UC-C5-04 | Undo last change | P2 | 3 | Deferred |
+
+---
+
+## D. Notifications (Resend)
+
+| ID | Use case | Priority | Phase | Template |
+|---|---|---|---|---|
+| UC-N01 | Welcome email | P0 | 0b | `welcome` |
+| UC-N02 | Verify email | P0 | 0b | `verify-email` |
+| UC-N03 | Password reset | P0 | 0b | `reset-password` |
+| UC-N04 | Research complete | P1 | 1 | `research-complete` 🆕 |
+| UC-N05 | Booking confirmed | P1 | 2 | `booking-confirmed` |
+
+---
+
+## E. MVP funnel (must work end-to-end)
+
+```
+Sign up (email / Gmail / GitHub)
+  → Create trip (DRAFT)
+  → Fill brief → clarify if needed (BRIEF_COMPLETE)
+  → Start research (async job)
+  → Poll / email notification (RESEARCH_READY)
+  → Select destination (DESTINATION_SELECTED)
+  → Generate & view itinerary (ITINERARY_READY)
+```
+
+Phase 2 adds: refine (C5) → book (C4).
+
+---
+
+## F. Deferred (post-v1)
+
+| Use case | Notes |
+|---|---|
+| Guest / try-before-sign-up | §3 later |
+| Share / export PDF | §3 later |
+| Group planning | §3 later |
+| Disruption replanning | §3 later |
+| Packing lists | §3 later — C6 candidate |
+
+---
+
+## Traceability
+
+| Use case range | Feature | PLAN section |
+|---|---|---|
+| UC-A* | Auth & admin | §4.0.5, §4.0.6, §4.0.10 |
+| UC-T* | Trip lifecycle | §8, §4.0.8 |
+| UC-C1-* | C1 Intake | §3, §4.1 |
+| UC-C2-* | C2 Research | §4.1, §14 |
+| UC-C3-* | C3 Itinerary | §3, §4.0.3 |
+| UC-C4-* | C4 Booking | §7 |
+| UC-C5-* | C5 Chat | §3 |
+| UC-N* | Mailer | §4.0.10 |

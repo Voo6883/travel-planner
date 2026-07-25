@@ -9,6 +9,7 @@
 > **Before coding:** run prerequisite check (§4.0.0). **Runtime:** Docker Compose (§4.0.0).
 > **Kickoff gate:** Phase 0a starts when this plan is merged to `master` (sign-off = merge approval).
 > Sprint-ready tasks live in [`plans/BACKLOG.md`](../BACKLOG.md).
+> **Use cases:** [`plans/USE-CASES.md`](../USE-CASES.md) — acceptance criteria & MVP funnel.
 > **AI agents:** start with [`AGENTS.md`](../../AGENTS.md) → [`docs/AI-AGENT-WORKFLOW.md`](../../docs/AI-AGENT-WORKFLOW.md).
 
 ---
@@ -92,6 +93,44 @@ Steps 2–3 are the flagship agentic capability; step 5 is the differentiator
 Packing lists, review summarization, real-time replanning on disruptions,
 trip narrative/share, translation/phrasebook, group/collaborative planning.
 (These reuse the same base; no new architecture.)
+
+### 3.1 Use cases & MVP funnel (LOCKED)
+
+Full catalog: [`plans/USE-CASES.md`](../USE-CASES.md). Summary of **P0 product rules**
+that gate feature delivery:
+
+#### Trip status (wizard progress)
+
+| `trip.status` | Unlocks |
+|---|---|
+| `DRAFT` / `CLARIFICATION_NEEDED` | C1 brief editor |
+| `BRIEF_COMPLETE` | Start C2 research |
+| `RESEARCH_QUEUED` / `RESEARCH_RUNNING` | Poll job status only |
+| `RESEARCH_READY` | View recommendations + **select destination** |
+| `DESTINATION_SELECTED` | C3 itinerary generation |
+| `ITINERARY_READY` | C5 chat + C4 booking |
+| `BOOKING_IN_PROGRESS` / `BOOKED` | C4 confirm flow |
+
+#### C1 — clarification (not silent guess)
+
+When `TripBrief` is incomplete, API returns typed **`ClarificationNeeded`** with
+`questions[]` → `trip.status=CLARIFICATION_NEEDED`. User answers via
+`PUT /api/v1/trips/{tripId}/brief/clarification`. C2 blocked until `BRIEF_COMPLETE`.
+
+#### C2 — async research + destination selection
+
+- `POST .../research/run` → `202` + `job_id` (agent up to 90s — §14); poll
+  `GET .../research/jobs/{jobId}`.
+- On complete: `RESEARCH_READY` + optional **research-complete email** (Resend).
+- User **must select** one recommendation: `POST .../selected-recommendation` →
+  `DESTINATION_SELECTED` before C3.
+
+#### Auth P1 (Phase 1)
+
+- `PUT /auth/password` — change password when logged in
+- `POST /auth/verify-email/resend` — resend verification
+- `DELETE /auth/me` — account delete (soft-delete + PII anonymize)
+- Local sign-up **blocked from planner** until `email_verified=true`
 
 ---
 
@@ -1090,6 +1129,9 @@ Firebase Admin SDK imports **only** in `infrastructure/auth/firebase/`.
 | GET | `/api/v1/auth/me` | Current user + roles + linked providers |
 | POST | `/api/v1/auth/password/forgot` | Send reset email (Resend) |
 | POST | `/api/v1/auth/password/reset` | Reset with token from email |
+| PUT | `/api/v1/auth/password` | Change password (logged in) — UC-A12 |
+| POST | `/api/v1/auth/verify-email/resend` | Resend verification email — UC-A13 |
+| DELETE | `/api/v1/auth/me` | Delete own account — UC-A14 |
 
 #### Frontend auth pages (`features/auth/`)
 
@@ -1148,6 +1190,7 @@ All transactional email goes through **Resend** (`https://resend.com`) behind a 
 | **Welcome** | After local `POST /auth/register` **or** first-time Gmail sign-up (`is_new_user`) | `mail/templates/welcome.html` |
 | **Email verification** | Registration; link with signed token | `mail/templates/verify-email.html` |
 | **Password reset** | `POST /auth/password/forgot` | `mail/templates/reset-password.html` |
+| **Research complete** | C2 job → `RESEARCH_READY` (optional; user offline) | `mail/templates/research-complete.html` |
 | **Admin password reset** | Admin action (§4.0.6) — optional notify user | `mail/templates/admin-reset-notify.html` |
 
 ```java
@@ -1585,6 +1628,39 @@ TripBrief ──► TravelResearchAgent
 - The agent **proposes**; it never books. Booking is a separate, human-gated action (§7).
 - Deterministic guardrails: budget filter, date/plausibility checks, and a fallback
   ("no confident recommendation" is a valid, typed result, not a hallucinated one).
+
+**Async execution (UC-C2-01/02):** Research runs as a **background job** — not on the HTTP
+thread. See [`USE-CASES.md`](../USE-CASES.md).
+
+| API | Response |
+|---|---|
+| `POST .../research/run` | `202` `{ job_id }` → `trip.status=RESEARCH_QUEUED` |
+| `GET .../research/jobs/{jobId}` | `{ status, progress_pct?, error_code? }` |
+| `GET .../ranked-recommendations` | `200` when `RESEARCH_READY`; else `409 research_not_ready` |
+
+On job complete: `RESEARCH_READY`; optional **research-complete email** (§4.0.10).
+
+**Destination selection (UC-C2-06):** User picks one recommendation before C3:
+
+`POST .../selected-recommendation` `{ recommendation_id }` → `DESTINATION_SELECTED`.
+
+Each recommendation includes `source_refs[]` for grounding (UI + C3 POI linkage).
+
+### 4.1.1 C1 clarification (UC-C1-04)
+
+When extraction cannot produce a complete `TripBrief`, return **`ClarificationNeeded`**:
+
+```json
+{
+  "status": "CLARIFICATION_NEEDED",
+  "questions": [
+    { "id": "budget_max", "prompt_key": "trip_brief.clarify_budget", "type": "money", "required": true }
+  ]
+}
+```
+
+`PUT .../brief/clarification` with answers → re-validate → `BRIEF_COMPLETE` or more questions.
+C2 is **blocked** until `BRIEF_COMPLETE` (§3.1).
 
 ### 4.2 Frontend architecture — Option A feature-based (LOCKED)
 
@@ -2513,7 +2589,11 @@ DRAFT ─(search/quote)→ QUOTED ─(optional hold)→ HELD ─(USER confirms)�
 - **Mail audit:** `mail_event` — `id`, `user_id`, `template`, `status`, `created_at` (no body — Resend handles delivery)
 - **Seed:** dev admin row — username `ADMIN`, BCrypt(`123456`), role `ADMIN` (§4.0.6)
 - **Audit:** `audit_event` — admin actions (reset password, enable/disable user)
-- Core: `trip` (FK `user_id`), `trip_brief`, `itinerary_day`, `itinerary_item`
+- Core: `trip` — `id`, `user_id` FK, `name`, `status` (enum §3.1), `selected_recommendation_id`, audit columns
+- `trip_brief`, `trip_clarification` (pending questions/answers)
+- `research_job` — `id`, `trip_id`, `status`, `progress_pct`, `error_code`, `started_at`, `completed_at`
+- `ranked_recommendation` — per research run; `source_refs` JSON
+- `itinerary_day`, `itinerary_item` — `source_ref` on POI items
 - Booking: `booking` (+ `booking_status` history), `payment_reference`
 - Chat: `conversation`, `message`
 - Knowledge/RAG: `destination`, `destination_embedding` (pgvector), `poi`
