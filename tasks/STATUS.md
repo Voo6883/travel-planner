@@ -42,7 +42,7 @@
 
 | ID | Task | Depends on | Status | Notes |
 |---|---|---|---|---|
-| 06 | [OpenAPI and error platform](06-openapi-error-platform.md) | 02, 03, 04, 05 | `review` | Contract, error catalog, pagination, `expected_version`, request-id propagation, codegen + CI drift gate. 53 backend / 26 frontend tests green locally; awaiting CI and evidence-gate acceptance. |
+| 06 | [OpenAPI and error platform](06-openapi-error-platform.md) | 02, 03, 04, 05 | `done` | Commit `0e295fd`. Contract + error catalog + pagination + `expected_version` + request-id. 53 backend / 26 frontend tests. Drift gate verified in both directions against a committed tree. Open questions: **F-10**, **F-11**. |
 | 07 | [Database and domain foundation](07-database-domain-foundation.md) | 02, 04, 06 | `not_started` | |
 | 08 | [Local identity and JWT session](08-local-identity-jwt.md) | 06, 07 | `not_started` | ADR 002 superseded by ADR 004/009 — see harness §7. |
 | 09 | [Mailer and account lifecycle](09-mailer-account-lifecycle.md) | 08 | `not_started` | |
