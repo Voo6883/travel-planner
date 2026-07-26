@@ -4,6 +4,20 @@
 # owns production configuration. Every value must arrive as an environment variable at runtime;
 # no secret is ever committed here or baked into an image (PLAN §4.0.0.2).
 
+spring:
+  jpa:
+    hibernate:
+      # Restated here rather than inherited, because this is the one value whose accidental
+      # override destroys production data. `update` would let Hibernate reshape live tables to
+      # match whatever the entities happen to say; PLAN §4.0.2-H forbids it outright.
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    clean-disabled: true
+    # No baselining in production. If the schema history table is missing, this database is not
+    # the one the migrations describe, and startup must fail rather than assume V1..Vn already ran.
+    baseline-on-migrate: false
+
 logging:
   level:
     root: WARN

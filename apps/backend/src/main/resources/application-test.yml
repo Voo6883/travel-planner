@@ -6,13 +6,24 @@
 # suites hermetic; DatabaseReadinessContributor is conditional on spring.datasource.url and so
 # is simply absent.
 #
-# Integration tests that need a real PostgreSQL use Testcontainers from
-# tasks/07-database-domain-foundation.md onward and declare their own datasource.
+# Integration tests that need a real PostgreSQL live in a separate Gradle source set
+# (`src/test/integration`, task `integrationTest`), run under the `integration-test` profile, and
+# declare their own Testcontainers datasource. They are never part of `test`.
 
 spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+
+  # Both back off on their own without a DataSource bean, but "backs off by accident" is not a
+  # property to rely on: a future starter that contributes a DataSource would quietly start
+  # migrating and validating inside the unit suite. Disabling them explicitly keeps `./gradlew
+  # test` hermetic by declaration rather than by luck.
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: none
 
 logging:
   level:

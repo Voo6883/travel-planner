@@ -14,6 +14,33 @@ spring:
     # @JsonProperty — the contract holds by default rather than by vigilance.
     property-naming-strategy: SNAKE_CASE
 
+  jpa:
+    # Hibernate never writes DDL. Flyway owns every schema change (PLAN §4.0.2-H), and `validate`
+    # turns a migration that drifted from an entity into a startup failure instead of a column
+    # that silently reads back null in production.
+    hibernate:
+      ddl-auto: validate
+    # No open session in view. Left on (the Spring Boot default), a lazy association would load
+    # from inside the view layer, outside any transaction the service declared — which is both a
+    # hidden N+1 and a way for a JPA entity to reach the wire.
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          # Every Instant is bound and read as UTC regardless of the JVM's default zone, so a
+          # container in Asia/Kuala_Lumpur and one in UTC agree on what a timestamptz means.
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # A checksum change on an applied migration is an error, not something to repair silently:
+    # the database in front of you no longer matches the file that claims to describe it.
+    validate-on-migrate: true
+    # `flyway clean` drops every object in the schema. There is no environment where an
+    # application process should be able to do that to itself.
+    clean-disabled: true
+
 server:
   port: 8080
   error:

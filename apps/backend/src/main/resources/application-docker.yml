@@ -4,6 +4,9 @@
 # name `postgres` — never `localhost`, which inside a container refers to the container itself
 # (§4.0.0.2).
 
+# Flyway is inherited from application.yml and runs on container startup. Compose already gates
+# the backend behind the Postgres healthcheck, so the migration always meets a live database.
+
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/travel_planner}

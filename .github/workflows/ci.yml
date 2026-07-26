@@ -96,6 +96,14 @@ jobs:
       - name: Build and test
         run: ./gradlew --no-daemon build
 
+      # Testcontainers suite from task 07: migrations against a real pgvector image, JPA <-> domain
+      # mapping, transaction rollback, and optimistic-lock conflicts. Kept OUT of `build` on
+      # purpose — Testcontainers fails hard without a Docker daemon, and `./gradlew build` must
+      # stay runnable on a developer machine with no Docker (established in tasks 02 and 04).
+      # The ubuntu runner has Docker, so CI runs it explicitly instead.
+      - name: Integration tests (Testcontainers Postgres)
+        run: ./gradlew --no-daemon integrationTest
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7

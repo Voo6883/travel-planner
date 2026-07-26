@@ -3,6 +3,10 @@
 # Host-run means `localhost`, not the Compose service name `postgres` (§4.0.0.2). The default
 # below reflects that; SPRING_DATASOURCE_URL in the root .env overrides it.
 
+# Flyway is inherited from application.yml: migrations run on startup, so a freshly created
+# database is usable with no separate step. `./gradlew flywayValidate` checks the same database
+# through SPRING_DATASOURCE_URL.
+
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/travel_planner}

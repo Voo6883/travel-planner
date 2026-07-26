@@ -1,0 +1,21 @@
+# Profile for the Testcontainers suite (Gradle task `integrationTest`).
+#
+# Deliberately NOT the `test` profile: that one excludes DataSourceAutoConfiguration so the unit
+# suite runs without Docker. This profile is the opposite — it wants a real PostgreSQL, and the
+# datasource URL is supplied at runtime by AbstractPostgresIntegrationTest from the container.
+#
+# Flyway and ddl-auto=validate are inherited from application.yml on purpose. Running the suite
+# against the same settings production uses is what makes "migrations apply from an empty database"
+# a meaningful claim rather than a test-only code path.
+
+spring:
+  jpa:
+    # Every statement is visible when a mapping test fails, which is when it matters and never
+    # otherwise; the suite is small enough that the noise cost is nil.
+    show-sql: false
+
+logging:
+  level:
+    root: WARN
+    com.travelplanner: INFO
+    org.flywaydb: INFO
