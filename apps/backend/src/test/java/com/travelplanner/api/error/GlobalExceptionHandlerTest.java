@@ -2,27 +2,34 @@ package com.travelplanner.api.error;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 
-/** Error-envelope behaviour (PLAN §6.1). */
+/**
+ * Error-envelope behaviour (PLAN §6.1) through the real application.
+ *
+ * <p>{@code @AutoConfigureMockMvc} rather than a manual {@code webAppContextSetup}: it registers
+ * the application's {@code Filter} beans, which is what lets this test prove that
+ * {@code RequestIdFilter} is actually wired into the chain and not merely instantiable.
+ */
 @SpringBootTest
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 class GlobalExceptionHandlerTest {
 
     private final MockMvc mockMvc;
 
-    GlobalExceptionHandlerTest(@Autowired WebApplicationContext context) {
-        this.mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GlobalExceptionHandlerTest(@Autowired MockMvc mockMvc) {
+        this.mockMvc = mockMvc;
     }
 
     @Test
@@ -33,6 +40,19 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("not_found"))
                 .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void everyResponseCarriesTheRequestIdHeaderTheContractPromises() throws Exception {
+        // End-to-end through the real filter chain: RequestIdFilter runs before the advice, so
+        // even a failed request is traceable to its log lines (PLAN §4.0.2-J2).
+        mockMvc.perform(get("/api/v1/health").header("X-Request-Id", "task-06-probe"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Request-Id", "task-06-probe"));
+
+        mockMvc.perform(get("/api/v1/definitely-not-a-route"))
+                .andExpect(status().isNotFound())
+                .andExpect(header().exists("X-Request-Id"));
     }
 
     @Test

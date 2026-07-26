@@ -1,0 +1,117 @@
+# Error catalog — the registry named in PLAN §4.0.8 ("Registries: Error codes →
+# api/openapi/errors.yaml + DomainException subclasses").
+#
+# THIS FILE IS THE REGISTRATION POINT FOR EVERY `code` THE API CAN RETURN.
+#
+# Registration procedure (all five steps, in one change):
+#   1. Add the value to `ErrorCode.enum` below, in alphabetical order.
+#   2. Add a row to the catalog table in the `description` of `ErrorCode`.
+#   3. Add the matching constant to
+#      apps/backend/src/main/java/com/travelplanner/api/error/ApiErrorCode.java
+#      with its HTTP status.
+#   4. Add the i18n string under `errors.<code>` in BOTH
+#      apps/frontend/src/locales/en/common.json and .../ms/common.json.
+#   5. Run `npm run codegen` from the repo root and commit the regenerated client.
+#
+# OpenApiSpecTest fails the backend build when steps 1 and 3 disagree, and
+# common.errors.test.ts fails the frontend build when step 4 is missed. The procedure is
+# therefore enforced, not merely documented.
+#
+# Scope note: only platform-level codes are registered here. Feature codes
+# (`trip_not_found`, `booking_declined`, …) are registered by the task that introduces the
+# endpoint which can return them — see tasks/06-openapi-error-platform.md "Do not".
+
+openapi: 3.0.3
+info:
+  title: Travel Planner error catalog
+  version: 1.0.0
+  description: Component-only document. Referenced by openapi.yaml; it exposes no paths.
+
+paths: {}
+
+components:
+  schemas:
+    ErrorCode:
+      type: string
+      description: |
+        Registered machine-readable error identifiers (PLAN §6.1). `snake_case`, stable, and
+        never localised — the frontend maps each value to `common.errors.<code>`.
+
+        | Code | HTTP | Meaning |
+        |---|---|---|
+        | `forbidden` | 403 | Authenticated, but not allowed to act on this resource |
+        | `internal_error` | 500 | Unhandled server fault. `details` is always empty |
+        | `not_found` | 404 | No resource at this path, or none owned by the caller |
+        | `unauthorized` | 401 | No valid session; the caller must sign in |
+        | `validation_failed` | 400 | Request failed schema or constraint validation. `details.fields` maps field name → message |
+        | `version_conflict` | 409 | Optimistic-lock mismatch (ADR 008). `details.current_version` carries the server's version |
+      enum:
+        - forbidden
+        - internal_error
+        - not_found
+        - unauthorized
+        - validation_failed
+        - version_conflict
+
+    ApiErrorResponse:
+      type: object
+      description: |
+        The single error envelope (PLAN §6.1). **Every** non-2xx JSON response uses this shape,
+        including the terminal `event: error` frame of an SSE stream (ADR 007).
+      required:
+        - code
+        - message
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+        message:
+          type: string
+          description: |
+            English fallback for logs and development. Never rendered verbatim to a user —
+            the frontend resolves `code` to an i18n key instead.
+          example: The requested resource does not exist.
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: |
+            Optional structured context: field errors, identifiers, the current version.
+            Never a stack trace, an internal package name, or PII.
+          example:
+            current_version: 9
+      example:
+        code: not_found
+        message: The requested resource does not exist.
+        details: {}
+
+    ValidationFailedDetails:
+      type: object
+      description: |
+        Shape of `ApiErrorResponse.details` when `code` is `validation_failed`. Documented
+        separately because it is the only `details` payload with a fixed structure that
+        clients are expected to read field-by-field.
+      required:
+        - fields
+      properties:
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+          description: Field name → English constraint message.
+          example:
+            expected_version: must not be null
+
+    VersionConflictDetails:
+      type: object
+      description: |
+        Shape of `ApiErrorResponse.details` when `code` is `version_conflict` (ADR 008).
+        The client re-reads at `current_version`, re-applies its edit, and retries.
+      required:
+        - current_version
+      properties:
+        current_version:
+          type: integer
+          format: int32
+          minimum: 0
+          description: The version the server currently holds for the aggregate.
+          example: 9

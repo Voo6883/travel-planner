@@ -7,6 +7,12 @@ spring:
     name: travel-planner-backend
   profiles:
     default: local
+  jackson:
+    # The wire format is snake_case (PLAN §6.1: `page_size`, `expected_version`,
+    # `current_version`, `trip_id`). Setting it globally means a Java field named
+    # `expectedVersion` cannot silently ship as `expectedVersion` because someone forgot a
+    # @JsonProperty — the contract holds by default rather than by vigilance.
+    property-naming-strategy: SNAKE_CASE
 
 server:
   port: 8080
@@ -18,6 +24,10 @@ server:
     include-binding-errors: never
 
 logging:
+  # Surfaces the X-Request-Id that RequestIdFilter puts in the MDC (PLAN §4.0.2-J2), so a
+  # user-reported failure can be traced to its log lines.
+  pattern:
+    level: '%5p [%X{requestId:-no-request-id}]'
   level:
     root: INFO
     com.travelplanner: INFO

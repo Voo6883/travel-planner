@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
-import { fetchBackendStatus, type BackendStatus } from '@/lib/api/health-client';
+import { fetchBackendStatus, type BackendStatus } from '@/lib/api/health-api';
 
 type ProbeState = 'checking' | BackendStatus;
 
@@ -10,8 +10,8 @@ type ProbeState = 'checking' | BackendStatus;
  * Shows whether the backend is reachable.
  *
  * Renders fully without the backend — an unreachable API is a displayed state, not an error
- * boundary. Uses plain state rather than React Query because there is no cache to share yet;
- * tasks/06/11 move this onto the generated client and a query hook.
+ * boundary. Now reads through the generated contract (task 06); it still uses plain state rather
+ * than React Query because there is no cache to share yet — task 11 moves it onto a query hook.
  */
 export function SystemStatusCard() {
   const t = useTranslations('common');

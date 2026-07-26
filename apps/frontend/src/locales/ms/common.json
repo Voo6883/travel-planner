@@ -12,5 +12,13 @@
   "scaffold_notice": "Rangka Fasa 0a — ciri perancangan belum dibina.",
   "locale_label": "Bahasa",
   "locale_en": "English",
-  "locale_ms": "Bahasa Melayu"
+  "locale_ms": "Bahasa Melayu",
+  "errors": {
+    "forbidden": "Anda tiada kebenaran untuk melakukan ini.",
+    "internal_error": "Sesuatu tidak kena di pihak kami. Sila cuba lagi.",
+    "not_found": "Kami tidak menemui apa yang anda cari.",
+    "unauthorized": "Sila log masuk untuk meneruskan.",
+    "validation_failed": "Sebahagian maklumat tidak sah. Sila semak medan yang ditanda.",
+    "version_conflict": "Ini telah dikemas kini di tempat lain. Muat semula untuk melihat versi terkini."
+  }
 }

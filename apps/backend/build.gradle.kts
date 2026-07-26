@@ -38,6 +38,11 @@ dependencies {
     testImplementation(platform("org.springframework.boot:spring-boot-dependencies:3.5.3"))
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    // Validates api/openapi/openapi.yaml in the backend build (task 06). Test-only on purpose:
+    // the contract is hand-authored and design-first, so nothing generates or serves it at
+    // runtime and the production image stays free of the parser and its transitive tree.
+    testImplementation("io.swagger.parser.v3:swagger-parser-v3:2.1.22")
 }
 
 tasks.withType<JavaCompile>().configureEach {

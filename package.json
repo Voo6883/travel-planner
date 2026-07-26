@@ -12,6 +12,7 @@
   "scripts": {
     "prereq": "node scripts/prereq.mjs",
     "prereq:test": "node scripts/tests/run-prereq-tests.mjs",
+    "codegen": "npm --prefix apps/frontend run codegen",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down",
     "docker:reset": "docker compose down -v",

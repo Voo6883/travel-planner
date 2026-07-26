@@ -2,9 +2,12 @@ name: CI
 
 # Phase 0A CI skeleton (backlog S0-4, PLAN §15).
 #
-# Deliberately excludes coverage, ArchUnit, OpenAPI drift, and the AI eval harness — those gates
-# depend on foundations that do not exist yet and are owned by tasks/15-quality-gates.md.
+# Deliberately excludes coverage, ArchUnit, and the AI eval harness — those gates depend on
+# foundations that do not exist yet and are owned by tasks/15-quality-gates.md.
 # Later tasks must EXTEND these jobs rather than add parallel ones.
+#
+# The OpenAPI drift gate landed with tasks/06-openapi-error-platform.md: spec validation runs
+# inside the `backend` job, and the codegen drift check inside the `frontend` job.
 #
 # No job requires a provider secret. CI must stay runnable on a fork.
 
@@ -88,6 +91,8 @@ jobs:
           # Caches ~/.gradle dependencies only — never build output or credentials.
           cache: gradle
 
+      # Also validates api/openapi/openapi.yaml and asserts the error catalog matches
+      # ApiErrorCode (task 06) — OpenApiSpecTest and ErrorCatalogTest run inside `build`.
       - name: Build and test
         run: ./gradlew --no-daemon build
 
@@ -122,6 +127,26 @@ jobs:
       # lockfile should fail rather than be silently rewritten.
       - name: Install
         run: npm ci
+
+      # Contract gate (task 06). The OpenAPI spec in apps/backend is the single source of truth;
+      # this proves the committed client was generated from the spec as it stands right now.
+      # Regenerating and diffing beats checking a hash: the failure output is the drift itself.
+      - name: Contract codegen drift
+        run: |
+          set -euo pipefail
+          npm run codegen
+          # `git status --porcelain`, not `git diff`: diff ignores UNTRACKED files, so a codegen
+          # run that emits a brand-new module would pass a diff-based gate while the client sat
+          # uncommitted. Porcelain catches modified, untracked, and deleted alike.
+          drift="$(git status --porcelain -- src/generated/)"
+          if [ -n "$drift" ]; then
+            echo "::error::src/generated is stale — run 'npm run codegen' from the repo root"
+            echo "::error::and commit the regenerated client."
+            echo "$drift"
+            git diff -- src/generated/ || true
+            exit 1
+          fi
+          echo "generated client matches the contract"
 
       - name: Lint
         run: npm run lint
