@@ -7,6 +7,8 @@ import enAuth from './en/auth.json';
 import msAuth from './ms/auth.json';
 import enAdmin from './en/admin.json';
 import msAdmin from './ms/admin.json';
+import enMarketing from './en/marketing.json';
+import msMarketing from './ms/marketing.json';
 
 /**
  * Guards the i18n contract (PLAN §4.2.10). A missing key renders a raw key string in the UI, so
@@ -38,6 +40,7 @@ const namespaces = [
   { name: 'common', en: enCommon, ms: msCommon },
   { name: 'auth', en: enAuth, ms: msAuth },
   { name: 'admin', en: enAdmin, ms: msAdmin },
+  { name: 'marketing', en: enMarketing, ms: msMarketing },
 ] as const;
 
 const flatEn = flatten(enCommon);

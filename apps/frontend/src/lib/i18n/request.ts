@@ -15,15 +15,16 @@ export default getRequestConfig(async () => {
   const requested = cookieStore.get(localeCookieName)?.value;
   const locale = isSupportedLocale(requested) ? requested : defaultLocale;
 
-  const [common, auth, admin] = await Promise.all([
+  const [common, auth, admin, marketing] = await Promise.all([
     loadNamespace(locale, 'common'),
     loadNamespace(locale, 'auth'),
     loadNamespace(locale, 'admin'),
+    loadNamespace(locale, 'marketing'),
   ]);
 
   return {
     locale,
-    messages: { common, auth, admin },
+    messages: { common, auth, admin, marketing },
   };
 });
 
