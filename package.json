@@ -1,0 +1,21 @@
+{
+  "name": "travel-planner",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "prereq": "node scripts/check-prerequisites.mjs",
+    "dev": "npm run dev:apps",
+    "dev:apps": "concurrently -k -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "dotenv -e .env -- bash -c 'cd apps/backend && ./gradlew bootRun --continuous -x test'",
+    "dev:frontend": "dotenv -e .env -- npm run dev --prefix apps/frontend",
+    "dev:db": "docker compose -f docker-compose.dev.yml up -d",
+    "dev:full": "npm run dev:db && npm run dev:apps",
+    "codegen": "echo 'OpenAPI codegen lands in Task 06'"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "dotenv-cli": "^8.0.0"
+  }
+}

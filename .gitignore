@@ -5,6 +5,7 @@ apps/frontend/.env.local
 
 # Dependencies & build
 node_modules/
+apps/frontend/node_modules/
 apps/frontend/.next/
 apps/backend/build/
 apps/backend/.gradle/
