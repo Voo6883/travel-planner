@@ -46,12 +46,26 @@
     "error_title": "Sesuatu tidak kena",
     "empty_title": "Belum ada apa-apa di sini",
     "offline_title": "Anda di luar talian",
-    "offline_body": "Halaman yang sudah anda buka kekal boleh dibaca. Apa-apa yang memerlukan pelayan akan menunggu sehingga anda bersambung semula.",
+    "offline_body": "Halaman ini kekal terbuka, tetapi tiada apa-apa yang baharu boleh dimuatkan dan apa-apa yang anda ubah tidak akan disimpan sehingga anda bersambung semula.",
     "back_online": "Kembali dalam talian",
     "permission_denied_title": "Anda tiada akses ke halaman ini",
     "permission_denied_body": "Kawasan ini untuk pentadbir. Semua dalam perancang anda masih tersedia.",
     "request_reference": "Rujukan: {requestId}",
     "retry_after": "Anda boleh cuba lagi dalam {seconds} saat."
+  },
+  "pwa": {
+    "offline_page_title": "Anda di luar talian",
+    "offline_page_body": "Kami tidak dapat menghubungi Perancang Perjalanan dari peranti ini buat masa ini. Tiada apa-apa yang hilang — perjalanan anda ada di pelayan, sama seperti yang anda tinggalkan.",
+    "offline_page_available_title": "Apa yang berfungsi di luar talian",
+    "offline_page_available_body": "Halaman ini sahaja. Perancang Perjalanan tidak menyimpan perjalanan anda pada peranti ini.",
+    "offline_page_unavailable_title": "Apa yang memerlukan sambungan",
+    "offline_page_unavailable_body": "Membuka atau menyunting perjalanan, bersembang dengan perancang, penyelidikan, dan tempahan. Tiada satu pun akan berjalan di latar belakang — sambung semula dan cuba lagi.",
+    "offline_page_retry": "Cuba lagi",
+    "update_ready_title": "Kemas kini sudah sedia",
+    "update_ready_body": "Muat semula untuk mendapatkan versi terbaharu Perancang Perjalanan.",
+    "update_refresh_now": "Muat semula sekarang",
+    "update_later": "Nanti",
+    "update_dismiss": "Tolak notis kemas kini"
   },
   "errors": {
     "account_closed": "Akaun ini telah ditutup oleh pemiliknya dan tidak boleh diubah lagi.",

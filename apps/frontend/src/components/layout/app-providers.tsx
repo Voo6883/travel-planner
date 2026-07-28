@@ -10,6 +10,7 @@ import { useState, type ReactNode } from 'react';
 import { ThemeModeProvider, useThemeMode } from '@/hooks/use-theme-mode';
 import { createQueryClient } from '@/lib/query/client';
 import { buildAntTheme } from '@/styles/ant-theme';
+import { ServiceWorkerProvider } from './service-worker-provider';
 
 interface AppProvidersProps {
   locale: string;
@@ -48,7 +49,11 @@ export function AppProviders({ locale, messages, children }: AppProvidersProps) 
       <NextIntlClientProvider locale={locale} messages={messages}>
         <QueryClientProvider client={queryClient}>
           <ThemeModeProvider>
-            <ThemedAntProvider locale={locale}>{children}</ThemedAntProvider>
+            {/* Innermost so `useSerwist()` is available to anything rendered as a page child,
+                and inside `ConfigProvider` so the update prompt's buttons are themed (ADR 005). */}
+            <ThemedAntProvider locale={locale}>
+              <ServiceWorkerProvider>{children}</ServiceWorkerProvider>
+            </ThemedAntProvider>
           </ThemeModeProvider>
         </QueryClientProvider>
       </NextIntlClientProvider>
