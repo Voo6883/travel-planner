@@ -14,22 +14,38 @@ class UserContextTest {
 
     @Test
     void requiresAUserIdBecauseEveryQueryIsScopedByIt() {
-        assertThatThrownBy(() -> new UserContext(null, "a@b.com", List.of()))
+        assertThatThrownBy(() -> new UserContext(null, "a@b.com", List.of(), true))
                 .isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void treatsAbsentRolesAsNoRolesRatherThanNull() {
-        UserContext context = new UserContext(UUID.randomUUID(), "a@b.com", null);
+        UserContext context = new UserContext(UUID.randomUUID(), "a@b.com", null, true);
 
         assertThat(context.roles()).isEmpty();
         assertThat(context.isAdmin()).isFalse();
     }
 
     @Test
+    void carriesEmailVerifiedSoTheUcA08GateHasSomethingToRead() {
+        // Follow-up F-14, decided in task 08: sourced from a per-request user lookup rather than
+        // from a token claim, so it cannot go stale inside a live session (ADR 009 §2).
+        UUID userId = UUID.randomUUID();
+
+        assertThat(new UserContext(userId, "a@b.com", List.of(), true).emailVerified()).isTrue();
+        assertThat(new UserContext(userId, "a@b.com", List.of(), false).emailVerified()).isFalse();
+    }
+
+    @Test
+    void theSingleRoleShortcutProducesAnUnverifiedContext() {
+        // The safe default is the one that keeps a verification gate closed.
+        assertThat(UserContext.of(UUID.randomUUID(), "a@b.com", Role.USER).emailVerified()).isFalse();
+    }
+
+    @Test
     void copiesTheRoleListSoACallerCannotEscalateAfterConstruction() {
         List<String> mutable = new ArrayList<>(List.of(Role.USER.name()));
-        UserContext context = new UserContext(UUID.randomUUID(), "a@b.com", mutable);
+        UserContext context = new UserContext(UUID.randomUUID(), "a@b.com", mutable, true);
 
         mutable.add(Role.ADMIN.name());
 

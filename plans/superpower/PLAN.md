@@ -1124,7 +1124,7 @@ application/auth/
 |---|---|
 | **Account model** | One **User** owns trips, briefs, bookings, conversations |
 | **No tenant** | No `tenant_id`, no org/workspace hierarchy |
-| **UserContext** | `{ userId, email, roles[] }` — `@AuthenticationPrincipal` |
+| **UserContext** | `{ userId, email, roles[], emailVerified }` — `@AuthenticationPrincipal` (F-14; ADR 009 §2) |
 | **Data isolation** | Every query scoped by `user_id` — except `ROLE_ADMIN` (§4.0.6) |
 | **Roles** | `ROLE_USER` (default) · `ROLE_ADMIN` |
 | **Token transport** | Self-issued **JWT** in **httpOnly, Secure, SameSite=Lax** cookie (`tp_session`) |
@@ -1351,7 +1351,11 @@ features/auth/
 - GitHub: redirect — no secret in frontend.
 
 ```java
-public record UserContext(@NotNull UUID userId, String email, List<String> roles) {}
+// No Jakarta annotation: §4.0.2-F forbids a framework import in the domain, and the null check
+// lives in the record's compact constructor instead (follow-up F-13, closed by task 08).
+// `emailVerified` is read from current user state on every authenticated request rather than
+// frozen into a token claim — ADR 009 §2, and what UC-A08's planner gate reads (follow-up F-14).
+public record UserContext(UUID userId, String email, List<String> roles, boolean emailVerified) {}
 ```
 
 **API calls:** frontend calls Spring Boot **directly** (no BFF) with session cookie.

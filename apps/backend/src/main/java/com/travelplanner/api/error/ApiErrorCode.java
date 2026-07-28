@@ -18,11 +18,28 @@ import org.springframework.http.HttpStatus;
  */
 public enum ApiErrorCode {
 
+    /** Credential accepted, but {@code user.enabled} is false (ADR 009 §1). */
+    ACCOUNT_DISABLED("account_disabled", HttpStatus.FORBIDDEN),
+
+    /**
+     * Lockout window exhausted (ADR 009 §6). {@code 423 Locked} rather than {@code 429}: the
+     * account is temporarily unusable, which is a different condition from a client exceeding a
+     * request quota — and {@code 429} is reserved for the rate limits PLAN §4.0.9 schedules for
+     * Phase 1+.
+     */
+    ACCOUNT_LOCKED("account_locked", HttpStatus.LOCKED),
+
+    /** Credential accepted, but the address is unconfirmed (UC-A08). */
+    EMAIL_NOT_VERIFIED("email_not_verified", HttpStatus.FORBIDDEN),
+
     /** Authenticated, but not allowed to act on this resource. */
     FORBIDDEN("forbidden", HttpStatus.FORBIDDEN),
 
     /** Unhandled server fault. Details never leave the logs. */
     INTERNAL_ERROR("internal_error", HttpStatus.INTERNAL_SERVER_ERROR),
+
+    /** Sign-in failed. Identical for every cause, so it can never enumerate accounts. */
+    INVALID_CREDENTIALS("invalid_credentials", HttpStatus.UNAUTHORIZED),
 
     /** No resource at this path, or none owned by the caller. */
     NOT_FOUND("not_found", HttpStatus.NOT_FOUND),

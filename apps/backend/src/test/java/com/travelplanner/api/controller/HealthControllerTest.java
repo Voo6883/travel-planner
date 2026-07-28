@@ -10,12 +10,23 @@ import com.travelplanner.application.health.ReadinessStatus;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Slice tests for the Phase 0a health surface (PLAN §4.0.0). */
+/**
+ * Slice tests for the Phase 0a health surface (PLAN §4.0.0).
+ *
+ * <p>{@code addFilters = false} since task 08 put Spring Security on the classpath. A
+ * {@code @WebMvcTest} does not load the application's own {@code SecurityConfig} — only beans that
+ * <em>are</em> a {@code SecurityFilterChain} — so it would otherwise apply Spring Boot's default
+ * "authenticate everything" chain and these routing assertions would all become 401s. The real
+ * rule, that {@code /health} and {@code /ready} are public, is asserted against the actual
+ * configuration by {@code AuthApiIntegrationTest}.
+ */
 @WebMvcTest(HealthController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class HealthControllerTest {
 
     @Autowired

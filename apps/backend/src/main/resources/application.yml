@@ -41,6 +41,20 @@ spring:
     # application process should be able to do that to itself.
     clean-disabled: true
 
+# Authentication boundary (ADR 002, ADR 006, ADR 009). Defaults live in AuthSecurityProperties and
+# already match what the ADRs lock; only the values that must come from the environment, or that
+# differ per profile, are restated here.
+travelplanner:
+  security:
+    jwt:
+      # No default and no committed fallback. When this is unset the application generates a key
+      # for the process and logs a warning; under the `prod` profile it refuses to start.
+      secret: ${JWT_SECRET:}
+    session:
+      # `Secure` is switched on in application-prod.yml. It cannot be the default: a Secure cookie
+      # is dropped over plain HTTP, and the locked local experience is http://localhost (ADR 006).
+      secure: false
+
 server:
   port: 8080
   error:

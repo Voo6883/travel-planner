@@ -22,10 +22,14 @@ import org.testcontainers.utility.DockerImageName;
  * exits. Migrations then run once per Spring context instead of once per class, which is also what
  * makes "applies from an empty database" a real assertion — the first context to start meets a
  * genuinely empty database.
+ *
+ * <p>Public since task 08 so the API-level auth suite in {@code com.travelplanner.api.auth} can
+ * extend it. Sharing this class rather than declaring a second container is the point: two
+ * container definitions would mean two PostgreSQL instances and two migration runs per build.
  */
 @SpringBootTest
 @ActiveProfiles("integration-test")
-abstract class AbstractPostgresIntegrationTest {
+public abstract class AbstractPostgresIntegrationTest {
 
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
             DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"))

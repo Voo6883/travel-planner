@@ -104,6 +104,20 @@ class MigrationContractTest {
     }
 
     @Test
+    void theLockoutWindowIsStoredInTheDatabaseAndKeyedOnBothIdentifierAndAddress() {
+        // ADR 009 §6 rules out an in-memory counter: it would reset on deploy and count separately
+        // on every instance, which breaks the locked stateless/multi-instance goal. Keying on the
+        // identifier alone would make the lockout a targeted denial-of-service weapon.
+        String lockoutMigration = read("V7__create_login_attempt_table.sql");
+
+        assertThat(lockoutMigration).contains("CREATE TABLE login_attempt");
+        assertThat(lockoutMigration).contains("login_identifier").contains("client_ip");
+        assertThat(lockoutMigration)
+                .describedAs("the lockout read must be one indexed lookup on the composite key")
+                .contains("ON login_attempt (login_identifier, client_ip, attempted_at)");
+    }
+
+    @Test
     void everyAgentMutableAggregateNamedByAdr008HasAVersionColumn() {
         assertThat(read("V5__create_trip_table.sql")).contains("version");
         assertThat(read("V6__create_trip_brief_table.sql")).contains("version");

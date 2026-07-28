@@ -34,6 +34,32 @@ export interface ApiRequest<TResponse> {
 export const REQUEST_ID_HEADER = 'X-Request-Id';
 
 /**
+ * Double-submit CSRF pair (ADR 006). Spring Security writes `XSRF-TOKEN` as a *readable* cookie —
+ * unlike the session, which is httpOnly — and expects it echoed in `X-XSRF-TOKEN` on every
+ * mutating request. Reading a cookie is the whole mechanism: an attacker's page can make the
+ * browser send our session cookie, but the same-origin policy stops it reading this value.
+ */
+export const CSRF_COOKIE = 'XSRF-TOKEN';
+export const CSRF_HEADER = 'X-XSRF-TOKEN';
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+/**
+ * The token is seeded by any `GET` (ADR 006), so by the time a user can trigger a mutation the
+ * cookie exists. Returns null during server rendering, where there is no cookie jar and no CSRF
+ * risk to mitigate.
+ */
+export function csrfToken(): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+  const match = document.cookie
+    .split('; ')
+    .find((entry) => entry.startsWith(`${CSRF_COOKIE}=`));
+  return match ? decodeURIComponent(match.slice(CSRF_COOKIE.length + 1)) : null;
+}
+
+/**
  * Base URL including the `/api/v1` prefix, which is why contract path keys omit it. ADR 006 makes
  * this same-origin in the browser so the session cookie is first-party.
  */
@@ -53,14 +79,15 @@ export function newRequestId(): string {
 }
 
 export async function apiRequest<TResponse>(request: ApiRequest<TResponse>): Promise<TResponse> {
+  const method = request.method ?? 'GET';
   const response = await fetch(`${apiBaseUrl()}${request.path}`, {
-    method: request.method ?? 'GET',
+    method,
     signal: request.signal,
     // Session lives in an httpOnly cookie (ADR 006) — the JWT is never readable from JS, so the
     // credentials flag, not an Authorization header, is what authenticates the call.
     credentials: 'include',
     cache: 'no-store',
-    headers: buildHeaders(request.body),
+    headers: buildHeaders(method, request.body),
     ...(request.body === undefined ? {} : { body: JSON.stringify(request.body) }),
   });
 
@@ -78,7 +105,7 @@ export async function apiRequest<TResponse>(request: ApiRequest<TResponse>): Pro
 
 export { ApiError };
 
-function buildHeaders(body: unknown): Record<string, string> {
+function buildHeaders(method: string, body: unknown): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
     [REQUEST_ID_HEADER]: newRequestId(),
@@ -86,6 +113,13 @@ function buildHeaders(body: unknown): Record<string, string> {
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
-  // TODO(task-08): add the X-XSRF-TOKEN header here once the CSRF cookie exists (ADR 006).
+  if (!SAFE_METHODS.has(method)) {
+    // Mutating requests only. Sending it on a GET would be harmless but pointless — and it is
+    // exactly the safe/unsafe split Spring Security's CsrfFilter applies on the other side.
+    const token = csrfToken();
+    if (token) {
+      headers[CSRF_HEADER] = token;
+    }
+  }
   return headers;
 }

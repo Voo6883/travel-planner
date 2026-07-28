@@ -1,5 +1,6 @@
 package com.travelplanner.api.error;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -36,10 +37,23 @@ class GlobalExceptionHandlerTest {
     void unknownRouteReturns404WithTheStandardEnvelope() throws Exception {
         // Regression: the catch-all handler previously swallowed the no-handler exception and
         // turned every mistyped URL into a 500.
-        mockMvc.perform(get("/api/v1/definitely-not-a-route"))
+        //
+        // Authenticated, since task 08. The security chain denies by default, so an anonymous
+        // request never reaches the dispatcher — see the test below.
+        mockMvc.perform(get("/api/v1/definitely-not-a-route").with(user("someone")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("not_found"))
                 .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void anAnonymousRequestToAProtectedRouteIsUnauthorizedRatherThanNotFound() throws Exception {
+        // Task 08: everything outside the published public set requires authentication, so a
+        // mistyped URL answers 401 to a signed-out caller. That is the safe direction — a 404
+        // would confirm which paths do not exist, and by elimination which ones do.
+        mockMvc.perform(get("/api/v1/definitely-not-a-route"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("unauthorized"));
     }
 
     @Test
@@ -50,14 +64,20 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Request-Id", "task-06-probe"));
 
-        mockMvc.perform(get("/api/v1/definitely-not-a-route"))
+        mockMvc.perform(get("/api/v1/definitely-not-a-route").with(user("someone")))
                 .andExpect(status().isNotFound())
+                .andExpect(header().exists("X-Request-Id"));
+
+        // The security chain rejects before any controller, so this proves RequestIdFilter runs
+        // ahead of it — a 401 nobody can trace is a 401 nobody can debug.
+        mockMvc.perform(get("/api/v1/definitely-not-a-route"))
+                .andExpect(status().isUnauthorized())
                 .andExpect(header().exists("X-Request-Id"));
     }
 
     @Test
     void errorResponseNeverLeaksStackTracesOrInternalPackages() throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/v1/definitely-not-a-route"))
+        MvcResult result = mockMvc.perform(get("/api/v1/definitely-not-a-route").with(user("someone")))
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andReturn();
 

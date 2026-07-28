@@ -14,8 +14,12 @@
   "locale_en": "English",
   "locale_ms": "Bahasa Melayu",
   "errors": {
+    "account_disabled": "This account has been disabled. Please contact support.",
+    "account_locked": "Too many sign-in attempts. Please wait a few minutes and try again.",
+    "email_not_verified": "Please verify your email address before signing in.",
     "forbidden": "You do not have permission to do this.",
     "internal_error": "Something went wrong on our side. Please try again.",
+    "invalid_credentials": "That email, username, or password is incorrect.",
     "not_found": "We could not find what you were looking for.",
     "unauthorized": "Please sign in to continue.",
     "validation_failed": "Some details are not valid. Please check the highlighted fields.",

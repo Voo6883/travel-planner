@@ -74,15 +74,44 @@ class OpenApiSpecTest {
 
     @Test
     void everySharedErrorResponseReturnsTheStandardEnvelope() {
+        // Named explicitly rather than iterating every shared response: task 08 added a shared
+        // *success* response (AuthSession), and a blanket "all responses are ApiErrorResponse"
+        // assertion would have to be weakened every time one of those appears. This list is the
+        // thing worth pinning — an error response that quietly grew its own body shape is how a
+        // frontend ends up with two error parsers.
         Map<String, ApiResponse> responses = spec.getComponents().getResponses();
-        assertThat(responses).containsKeys(
+        List<String> errorResponses = List.of(
                 "ValidationFailed", "Unauthorized", "Forbidden", "NotFound", "VersionConflict",
-                "InternalError");
-        responses.values().forEach(response -> {
+                "InternalError", "InvalidCredentials", "SignInForbidden", "AccountLocked");
+
+        assertThat(responses).containsKeys(errorResponses.toArray(String[]::new));
+        errorResponses.forEach(name -> {
+            ApiResponse response = responses.get(name);
             assertThat(response.getContent()).containsKey("application/json");
             Schema<?> schema = response.getContent().get("application/json").getSchema();
-            assertThat(schemaNameOf(schema)).isEqualTo("ApiErrorResponse");
+            assertThat(schemaNameOf(schema))
+                    .describedAs("response %s", name)
+                    .isEqualTo("ApiErrorResponse");
         });
+    }
+
+    @Test
+    void theAuthSurfaceMatchesTheEndpointTableAdr009Publishes() {
+        // PLAN §4.0.5's table plus the two paths ADR 009 §5 records as missing from it.
+        assertThat(spec.getPaths()).containsKeys(
+                "/auth/register", "/auth/login", "/auth/refresh", "/auth/logout",
+                "/auth/logout-all", "/auth/me");
+        assertThat(spec.getComponents().getSecuritySchemes()).containsKey("cookieAuth");
+    }
+
+    @Test
+    void noAuthResponseBodyCarriesAToken() {
+        // ADR 002 rejected the Authorization header because a token JavaScript can read is a token
+        // XSS can steal. Putting one in a JSON body would give that back.
+        assertThat(spec.getComponents().getSchemas().get("AuthSessionResponse").getProperties())
+                .containsOnlyKeys("user");
+        assertThat(spec.getComponents().getSchemas().get("CurrentUser").getProperties())
+                .doesNotContainKeys("access_token", "refresh_token", "token");
     }
 
     @Test

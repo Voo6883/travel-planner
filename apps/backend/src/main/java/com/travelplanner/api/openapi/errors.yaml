@@ -39,15 +39,23 @@ components:
 
         | Code | HTTP | Meaning |
         |---|---|---|
+        | `account_disabled` | 403 | Credential accepted, but the account is switched off (ADR 009 §1) |
+        | `account_locked` | 423 | Too many failed sign-ins for this identifier and address (ADR 009 §6). `details.retry_after_seconds` carries the wait |
+        | `email_not_verified` | 403 | Credential accepted, but the address is unconfirmed (UC-A08) |
         | `forbidden` | 403 | Authenticated, but not allowed to act on this resource |
         | `internal_error` | 500 | Unhandled server fault. `details` is always empty |
+        | `invalid_credentials` | 401 | Sign-in failed. Identical for an unknown account and a wrong password — never an existence oracle |
         | `not_found` | 404 | No resource at this path, or none owned by the caller |
         | `unauthorized` | 401 | No valid session; the caller must sign in |
         | `validation_failed` | 400 | Request failed schema or constraint validation. `details.fields` maps field name → message |
         | `version_conflict` | 409 | Optimistic-lock mismatch (ADR 008). `details.current_version` carries the server's version |
       enum:
+        - account_disabled
+        - account_locked
+        - email_not_verified
         - forbidden
         - internal_error
+        - invalid_credentials
         - not_found
         - unauthorized
         - validation_failed
@@ -100,6 +108,21 @@ components:
           description: Field name → English constraint message.
           example:
             expected_version: must not be null
+
+    AccountLockedDetails:
+      type: object
+      description: |
+        Shape of `ApiErrorResponse.details` when `code` is `account_locked` (ADR 009 §6). The UI
+        renders a countdown instead of inviting a sixth attempt that cannot succeed.
+      required:
+        - retry_after_seconds
+      properties:
+        retry_after_seconds:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Seconds until the oldest counted failure leaves the 15-minute window.
+          example: 540
 
     VersionConflictDetails:
       type: object

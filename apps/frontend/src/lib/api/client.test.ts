@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, apiRequest, newRequestId } from './client';
+import { ApiError, apiRequest, CSRF_HEADER, newRequestId } from './client';
 
 /**
  * The client boundary is the only place the app talks HTTP, so the properties asserted here —
@@ -56,6 +56,32 @@ describe('apiRequest', () => {
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(init.body).toBe('{"expected_version":7}');
     expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+  });
+
+  it('echoes the CSRF cookie on mutating requests but not on safe ones (ADR 006)', async () => {
+    // Spring Security writes XSRF-TOKEN as a readable cookie precisely so the page can echo it.
+    // A cross-site page can make the browser send our session cookie, but the same-origin policy
+    // stops it reading this value — which is what makes the double submit a proof of origin.
+    document.cookie = 'XSRF-TOKEN=token-from-server';
+    const fetchMock = stubFetch(stubResponse({ body: {} }));
+
+    await apiRequest({ path: '/health', method: 'POST', body: {} });
+    await apiRequest({ path: '/health' });
+
+    const [, mutating] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [, safe] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect((mutating.headers as Record<string, string>)[CSRF_HEADER]).toBe('token-from-server');
+    expect((safe.headers as Record<string, string>)[CSRF_HEADER]).toBeUndefined();
+  });
+
+  it('omits the CSRF header when no token has been issued yet', async () => {
+    document.cookie = 'XSRF-TOKEN=; max-age=0';
+    const fetchMock = stubFetch(stubResponse({ body: {} }));
+
+    await apiRequest({ path: '/health', method: 'POST', body: {} });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>)[CSRF_HEADER]).toBeUndefined();
   });
 
   it('runs the injected validator so a malformed payload cannot reach a component', async () => {

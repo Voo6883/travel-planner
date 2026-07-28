@@ -50,6 +50,178 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a local account (UC-A01)
+         * @description Registers an email, username, and password.
+         *
+         *     **The response is always the same.** `202 Accepted` with `status: PENDING_VERIFICATION`,
+         *     whether the account was created, the address was already registered, or the username was
+         *     taken (ADR 009 §6). A `201`/`409` split would answer "does this account exist?" for anyone
+         *     who asked. The submitted address is told which case it was by email — the only channel the
+         *     account owner controls (task 09).
+         *
+         *     Validation failures are reported normally: a malformed email or a short password is the
+         *     caller's own input and reveals nothing about anyone else.
+         *
+         *     The new account starts `email_verified: false`, and UC-A08 blocks sign-in until it is
+         *     confirmed.
+         */
+        post: operations["register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with email or username (UC-A04)
+         * @description Verifies a local password and issues the session.
+         *
+         *     On success the response carries two `Set-Cookie` headers — `tp_session` and `tp_refresh` —
+         *     and a body describing the user. Neither token is in the body.
+         *
+         *     Failure modes, and why they differ:
+         *
+         *     | Code | Meaning |
+         *     |---|---|
+         *     | `invalid_credentials` | Unknown identifier **or** wrong password. One code for both, so the endpoint cannot enumerate accounts |
+         *     | `account_locked` | 5 failures in 15 minutes for this identifier from this address (ADR 009 §6) |
+         *     | `email_not_verified` | Password correct, address unconfirmed (UC-A08). Distinguishable so the UI can offer "resend" |
+         *     | `account_disabled` | Password correct, account switched off |
+         *
+         *     The last two are raised only after the password has verified, so they tell nothing to a
+         *     caller who does not already hold the credential.
+         */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange the refresh cookie for a new session (ADR 009 §3)
+         * @description Rotates `tp_refresh` and issues a fresh `tp_session`. The refresh cookie is the credential,
+         *     so this endpoint needs no valid access token — by the time a client calls it, the access
+         *     token has expired.
+         *
+         *     **Rotation is single-use.** Presenting a token that was already exchanged is treated as
+         *     theft: the whole token family is revoked, `token_version` is bumped so every outstanding
+         *     access token for the account stops working, and a security event is logged. Both the thief
+         *     and the legitimate client are signed out, because there is no way to tell which is which.
+         *
+         *     A missing, unknown, expired, revoked, or replayed token all return the same `unauthorized`.
+         */
+        post: operations["refreshSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End this session (UC-A10)
+         * @description Clears both cookies **and** invalidates the refresh token server-side. Clearing a cookie
+         *     alone is not revocation — the token in a copied cookie jar would keep working for the rest
+         *     of its fourteen days (ADR 009 §3).
+         *
+         *     Idempotent, and public: it must succeed for a caller whose access token has already
+         *     expired. A logout that can fail is one users learn to skip.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out of every device (ADR 009 §5)
+         * @description Bumps `token_version` and revokes every stored refresh token for the account, so access
+         *     tokens already in flight fail on their next request rather than at their next expiry.
+         *
+         *     This is the user-facing half of the revocation mechanism that admin disable, password
+         *     change, and account deletion also use (ADR 009 §1).
+         */
+        post: operations["logoutAll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The signed-in user and their linked providers (UC-A11)
+         * @description Source for `useUserContext()` on the frontend (ADR 002).
+         *
+         *     Read from the database on every call, never from token claims (ADR 009 §2). That is what
+         *     makes `email_verified` trustworthy: a claim minted at sign-in would still say `false` for
+         *     up to thirty minutes after the user clicked the verification link.
+         *
+         *     Also seeds the `XSRF-TOKEN` cookie, so a freshly loaded page can make its first mutating
+         *     request (ADR 006) — though any `GET` will do that.
+         */
+        get: operations["getCurrentUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -110,15 +282,19 @@ export interface components {
          *
          *     | Code | HTTP | Meaning |
          *     |---|---|---|
+         *     | `account_disabled` | 403 | Credential accepted, but the account is switched off (ADR 009 §1) |
+         *     | `account_locked` | 423 | Too many failed sign-ins for this identifier and address (ADR 009 §6). `details.retry_after_seconds` carries the wait |
+         *     | `email_not_verified` | 403 | Credential accepted, but the address is unconfirmed (UC-A08) |
          *     | `forbidden` | 403 | Authenticated, but not allowed to act on this resource |
          *     | `internal_error` | 500 | Unhandled server fault. `details` is always empty |
+         *     | `invalid_credentials` | 401 | Sign-in failed. Identical for an unknown account and a wrong password — never an existence oracle |
          *     | `not_found` | 404 | No resource at this path, or none owned by the caller |
          *     | `unauthorized` | 401 | No valid session; the caller must sign in |
          *     | `validation_failed` | 400 | Request failed schema or constraint validation. `details.fields` maps field name → message |
          *     | `version_conflict` | 409 | Optimistic-lock mismatch (ADR 008). `details.current_version` carries the server's version |
          * @enum {string}
          */
-        ErrorCode: "forbidden" | "internal_error" | "not_found" | "unauthorized" | "validation_failed" | "version_conflict";
+        ErrorCode: "account_disabled" | "account_locked" | "email_not_verified" | "forbidden" | "internal_error" | "invalid_credentials" | "not_found" | "unauthorized" | "validation_failed" | "version_conflict";
         /**
          * @description Shape of `ApiErrorResponse.details` when `code` is `validation_failed`. Documented
          *     separately because it is the only `details` payload with a fixed structure that
@@ -146,6 +322,124 @@ export interface components {
              * @example 9
              */
             current_version: number;
+        };
+        /**
+         * @description Shape of `ApiErrorResponse.details` when `code` is `account_locked` (ADR 009 §6). The UI
+         *     renders a countdown instead of inviting a sixth attempt that cannot succeed.
+         */
+        AccountLockedDetails: {
+            /**
+             * Format: int64
+             * @description Seconds until the oldest counted failure leaves the 15-minute window.
+             * @example 540
+             */
+            retry_after_seconds: number;
+        };
+        /**
+         * @description Local sign-up (UC-A01). All three fields are required.
+         * @example {
+         *       "email": "aisyah@example.com",
+         *       "username": "aisyah",
+         *       "password": "correct-horse-battery"
+         *     }
+         */
+        RegisterRequest: {
+            /**
+             * Format: email
+             * @description Compared case-insensitively; `ux_user_email_lower` enforces uniqueness.
+             * @example aisyah@example.com
+             */
+            email: string;
+            /**
+             * @description Letters, digits, dot, underscore, and hyphen. **May not contain `@`** — login accepts
+             *     an email *or* a username on one field, and a username shaped like somebody else's
+             *     address would make that field ambiguous (ADR 009 §4).
+             * @example aisyah
+             */
+            username: string;
+            /**
+             * Format: password
+             * @description Minimum 8 characters (PLAN §4.0.9), stored as a BCrypt hash at strength 12. The
+             *     72-character ceiling is BCrypt's own: it hashes the first 72 bytes and ignores the
+             *     rest, so a longer value would authenticate a password the user did not choose.
+             */
+            password: string;
+        };
+        /**
+         * @description Local sign-in (UC-A04). Matches PLAN §4.0.5's `LocalLoginRequest`.
+         * @example {
+         *       "login": "aisyah",
+         *       "password": "correct-horse-battery"
+         *     }
+         */
+        LoginRequest: {
+            /**
+             * @description Email **or** username. The server decides which by looking for `@`, which a username
+             *     cannot contain (ADR 009 §4). Both are matched case-insensitively.
+             * @example aisyah
+             */
+            login: string;
+            /** Format: password */
+            password: string;
+        };
+        /**
+         * @description Deliberately constant. Any field that varied with whether the account already existed
+         *     would be the enumeration oracle ADR 009 §6 closes.
+         */
+        RegistrationResponse: {
+            /**
+             * @description Always this value. The account owner learns the real outcome by email.
+             * @enum {string}
+             */
+            status: "PENDING_VERIFICATION";
+        };
+        /**
+         * @description The authenticated caller. Assembled from current database state on every request, never
+         *     from token claims (ADR 009 §2).
+         * @example {
+         *       "user_id": "6f9619ff-8b86-d011-b42d-00c04fc964ff",
+         *       "email": "aisyah@example.com",
+         *       "username": "aisyah",
+         *       "roles": [
+         *         "USER"
+         *       ],
+         *       "email_verified": true,
+         *       "linked_providers": [
+         *         "LOCAL"
+         *       ]
+         *     }
+         */
+        CurrentUser: {
+            /** Format: uuid */
+            user_id: string;
+            /** Format: email */
+            email: string;
+            /** @description Null for an account created through Google or GitHub before a name is picked. */
+            username?: string | null;
+            /** @description `USER` or `ADMIN` — the complete vocabulary (PLAN §4.0.5). */
+            roles: ("USER" | "ADMIN")[];
+            /**
+             * @description Live, not cached. UC-A08 blocks the planner until this is true, and the "verify your
+             *     email" banner clears the moment the user confirms rather than at the next token expiry.
+             */
+            email_verified: boolean;
+            /**
+             * @description Sign-in methods attached to this account (UC-A11). `[LOCAL]` today; task 10 adds
+             *     `FIREBASE_GOOGLE` and `GITHUB` without changing this shape.
+             */
+            linked_providers: ("LOCAL" | "FIREBASE_GOOGLE" | "GITHUB")[];
+        };
+        /**
+         * @description Body of a successful sign-in or refresh. The tokens are **not** here — they are `Set-Cookie`
+         *     headers, because a token in a JSON body is a token JavaScript can read, which is exactly
+         *     what ADR 002 rejected the `Authorization` header for.
+         *
+         *     A wrapper rather than the user object itself, so task 10 can add PLAN §4.0.5's
+         *     `is_new_user` and `provider_linked` for the Firebase and GitHub paths without reshaping a
+         *     response the local flow already publishes.
+         */
+        AuthSessionResponse: {
+            user: components["schemas"]["CurrentUser"];
         };
         /**
          * @description Pagination envelope fields (PLAN §6.1). A list response is this object plus its own
@@ -320,6 +614,91 @@ export interface components {
                 "application/json": components["schemas"]["ApiErrorResponse"];
             };
         };
+        /** @description Signed in. Two `Set-Cookie` headers carry the session; the body describes the user. */
+        AuthSession: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                "Set-Cookie": components["headers"]["SetSessionCookies"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AuthSessionResponse"];
+            };
+        };
+        /**
+         * @description Sign-in failed. **One response for every cause** — unknown email, unknown username, wrong
+         *     password, and an OAuth-only account with no local password are indistinguishable, so this
+         *     endpoint cannot be used to discover which addresses are registered (ADR 009 §6).
+         */
+        InvalidCredentials: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "code": "invalid_credentials",
+                 *       "message": "The email, username, or password is incorrect.",
+                 *       "details": {}
+                 *     }
+                 */
+                "application/json": components["schemas"]["ApiErrorResponse"];
+            };
+        };
+        /**
+         * @description The credential was correct, but the account may not sign in yet.
+         *
+         *     - `email_not_verified` — UC-A08. The frontend offers to resend the verification mail from
+         *       this state, which is why it is a distinct code rather than folded into
+         *       `invalid_credentials`.
+         *     - `account_disabled` — an administrator switched the account off (PLAN §4.0.6).
+         *
+         *     Both are raised only *after* the password has verified, so neither reveals anything to a
+         *     caller who does not already hold the credential.
+         */
+        SignInForbidden: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "code": "email_not_verified",
+                 *       "message": "This email address has not been verified yet.",
+                 *       "details": {}
+                 *     }
+                 */
+                "application/json": components["schemas"]["ApiErrorResponse"];
+            };
+        };
+        /**
+         * @description Five failed attempts within fifteen minutes for this identifier from this address
+         *     (ADR 009 §6). `details.retry_after_seconds` lets the UI show a countdown instead of
+         *     inviting a sixth attempt that cannot succeed.
+         *
+         *     Keyed on the *pair*, not on the identifier alone: an identifier-only lock would let anyone
+         *     who knows a username lock its owner out of their own account.
+         */
+        AccountLocked: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "code": "account_locked",
+                 *       "message": "Too many failed sign-in attempts. Try again later.",
+                 *       "details": {
+                 *         "retry_after_seconds": 900
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["ApiErrorResponse"];
+            };
+        };
         /** @description Unhandled server fault. `details` is always empty — diagnostics stay in the logs. */
         InternalError: {
             headers: {
@@ -351,6 +730,12 @@ export interface components {
     };
     requestBodies: never;
     headers: {
+        /**
+         * @description `tp_session` and `tp_refresh`, set or cleared. Two `Set-Cookie` headers are always sent
+         *     together — a cleared pair repeats the original name, path, `Secure`, and `SameSite`,
+         *     because a browser matches on all of them and a mismatched clear leaves the cookie in place.
+         */
+        SetSessionCookies: string;
         /**
          * @description Correlation id echoed from the request, or generated when the caller sent none.
          *     Present on every response, including errors — it is how a user-reported failure is
@@ -413,6 +798,139 @@ export interface operations {
                     "application/json": components["schemas"]["ReadinessResponse"];
                 };
             };
+        };
+    };
+    register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description The request was accepted. This says nothing about whether an account existed. */
+            202: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationResponse"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["AuthSession"];
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["InvalidCredentials"];
+            403: components["responses"]["SignInForbidden"];
+            423: components["responses"]["AccountLocked"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    refreshSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["AuthSession"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed out. Both session cookies are cleared. */
+            204: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    "Set-Cookie": components["headers"]["SetSessionCookies"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    logoutAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every session for this account has been terminated. */
+            204: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    "Set-Cookie": components["headers"]["SetSessionCookies"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getCurrentUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The authenticated caller. */
+            200: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUser"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
         };
     };
 }

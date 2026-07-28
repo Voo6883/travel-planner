@@ -13,8 +13,12 @@ export type ValidationFailedDetails = components['schemas']['ValidationFailedDet
  * list is needed to narrow an arbitrary server string.
  */
 export const REGISTERED_ERROR_CODES = [
+  'account_disabled',
+  'account_locked',
+  'email_not_verified',
   'forbidden',
   'internal_error',
+  'invalid_credentials',
   'not_found',
   'unauthorized',
   'validation_failed',
@@ -78,6 +82,15 @@ export class ApiError extends Error {
   get currentVersion(): number | null {
     const current = this.details['current_version'];
     return typeof current === 'number' ? current : null;
+  }
+
+  /**
+   * Seconds to wait behind a `423 account_locked` (ADR 009 §6), so the sign-in form can show a
+   * countdown rather than inviting an attempt that is guaranteed to fail.
+   */
+  get retryAfterSeconds(): number | null {
+    const retryAfter = this.details['retry_after_seconds'];
+    return typeof retryAfter === 'number' ? retryAfter : null;
   }
 
   /** Field errors behind a `400 validation_failed`, for form-level highlighting. */

@@ -18,6 +18,14 @@ spring:
     # the one the migrations describe, and startup must fail rather than assume V1..Vn already ran.
     baseline-on-migrate: false
 
+travelplanner:
+  security:
+    session:
+      # TLS is guaranteed here, so the session cookies are marked Secure and a browser will refuse
+      # to send them over plain HTTP (ADR 002). JWT_SECRET is mandatory under this profile —
+      # HmacJwtTokenService fails startup rather than signing with a key nobody chose.
+      secure: true
+
 logging:
   level:
     root: WARN

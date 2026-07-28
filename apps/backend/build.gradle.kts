@@ -85,6 +85,16 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
+    // Task 08 — the authentication boundary (ADR 002, ADR 006, ADR 009). The starter supplies the
+    // filter chain, the CSRF token repository, and BCrypt; nimbus-jose-jwt signs and verifies the
+    // self-issued access token. Nimbus rather than a JWT convenience wrapper because it is already
+    // managed by the Spring Boot BOM and is what Spring Security itself uses, so the project gains
+    // no new transitive tree.
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    // Version pinned explicitly: the Spring Boot BOM does not manage this coordinate (it reaches
+    // Spring Security only transitively, through the OAuth2 JOSE module this project does not use).
+    implementation("com.nimbusds:nimbus-jose-jwt:10.0.2")
+
     // JDBC stays declared explicitly even though starter-data-jpa pulls it in:
     // DatabaseReadinessContributor (task 04) uses javax.sql.DataSource directly and must not
     // silently depend on JPA remaining on the classpath.
@@ -108,6 +118,7 @@ dependencies {
 
     testImplementation(platform("org.springframework.boot:spring-boot-dependencies:3.5.3"))
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     // Validates api/openapi/openapi.yaml in the backend build (task 06). Test-only on purpose:

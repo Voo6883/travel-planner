@@ -5,6 +5,7 @@ import com.travelplanner.domain.port.UserRepositoryPort;
 import com.travelplanner.infrastructure.persistence.entity.UserEntity;
 import com.travelplanner.infrastructure.persistence.mapper.UserPersistenceMapper;
 import com.travelplanner.infrastructure.persistence.repository.UserJpaRepository;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -30,7 +31,9 @@ public class UserRepositoryAdapter implements UserRepositoryPort {
 
     @Override
     public User save(User user) {
-        UserEntity entity = new UserEntity();
+        // Loaded first when the row already exists, so an update carries the persistence context's
+        // identity instead of arriving as a detached instance that overwrites unread columns.
+        UserEntity entity = repository.findById(user.id()).orElseGet(UserEntity::new);
         mapper.applyToEntity(user, entity);
         return mapper.toDomain(repository.saveAndFlush(entity));
     }
@@ -46,7 +49,27 @@ public class UserRepositoryAdapter implements UserRepositoryPort {
     }
 
     @Override
+    public Optional<User> findByUsernameIgnoreCase(String username) {
+        return repository.findByUsernameIgnoreCase(username).map(mapper::toDomain);
+    }
+
+    @Override
     public boolean existsById(UUID userId) {
         return repository.existsById(userId);
+    }
+
+    @Override
+    public boolean existsByEmailIgnoreCase(String email) {
+        return repository.existsByEmailIgnoreCase(email);
+    }
+
+    @Override
+    public boolean existsByUsernameIgnoreCase(String username) {
+        return repository.existsByUsernameIgnoreCase(username);
+    }
+
+    @Override
+    public int revokeSessions(UUID userId, Instant sessionsValidAfter) {
+        return repository.revokeSessions(userId, sessionsValidAfter);
     }
 }

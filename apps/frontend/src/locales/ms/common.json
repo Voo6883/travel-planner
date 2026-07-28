@@ -14,8 +14,12 @@
   "locale_en": "English",
   "locale_ms": "Bahasa Melayu",
   "errors": {
+    "account_disabled": "Akaun ini telah dinyahaktifkan. Sila hubungi sokongan.",
+    "account_locked": "Terlalu banyak percubaan log masuk. Sila tunggu beberapa minit dan cuba lagi.",
+    "email_not_verified": "Sila sahkan alamat e-mel anda sebelum log masuk.",
     "forbidden": "Anda tiada kebenaran untuk melakukan ini.",
     "internal_error": "Sesuatu tidak kena di pihak kami. Sila cuba lagi.",
+    "invalid_credentials": "E-mel, nama pengguna, atau kata laluan itu tidak betul.",
     "not_found": "Kami tidak menemui apa yang anda cari.",
     "unauthorized": "Sila log masuk untuk meneruskan.",
     "validation_failed": "Sebahagian maklumat tidak sah. Sila semak medan yang ditanda.",
