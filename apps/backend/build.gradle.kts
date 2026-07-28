@@ -142,6 +142,10 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
+    // Hot reload during host dev (`npm run dev:backend`). Restarts on classpath changes when
+    // paired with `bootRun --continuous`; excluded from production images automatically.
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
+
     // Validates api/openapi/openapi.yaml in the backend build (task 06). Test-only on purpose:
     // the contract is hand-authored and design-first, so nothing generates or serves it at
     // runtime and the production image stays free of the parser and its transitive tree.

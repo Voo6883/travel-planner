@@ -10,6 +10,8 @@ Contract defined by [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) §
 | `check-prerequisites.sh` | Prerequisite gate — Unix / macOS / Git Bash |
 | `check-prerequisites.ps1` | Prerequisite gate — Windows PowerShell |
 | `prereq.mjs` | Cross-platform dispatcher behind `npm run prereq` |
+| `dev-backend.mjs` | Spring Boot hot reload (`npm run dev:backend`) |
+| `dev-frontend.mjs` | Next.js HMR dev server (`npm run dev:frontend`) |
 | `tests/test-check-prerequisites.sh` | Unit tests for the bash gate |
 | `tests/check-prerequisites.tests.ps1` | Unit tests for the PowerShell gate |
 | `tests/run-prereq-tests.mjs` | Cross-platform dispatcher behind `npm run prereq:test` |
@@ -28,6 +30,28 @@ npm run prereq                      # any platform — dispatches to the right s
 ```
 
 **Exit codes:** `0` = all required tools present and correct · `1` = at least one failure.
+
+## Hot reload development (hybrid mode)
+
+Start Postgres in Docker, then run both apps on the host with instant frontend HMR and backend
+DevTools restarts:
+
+```bash
+cp .env.example .env   # once — set BACKEND_INTERNAL_URL=http://localhost:8080 for host dev
+npm run dev:full       # Postgres + backend + frontend
+```
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Backend + frontend hot reload (no database) |
+| `npm run dev:full` | `dev:db` then `dev` — recommended for full-stack work |
+| `npm run dev:frontend` | Next.js only → http://localhost:3000 |
+| `npm run dev:backend` | Spring Boot only → http://localhost:8080/api/v1 |
+| `npm run dev:db` | Postgres/pgvector container only |
+
+Scripts are cross-platform (Windows PowerShell/cmd and Unix). They load the root `.env` when
+present and apply host defaults (`BACKEND_INTERNAL_URL=http://localhost:8080`,
+`SPRING_DATASOURCE_URL=…localhost…`) so a Docker-oriented `.env.example` copy still works.
 
 ## Checks performed
 

@@ -18,6 +18,11 @@ spring:
       # Start even when Postgres is down, so /api/v1/ready can report it as DOWN. Failing at
       # startup instead would make a stopped database indistinguishable from a broken build.
       initialization-fail-timeout: -1
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
 
 logging:
   level:
