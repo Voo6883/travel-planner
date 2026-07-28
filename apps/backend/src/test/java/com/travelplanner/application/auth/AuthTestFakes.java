@@ -1,5 +1,6 @@
 package com.travelplanner.application.auth;
 
+import com.travelplanner.domain.enums.AuthProvider;
 import com.travelplanner.domain.enums.Role;
 import com.travelplanner.domain.model.RefreshToken;
 import com.travelplanner.domain.model.User;
@@ -113,6 +114,19 @@ public final class AuthTestFakes {
         @Override
         public List<UserIdentity> findAllByUserId(UUID userId) {
             return saved.stream().filter(identity -> identity.userId().equals(userId)).toList();
+        }
+
+        @Override
+        public Optional<UserIdentity> findByProviderAndSubject(AuthProvider provider, String subject) {
+            return saved.stream()
+                    .filter(identity -> identity.provider() == provider)
+                    .filter(identity -> identity.providerSubjectId().equals(subject))
+                    .findFirst();
+        }
+
+        @Override
+        public void delete(UserIdentity identity) {
+            saved.removeIf(stored -> stored.id().equals(identity.id()));
         }
     }
 

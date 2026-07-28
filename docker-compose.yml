@@ -59,8 +59,17 @@ services:
       MAILER_PROVIDER: ${MAILER_PROVIDER:-stub}
       MAIL_FROM: ${MAIL_FROM:-Travel Planner <noreply@travelplanner.local>}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
-      # Where mailed links point. The browser resolves this, so it is the HOST port — the same
-      # reasoning as NEXT_PUBLIC_API_BASE_URL below.
+      # External identity (§4.0.5, ADR 004). All three default to empty, so `docker compose up`
+      # works with no Firebase project and no GitHub OAuth app — the backend falls back to its
+      # development stand-ins, which refuse to exist under the `prod` profile. Set them in .env to
+      # switch on real verification; nothing else changes.
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      # GitHub redirects the BROWSER here, so it is the host port, not the service name.
+      GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-http://localhost:8080/api/v1/auth/oauth/github/callback}
+      # Where mailed links and OAuth round trips point. The browser resolves this, so it is the
+      # HOST port — the same reasoning as NEXT_PUBLIC_API_BASE_URL below.
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     ports:
       - '${BACKEND_HOST_PORT:-8080}:8080'

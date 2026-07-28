@@ -55,6 +55,23 @@ travelplanner:
       # is dropped over plain HTTP, and the locked local experience is http://localhost (ADR 006).
       secure: false
 
+  # External identity providers (§4.0.5, ADR 004). Every credential defaults to empty and the
+  # development stand-ins take over, so a fresh checkout and CI both work with no Firebase project
+  # and no GitHub OAuth app — task 10 forbids relying on a live provider in CI. Both stand-ins
+  # refuse to be constructed under the `prod` profile.
+  identity:
+    # Where an OAuth round trip returns the browser: the FRONTEND origin, not the API's.
+    app-base-url: ${FRONTEND_URL:http://localhost:3000}
+    firebase:
+      # Also the `aud` every Firebase ID token must carry (ADR 009 §4). Without it a token minted
+      # by any other Firebase project on Earth would carry a valid Google signature.
+      project-id: ${FIREBASE_PROJECT_ID:}
+    github:
+      client-id: ${GITHUB_CLIENT_ID:}
+      # No default and no committed fallback. HttpGithubApi cannot be constructed without it.
+      client-secret: ${GITHUB_CLIENT_SECRET:}
+      callback-url: ${GITHUB_CALLBACK_URL:http://localhost:8080/api/v1/auth/oauth/github/callback}
+
   # Transactional mail (§4.0.10, ADR 004). The stub is the default everywhere, so a fresh checkout
   # and CI both work with no provider secret — task 09 forbids making live credentials mandatory.
   # Set MAILER_PROVIDER=resend, with RESEND_API_KEY and MAIL_FROM, to send for real.

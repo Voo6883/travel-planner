@@ -32,14 +32,42 @@ public enum ApiErrorCode {
     /** Credential accepted, but the address is unconfirmed (UC-A08). */
     EMAIL_NOT_VERIFIED("email_not_verified", HttpStatus.FORBIDDEN),
 
+    /**
+     * The Google account behind a Firebase ID token has an unconfirmed address (PLAN §4.0.5).
+     *
+     * <p>Distinct from {@link #INVALID_FIREBASE_TOKEN} because the token was perfectly valid — the
+     * user's next action is with Google, not with us.
+     */
+    FIREBASE_EMAIL_NOT_VERIFIED("firebase_email_not_verified", HttpStatus.FORBIDDEN),
+
     /** Authenticated, but not allowed to act on this resource. */
     FORBIDDEN("forbidden", HttpStatus.FORBIDDEN),
+
+    /**
+     * The provider identity is already spoken for (PLAN §4.0.5). One external identity may never
+     * resolve to two users.
+     */
+    IDENTITY_ALREADY_LINKED("identity_already_linked", HttpStatus.CONFLICT),
 
     /** Unhandled server fault. Details never leave the logs. */
     INTERNAL_ERROR("internal_error", HttpStatus.INTERNAL_SERVER_ERROR),
 
     /** Sign-in failed. Identical for every cause, so it can never enumerate accounts. */
     INVALID_CREDENTIALS("invalid_credentials", HttpStatus.UNAUTHORIZED),
+
+    /**
+     * A Firebase ID token did not verify (PLAN §4.0.5). Bad signature, wrong {@code aud}, expired,
+     * or a {@code firebase.sign_in_provider} other than {@code google.com} (ADR 009 §4) — one code
+     * for all of them, so the endpoint cannot be asked which console setting to attack next.
+     */
+    INVALID_FIREBASE_TOKEN("invalid_firebase_token", HttpStatus.UNAUTHORIZED),
+
+    /**
+     * The OAuth callback presented no {@code state}, or one that does not match the cookie issued
+     * at start (ADR 004 Security). {@code 400}: the caller is not attempting to authenticate, they
+     * submitted a value that is not valid input.
+     */
+    INVALID_OAUTH_STATE("invalid_oauth_state", HttpStatus.BAD_REQUEST),
 
     /**
      * A verification or password-reset link is unknown, expired, or already spent (task 09).
@@ -50,8 +78,37 @@ public enum ApiErrorCode {
      */
     INVALID_TOKEN("invalid_token", HttpStatus.BAD_REQUEST),
 
+    /**
+     * Unlinking would leave the account with no way to sign in (ADR 009 §4). {@code 409}: the
+     * request is well formed and conflicts with the account's current state, which is what the
+     * caller has to change first.
+     */
+    LAST_SIGN_IN_METHOD("last_sign_in_method", HttpStatus.CONFLICT),
+
     /** No resource at this path, or none owned by the caller. */
     NOT_FOUND("not_found", HttpStatus.NOT_FOUND),
+
+    /**
+     * The provider supplied no primary, verified, routable address, so no account can be created
+     * from it (ADR 009 §4).
+     *
+     * <p>{@code 422} rather than {@code 400}: the request was well formed and there is nothing in
+     * it for the caller to correct — the fix is on the provider's settings page.
+     */
+    PROVIDER_EMAIL_UNAVAILABLE("provider_email_unavailable", HttpStatus.UNPROCESSABLE_ENTITY),
+
+    /**
+     * An account holds this address but auto-linking is not permitted (ADR 009 §4 — the pre-hijack
+     * rule). {@code details.provider} names the provider awaiting confirmation.
+     */
+    PROVIDER_LINK_REQUIRED("provider_link_required", HttpStatus.CONFLICT),
+
+    /**
+     * The identity provider could not be reached or answered with a fault. {@code 503}, and
+     * deliberately not {@code internal_error}: nothing here failed, nothing was changed, and the
+     * caller's correct next action is to retry rather than to report a bug.
+     */
+    PROVIDER_UNAVAILABLE("provider_unavailable", HttpStatus.SERVICE_UNAVAILABLE),
 
     /**
      * A mail action exceeded its per-email or per-address window (ADR 009 §6).

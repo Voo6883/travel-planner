@@ -52,7 +52,23 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 @EnableConfigurationProperties(AuthSecurityProperties.class)
 public class SecurityConfig {
 
-    private static final String[] PUBLIC_GET = {"/api/v1/health", "/api/v1/ready"};
+    /**
+     * The probes, plus GitHub's redirect round trip.
+     *
+     * <p>Both OAuth endpoints are public because the browser reaching them has, by definition, no
+     * session yet — obtaining one is what the round trip is for. The callback's credential is the
+     * single-use {@code state} it must echo from an {@code httpOnly} cookie (ADR 004 Security), and
+     * {@code ?mode=link} is refused by the controller without a live session, so "public" here does
+     * not mean "unauthenticated callers can do anything".
+     *
+     * <p>They are {@code GET} because a provider redirect is a top-level navigation and there is no
+     * other verb a browser can arrive with. That also puts them outside CSRF protection, which is
+     * why {@code state} exists.
+     */
+    private static final String[] PUBLIC_GET = {
+        "/api/v1/health", "/api/v1/ready",
+        "/api/v1/auth/oauth/github/start", "/api/v1/auth/oauth/github/callback",
+    };
 
     /**
      * The endpoints a caller uses to obtain, refresh, or end a session — plus the four account
@@ -68,6 +84,10 @@ public class SecurityConfig {
         "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout",
         "/api/v1/auth/verify-email/confirm", "/api/v1/auth/verify-email/resend",
         "/api/v1/auth/password/forgot", "/api/v1/auth/password/reset",
+        // Gmail sign-up and sign-in are one endpoint (PLAN §4.0.5), so it has to be reachable
+        // without a session. `/auth/providers/**` deliberately is not: linking is the explicit,
+        // authenticated confirmation ADR 009 §4 requires.
+        "/api/v1/auth/firebase",
     };
 
     private final AuthSecurityProperties properties;

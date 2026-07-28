@@ -224,6 +224,257 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /auth/firebase:
+    post:
+      tags: [auth]
+      operationId: authenticateWithFirebase
+      summary: Sign up or sign in with a Google account (UC-A02, UC-A05)
+      description: |
+        One endpoint, three outcomes. The client obtains a Firebase ID token from
+        `signInWithPopup(GoogleAuthProvider)` and posts it here; the server verifies it, resolves it
+        to an account, and issues the same cookie session `/auth/login` issues (PLAN §4.0.5).
+
+        | Outcome | Body |
+        |---|---|
+        | No identity for this Firebase uid and no account holds the address | `is_new_user: true` — the account is created `email_verified: true` and a welcome mail is sent |
+        | The uid is already linked | `is_new_user: false`, `provider_linked: false` |
+        | An account holds the address **and** both sides are verified | `is_new_user: false`, `provider_linked: true` |
+
+        **The token is verified, not read** (ADR 004 Security). Two assertions beyond the signature
+        are load-bearing, and both come from ADR 009 §4:
+
+        - `aud` must equal the configured Firebase project id, so a token minted for a different
+          project cannot sign anybody in here;
+        - `firebase.sign_in_provider` must be `google.com`. Without it, switching on
+          Email/Password in the Firebase console would open an unvetted registration path into this
+          system — anyone could self-issue an identity for any address.
+
+        **Auto-linking requires proof, not email equality.** If an account already holds the
+        address but either side is unverified, the response is `409 provider_link_required` and
+        *nothing is linked*. Treating a matching address as ownership is the documented pre-hijack
+        takeover: an attacker registers locally as the victim's address, the victim later signs in
+        with Google, and the attacker keeps password access to the victim's trips.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FirebaseAuthRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthSession'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/InvalidProviderToken'
+        '403':
+          $ref: '#/components/responses/ProviderSignInForbidden'
+        '409':
+          $ref: '#/components/responses/ProviderLinkConflict'
+        '422':
+          $ref: '#/components/responses/ProviderEmailUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /auth/oauth/github/start:
+    get:
+      tags: [auth]
+      operationId: startGithubOAuth
+      summary: Begin the GitHub OAuth redirect (UC-A03, UC-A06)
+      description: |
+        Redirects the browser to GitHub's authorize URL with `client_id`, `scope=user:email`, and a
+        single-use `state` (PLAN §4.0.5 step 2).
+
+        `state` is CSRF protection, and it is only protection if the server remembers what it
+        issued: the value is also written to a short-lived `tp_oauth_state` `httpOnly` cookie, and
+        the callback accepts nothing that does not match it. The client secret never leaves the
+        server — the browser only ever sees the authorize URL.
+
+        `mode=link` starts the **explicit link confirmation** ADR 009 §4 requires when auto-linking
+        is refused. It demands a live session, and the callback then attaches the GitHub identity to
+        that account instead of signing anyone in.
+      parameters:
+        - name: mode
+          in: query
+          required: false
+          description: |
+            `sign_in` (default) or `link`. `link` requires an authenticated caller and is answered
+            with `401 unauthorized` without one.
+          schema:
+            type: string
+            enum: [sign_in, link]
+            default: sign_in
+      responses:
+        '302':
+          description: Redirect to GitHub, with the `state` cookie set.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Location:
+              description: GitHub's authorize URL.
+              required: true
+              schema:
+                type: string
+            Set-Cookie:
+              $ref: '#/components/headers/SetOAuthStateCookie'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/oauth/github/callback:
+    get:
+      tags: [auth]
+      operationId: completeGithubOAuth
+      summary: Complete the GitHub OAuth exchange (UC-A03, UC-A06)
+      description: |
+        GitHub redirects the browser here. The server validates `state` against the cookie, exchanges
+        the authorization code for an access token **server-side**, reads the account, and issues the
+        session cookies (PLAN §4.0.5 step 4).
+
+        **Only the primary, verified address is used** (ADR 009 §4). `@users.noreply.github.com` and
+        every unverified address are ignored, because an address a user has not confirmed is not
+        evidence of anything and a `noreply` alias belongs to GitHub rather than to a person. An
+        account whose address cannot be established can still sign in if its identity is already
+        linked; it cannot be used to *create* one.
+
+        Always answered with a redirect rather than JSON: the caller is a browser following GitHub's
+        redirect, not a script reading a body. Failures redirect to the sign-in page with an
+        `error` query parameter carrying the registered error code, so the frontend renders the same
+        translated message it would for a JSON envelope.
+      parameters:
+        - name: code
+          in: query
+          required: false
+          description: GitHub's single-use authorization code. Absent when the user declined.
+          schema:
+            type: string
+            maxLength: 512
+        - name: state
+          in: query
+          required: false
+          description: Echo of the value issued by `/auth/oauth/github/start`.
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        '302':
+          description: |
+            Signed in (or linked) and redirected into the app, with both session cookies set — or
+            redirected to the sign-in page carrying `?error=<code>` when the exchange failed.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Location:
+              description: A frontend URL. Never a provider URL, and never one supplied by the caller.
+              required: true
+              schema:
+                type: string
+            Set-Cookie:
+              $ref: '#/components/headers/SetSessionCookies'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/providers/{provider}:
+    parameters:
+      - $ref: '#/components/parameters/ProviderParam'
+
+    post:
+      tags: [auth]
+      operationId: linkProvider
+      summary: Confirm linking a provider to the signed-in account (UC-A09)
+      description: |
+        The explicit, authenticated confirmation ADR 009 §4 requires wherever auto-linking is
+        refused. Being signed in is the proof of ownership that a matching email address is not:
+        the caller holds a session for the existing account *and* a credential the provider just
+        verified, so both halves are demonstrated rather than inferred.
+
+        The account's email address is not consulted at all on this path — linking a provider whose
+        address differs from the account's is allowed and expected.
+
+        `409 identity_already_linked` when the provider identity belongs to another account, or when
+        this account already has an identity for the provider. One external identity may never
+        resolve to two users; the unique index on `(provider, provider_subject_id)` is the final
+        arbiter and this check is the readable one in front of it. Re-linking the *same* identity to
+        the same account is a no-op and succeeds.
+
+        `GITHUB` is not accepted here: its credential is a single-use authorization code the browser
+        never holds. Link GitHub through `GET /auth/oauth/github/start?mode=link` instead.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkProviderRequest'
+      responses:
+        '204':
+          description: |
+            The provider is linked. No body: the client re-reads `GET /auth/me`, which is the one
+            place `linked_providers` is published.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ProviderSignInForbidden'
+        '409':
+          $ref: '#/components/responses/ProviderLinkConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+    delete:
+      tags: [auth]
+      operationId: unlinkProvider
+      summary: Unlink a provider from the signed-in account (ADR 009 §4)
+      description: |
+        **Refused when it would leave the account with no usable sign-in method** —
+        `409 last_sign_in_method`. A local password counts as a method only when one is set, so a
+        Google-only account cannot unlink Google and lock itself out permanently.
+
+        **Every session is terminated** (`PROVIDER_UNLINKED`, ADR 009 §1). Removing a way into an
+        account is a security event, and the case it exists for is "that provider account is no
+        longer mine" — which is exactly when sessions obtained through it must stop working now
+        rather than at their next expiry. Both cookies are therefore cleared and the caller signs in
+        again.
+
+        `LOCAL` is rejected with `400 validation_failed`: the row is bookkeeping, and deleting it
+        would not remove the password it stands for. Changing or removing a password is
+        `PUT /auth/password`.
+
+        `404 not_found` when the account never linked the provider — the same code an unowned
+        resource returns.
+      security:
+        - cookieAuth: []
+      responses:
+        '204':
+          description: The provider is unlinked and every session for the account has ended.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Set-Cookie:
+              $ref: '#/components/headers/SetSessionCookies'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ProviderLinkConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /auth/refresh:
     post:
       tags: [auth]
@@ -571,6 +822,15 @@ components:
       schema:
         type: string
 
+    SetOAuthStateCookie:
+      description: |
+        `tp_oauth_state`, the single-use CSRF value for one GitHub round trip. `httpOnly` and
+        scoped to `/api/v1/auth/oauth`, with a lifetime measured in minutes — it is a nonce for one
+        redirect, not a session.
+      required: true
+      schema:
+        type: string
+
     XRequestId:
       description: |
         Correlation id echoed from the request, or generated when the caller sent none.
@@ -582,6 +842,18 @@ components:
         format: uuid
 
   parameters:
+    ProviderParam:
+      name: provider
+      in: path
+      required: true
+      description: |
+        The sign-in method, exactly as `CurrentUser.linked_providers` publishes it. `LOCAL` is
+        addressable so that an unsupported operation on it is a registered `validation_failed`
+        rather than a 404 that reads like a routing mistake.
+      schema:
+        type: string
+        enum: [LOCAL, FIREBASE_GOOGLE, GITHUB]
+
     PageParam:
       name: page
       in: query
@@ -662,6 +934,9 @@ components:
 
     RateLimitedDetails:
       $ref: './errors.yaml#/components/schemas/RateLimitedDetails'
+
+    ProviderLinkRequiredDetails:
+      $ref: './errors.yaml#/components/schemas/ProviderLinkRequiredDetails'
 
     RegisterRequest:
       type: object
@@ -807,6 +1082,42 @@ components:
           maxLength: 72
           description: Must differ from the current password.
 
+    FirebaseAuthRequest:
+      type: object
+      description: |
+        The Firebase ID token from `signInWithPopup(GoogleAuthProvider)` (PLAN §4.0.5). It is the
+        whole credential: the server verifies its signature against Google's published keys and
+        trusts nothing the client says alongside it — no email, no uid, no "this is a new user"
+        flag, because every one of those would be a claim the caller could simply assert.
+      required: [id_token]
+      properties:
+        id_token:
+          type: string
+          minLength: 20
+          maxLength: 4096
+          description: |
+            A short-lived RS256 JWT issued by Firebase for this project. Never stored and never
+            logged — it exists for the length of one verification call.
+      example:
+        id_token: eyJhbGciOiJSUzI1NiIsImtpZCI6IjE2N...
+
+    LinkProviderRequest:
+      type: object
+      description: |
+        The provider credential to attach to the signed-in account (UC-A09). For `FIREBASE_GOOGLE`
+        it is a Firebase ID token, the same value `POST /auth/firebase` takes.
+
+        One field rather than one schema per provider: the server routes on the `{provider}` path
+        segment and the adapter for that provider is the only code that interprets the string, which
+        is the same seam `IdentityProviderPort` uses for sign-in.
+      required: [credential]
+      properties:
+        credential:
+          type: string
+          minLength: 20
+          maxLength: 4096
+          description: Provider-issued token. Never stored, never logged, never echoed back.
+
     AcceptedResponse:
       type: object
       description: |
@@ -870,13 +1181,27 @@ components:
         headers, because a token in a JSON body is a token JavaScript can read, which is exactly
         what ADR 002 rejected the `Authorization` header for.
 
-        A wrapper rather than the user object itself, so task 10 can add PLAN §4.0.5's
+        A wrapper rather than the user object itself, which is what let task 10 add PLAN §4.0.5's
         `is_new_user` and `provider_linked` for the Firebase and GitHub paths without reshaping a
-        response the local flow already publishes.
-      required: [user]
+        response the local flow already published.
+      required: [user, is_new_user, provider_linked]
       properties:
         user:
           $ref: '#/components/schemas/CurrentUser'
+        is_new_user:
+          type: boolean
+          default: false
+          description: |
+            The account was created by this very request (UC-A02, UC-A03). Drives the onboarding
+            copy, and is the condition PLAN §4.0.10 puts the welcome mail behind — so it is `false`
+            for `/auth/login` and `/auth/refresh`, which never create anything.
+        provider_linked:
+          type: boolean
+          default: false
+          description: |
+            An existing account gained a new sign-in method as part of this request (UC-A09). Only
+            ever `true` when both the account and the incoming provider address were already
+            verified (ADR 009 §4); the refusal case is `409 provider_link_required` instead.
 
     PageMetadata:
       type: object
@@ -1150,6 +1475,109 @@ components:
             message: Too many requests. Try again later.
             details:
               retry_after_seconds: 3600
+
+    InvalidProviderToken:
+      description: |
+        `invalid_firebase_token` — the ID token did not verify. **One response for every cause**:
+        a bad signature, an expired token, a token minted for another Firebase project (`aud`), and
+        a token whose `firebase.sign_in_provider` is not `google.com` are indistinguishable here.
+
+        The last of those is the ADR 009 §4 assertion, and folding it in with the rest is
+        deliberate: a distinct code would tell a caller probing the endpoint exactly which console
+        setting to attack next.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            code: invalid_firebase_token
+            message: This sign-in could not be verified.
+            details: {}
+
+    ProviderSignInForbidden:
+      description: |
+        The provider verified the caller, but the account may not sign in.
+
+        - `firebase_email_not_verified` — Google reports the address as unconfirmed (PLAN §4.0.5).
+          An unconfirmed address cannot create an account and cannot be matched against one.
+        - `account_disabled` — an administrator switched the account off (PLAN §4.0.6).
+        - `email_not_verified` — the matched account itself is unconfirmed.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            code: firebase_email_not_verified
+            message: This provider account has no verified email address.
+            details: {}
+
+    ProviderLinkConflict:
+      description: |
+        The identity cannot be attached, for one of three reasons that share `409`.
+
+        - `provider_link_required` — an account already holds this address, but auto-linking is not
+          permitted because either side is unverified (ADR 009 §4). **Nothing was linked.** The
+          caller signs in to that account and confirms explicitly. `details.provider` names which.
+        - `identity_already_linked` — the provider identity belongs to another account, or this
+          account already has one for the provider (PLAN §4.0.5).
+        - `last_sign_in_method` — unlinking would leave the account unable to sign in at all.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            code: provider_link_required
+            message: Sign in to your existing account to link this provider.
+            details:
+              provider: FIREBASE_GOOGLE
+
+    ProviderEmailUnavailable:
+      description: |
+        `provider_email_unavailable` — the provider supplied no address this system may use, so no
+        account can be created from it (ADR 009 §4).
+
+        For GitHub that means: no address is both primary and verified, or the only candidate is an
+        `@users.noreply.github.com` alias. Accepting either would put an address on an account that
+        nobody has proved they control.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            code: provider_email_unavailable
+            message: This provider account has no usable email address.
+            details: {}
+
+    ProviderUnavailable:
+      description: |
+        `provider_unavailable` — the identity provider could not be reached, timed out, or answered
+        with a fault. Nothing was created, linked, or revoked, so the caller may simply retry.
+
+        Distinct from `internal_error` on purpose: this is somebody else's outage, and the UI's
+        correct reaction is "try again", not "report a bug".
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            code: provider_unavailable
+            message: The identity provider is unavailable. Please try again.
+            details: {}
 
     MailRequestAccepted:
       description: |

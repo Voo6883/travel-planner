@@ -82,7 +82,9 @@ class OpenApiSpecTest {
         Map<String, ApiResponse> responses = spec.getComponents().getResponses();
         List<String> errorResponses = List.of(
                 "ValidationFailed", "Unauthorized", "Forbidden", "NotFound", "VersionConflict",
-                "InternalError", "InvalidCredentials", "SignInForbidden", "AccountLocked");
+                "InternalError", "InvalidCredentials", "SignInForbidden", "AccountLocked",
+                "InvalidProviderToken", "ProviderSignInForbidden", "ProviderLinkConflict",
+                "ProviderEmailUnavailable", "ProviderUnavailable");
 
         assertThat(responses).containsKeys(errorResponses.toArray(String[]::new));
         errorResponses.forEach(name -> {
@@ -97,21 +99,35 @@ class OpenApiSpecTest {
 
     @Test
     void theAuthSurfaceMatchesTheEndpointTableAdr009Publishes() {
-        // PLAN §4.0.5's table plus the two paths ADR 009 §5 records as missing from it.
+        // PLAN §4.0.5's table, the two paths ADR 009 §5 records as missing from it, and the four
+        // task 10 adds for the external providers that table already names.
         assertThat(spec.getPaths()).containsKeys(
                 "/auth/register", "/auth/login", "/auth/refresh", "/auth/logout",
-                "/auth/logout-all", "/auth/me");
+                "/auth/logout-all", "/auth/me",
+                "/auth/firebase", "/auth/oauth/github/start", "/auth/oauth/github/callback",
+                "/auth/providers/{provider}");
         assertThat(spec.getComponents().getSecuritySchemes()).containsKey("cookieAuth");
+    }
+
+    @Test
+    void linkingAndUnlinkingRequireASession() {
+        // ADR 009 §4: the explicit confirmation is only proof if somebody is signed in to give it.
+        PathItem providers = spec.getPaths().get("/auth/providers/{provider}");
+        assertThat(providers.getPost().getSecurity()).isNotEmpty();
+        assertThat(providers.getDelete().getSecurity()).isNotEmpty();
     }
 
     @Test
     void noAuthResponseBodyCarriesAToken() {
         // ADR 002 rejected the Authorization header because a token JavaScript can read is a token
-        // XSS can steal. Putting one in a JSON body would give that back.
+        // XSS can steal. Putting one in a JSON body would give that back. The two flags task 10
+        // added are booleans about what just happened, not credentials.
         assertThat(spec.getComponents().getSchemas().get("AuthSessionResponse").getProperties())
-                .containsOnlyKeys("user");
+                .containsOnlyKeys("user", "is_new_user", "provider_linked");
         assertThat(spec.getComponents().getSchemas().get("CurrentUser").getProperties())
                 .doesNotContainKeys("access_token", "refresh_token", "token");
+        assertThat(spec.getComponents().getSchemas().get("FirebaseAuthRequest").getProperties())
+                .containsOnlyKeys("id_token");
     }
 
     @Test

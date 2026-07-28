@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * Spring Data access to {@code user_identity}.
  *
  * <p>The linking policy that decides <em>whether</em> a provider may attach to an existing account
- * (ADR 009 §4) is task 10's; these are the two lookups it will need.
+ * (ADR 009 §4) is {@code AccountLinkingService}'s. These are the lookups it runs.
  */
 public interface UserIdentityJpaRepository extends JpaRepository<UserIdentityEntity, UUID> {
 
