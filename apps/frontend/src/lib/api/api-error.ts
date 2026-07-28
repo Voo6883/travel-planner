@@ -15,6 +15,10 @@ export type ValidationFailedDetails = components['schemas']['ValidationFailedDet
 export const REGISTERED_ERROR_CODES = [
   'account_disabled',
   'account_locked',
+  'ai_rate_limited',
+  'ai_response_invalid',
+  'ai_timeout',
+  'ai_unavailable',
   'email_not_verified',
   'firebase_email_not_verified',
   'forbidden',

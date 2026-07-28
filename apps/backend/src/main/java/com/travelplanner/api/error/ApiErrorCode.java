@@ -29,6 +29,44 @@ public enum ApiErrorCode {
      */
     ACCOUNT_LOCKED("account_locked", HttpStatus.LOCKED),
 
+    /**
+     * The AI provider rejected the request for quota reasons (task 14).
+     *
+     * <p>{@code 429}, and the platform retries it with backoff before it ever gets this far — so a
+     * client seeing this code has already had three attempts spent on its behalf.
+     */
+    AI_RATE_LIMITED("ai_rate_limited", HttpStatus.TOO_MANY_REQUESTS),
+
+    /**
+     * The model answered, but the answer failed schema validation and one repair attempt did not fix
+     * it (task 14).
+     *
+     * <p>{@code 502} rather than {@code 500}: the fault is in an upstream response, not in this
+     * application. It is deliberately a typed failure and never a partially populated object —
+     * PLAN §4.1 requires "no confident result" to be a valid outcome rather than something invented
+     * to fill the fields.
+     */
+    AI_RESPONSE_INVALID("ai_response_invalid", HttpStatus.BAD_GATEWAY),
+
+    /**
+     * The AI provider did not answer within its budget (task 14).
+     *
+     * <p>{@code 504}, the standard meaning of an upstream that did not answer in time. Not
+     * auto-retried: the call already consumed its whole budget, and a second attempt would double
+     * the wait a user is sitting through for the same outcome.
+     */
+    AI_TIMEOUT("ai_timeout", HttpStatus.GATEWAY_TIMEOUT),
+
+    /**
+     * The AI provider is unreachable, failing, misconfigured, or its circuit breaker is open
+     * (task 14).
+     *
+     * <p>{@code 503}, so a client can distinguish "try again shortly" from a request that will never
+     * work. ADR 007 also requires this code to be deliverable <em>inside</em> a stream, as a
+     * {@code StreamError} frame, because after a {@code 200} the status line is no longer available.
+     */
+    AI_UNAVAILABLE("ai_unavailable", HttpStatus.SERVICE_UNAVAILABLE),
+
     /** Credential accepted, but the address is unconfirmed (UC-A08). */
     EMAIL_NOT_VERIFIED("email_not_verified", HttpStatus.FORBIDDEN),
 

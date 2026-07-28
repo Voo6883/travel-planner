@@ -56,6 +56,10 @@
   "errors": {
     "account_disabled": "Akaun ini telah dinyahaktifkan. Sila hubungi sokongan.",
     "account_locked": "Terlalu banyak percubaan log masuk. Sila tunggu beberapa minit dan cuba lagi.",
+    "ai_rate_limited": "Perancang sedang sibuk sekarang. Sila cuba lagi sebentar lagi.",
+    "ai_response_invalid": "Perancang tidak dapat menghasilkan jawapan yang boleh digunakan. Sila cuba lagi.",
+    "ai_timeout": "Perancang mengambil masa terlalu lama untuk membalas. Sila cuba lagi.",
+    "ai_unavailable": "Perancang tidak tersedia buat sementara waktu. Sila cuba lagi sebentar lagi.",
     "email_not_verified": "Sila sahkan alamat e-mel anda sebelum log masuk.",
     "firebase_email_not_verified": "Akaun Google anda tiada alamat e-mel yang disahkan. Sahkannya dengan Google dan cuba lagi.",
     "forbidden": "Anda tiada kebenaran untuk melakukan ini.",

@@ -56,6 +56,10 @@
   "errors": {
     "account_disabled": "This account has been disabled. Please contact support.",
     "account_locked": "Too many sign-in attempts. Please wait a few minutes and try again.",
+    "ai_rate_limited": "The planner is busy right now. Please try again in a moment.",
+    "ai_response_invalid": "The planner could not produce a usable answer. Please try again.",
+    "ai_timeout": "The planner took too long to respond. Please try again.",
+    "ai_unavailable": "The planner is temporarily unavailable. Please try again shortly.",
     "email_not_verified": "Please verify your email address before signing in.",
     "firebase_email_not_verified": "Your Google account does not have a verified email address. Verify it with Google and try again.",
     "forbidden": "You do not have permission to do this.",
