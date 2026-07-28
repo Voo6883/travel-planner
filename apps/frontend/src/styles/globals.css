@@ -5,10 +5,17 @@
 /*
  * Semantic tokens as CSS variables (docs/UI-UX-DESIGN-SYSTEM.md §3.1).
  * Dark mode changes these values; component class names never change.
- * Values are mirrored from src/styles/design-tokens.ts — that file stays the written source
- * of truth, and tasks/11 replaces this hand-mirroring with generated output.
+ *
+ * Values are mirrored from src/styles/design-tokens.ts, which stays the written source of truth.
+ * `design-tokens.test.ts` fails the build if the two drift, so the mirror cannot rot — a codegen
+ * step would buy the same guarantee at the cost of a generated file nobody may edit.
+ *
+ * Three selectors, one decision (§13): `:root` is light, the media query is `system`, and
+ * `:root.dark` is an explicit user choice that must beat the OS. `:not(.light)` keeps an explicit
+ * light choice from being overridden by a dark OS.
  */
 :root {
+  color-scheme: light;
   --canvas: #f8fafc;
   --surface: #ffffff;
   --surface-subtle: #f1f5f9;
@@ -26,20 +33,25 @@
   --destructive-surface: #fef2f2;
   --info: #0369a1;
   --info-surface: #f0f9ff;
+  --scrim: rgba(15,23,42,.56);
   --action-primary-fill: #0958d9;
   --action-primary-fill-hover: #003eb3;
   --action-primary-fill-active: #002c8c;
   --action-primary-text: #0958d9;
+  --action-primary-text-hover: #003eb3;
   --focus-ring: #1677ff;
   --selection-surface: #e6f4ff;
   --selection-border: #bae0ff;
   --selection-text: #0958d9;
   --ai-accent-text: #006d75;
   --ai-accent-surface: #e6fffb;
+  --chat-user-surface: #0958d9;
+  --chat-user-text: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
+    color-scheme: dark;
     --canvas: #0b1220;
     --surface: #111827;
     --surface-subtle: #172033;
@@ -57,20 +69,64 @@
     --destructive-surface: #450a0a;
     --info: #7dd3fc;
     --info-surface: #082f49;
+    --scrim: rgba(0,0,0,.68);
+    --action-primary-fill: #0958d9;
+    --action-primary-fill-hover: #003eb3;
+    --action-primary-fill-active: #002c8c;
     --action-primary-text: #69b1ff;
+    --action-primary-text-hover: #91caff;
     --focus-ring: #69b1ff;
     --selection-surface: #082f49;
     --selection-border: #4096ff;
     --selection-text: #bae0ff;
     --ai-accent-text: #5eead4;
     --ai-accent-surface: #042f2e;
+    --chat-user-surface: #0958d9;
+    --chat-user-text: #ffffff;
   }
+}
+
+:root.dark {
+  color-scheme: dark;
+  --canvas: #0b1220;
+  --surface: #111827;
+  --surface-subtle: #172033;
+  --surface-elevated: #1e293b;
+  --foreground: #f8fafc;
+  --foreground-muted: #cbd5e1;
+  --foreground-subtle: #94a3b8;
+  --border: #94a3b8;
+  --border-subtle: #334155;
+  --success: #4ade80;
+  --success-surface: #052e16;
+  --warning: #fdba74;
+  --warning-surface: #431407;
+  --destructive: #f87171;
+  --destructive-surface: #450a0a;
+  --info: #7dd3fc;
+  --info-surface: #082f49;
+  --scrim: rgba(0,0,0,.68);
+  --action-primary-fill: #0958d9;
+  --action-primary-fill-hover: #003eb3;
+  --action-primary-fill-active: #002c8c;
+  --action-primary-text: #69b1ff;
+  --action-primary-text-hover: #91caff;
+  --focus-ring: #69b1ff;
+  --selection-surface: #082f49;
+  --selection-border: #4096ff;
+  --selection-text: #bae0ff;
+  --ai-accent-text: #5eead4;
+  --ai-accent-surface: #042f2e;
+  --chat-user-surface: #0958d9;
+  --chat-user-text: #ffffff;
 }
 
 @layer base {
   html {
     /* Prevent iOS text inflation without disabling user zoom (§4.4 safe areas). */
     -webkit-text-size-adjust: 100%;
+    /* Sticky headers must not cover a control the browser just scrolled to (§4.4). */
+    scroll-padding-top: 4rem;
   }
 
   body {
@@ -84,5 +140,102 @@
   :focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
+  }
+
+  /* §3.6: reduced motion removes transforms and continuous shimmer, not just "some" animation. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/*
+ * Global Ant Design overrides (§12.3).
+ *
+ * Deliberately shallow. Color, radius, and control height come from `ConfigProvider` tokens in
+ * ant-theme.ts; only what a token cannot express is written here, and nothing targets generated
+ * Ant DOM structure more deeply than one class.
+ */
+@layer components {
+  .ant-btn {
+    @apply font-medium;
+  }
+
+  /* §6.1: text and link buttons still need a 44 px hit area even when they look smaller. */
+  .ant-btn-sm {
+    @apply min-h-control;
+  }
+
+  /*
+   * §6.2 and §10.1: 44 px controls at every breakpoint, 48 px for the `large` size the forms use.
+   *
+   * Stated here rather than left to Ant's internal padding. Target size is a WCAG 2.2 AA
+   * requirement, and Tailwind's Preflight zeroes padding on every form element in the base layer
+   * — close enough in the cascade that leaning on Ant's padding to produce the height would make
+   * an accessibility guarantee depend on stylesheet ordering. A `min-height` cannot be reset away
+   * by a padding rule.
+   */
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-input-number,
+  .ant-picker,
+  .ant-select-selector {
+    @apply min-h-control;
+  }
+
+  .ant-input-lg,
+  .ant-input-affix-wrapper-lg,
+  .ant-input-number-lg,
+  .ant-picker-large,
+  .ant-select-lg .ant-select-selector {
+    @apply min-h-control-lg;
+  }
+
+  /* The inner input of an affix wrapper is not the control — the wrapper is, and doubling the
+     minimum here would make every password field 88 px tall. */
+  .ant-input-affix-wrapper > .ant-input {
+    @apply min-h-0;
+  }
+
+  /* §6.2: label above the control with an 8 px gap, in the `label` type step. */
+  .ant-form-vertical .ant-form-item-label {
+    @apply pb-2;
+  }
+
+  .ant-form-vertical .ant-form-item-label > label {
+    @apply text-label text-foreground;
+  }
+
+  .ant-form-item-explain-error {
+    @apply text-body-sm text-destructive;
+  }
+
+  /* §6.3: card = border plus shadow-sm; elevation only when the whole card is interactive. */
+  .ant-card {
+    @apply border border-border-subtle shadow-sm;
+  }
+
+  /* §6.7: admin tables get a subtle header and a 48 px minimum row. */
+  .ant-table-thead > tr > th {
+    @apply bg-surface-subtle;
+  }
+
+  .ant-table-tbody > tr > td {
+    @apply min-h-control-lg;
+  }
+
+  .ant-modal-content,
+  .ant-drawer-content {
+    @apply rounded-xl;
+  }
+
+  .ant-alert {
+    @apply rounded-lg;
   }
 }

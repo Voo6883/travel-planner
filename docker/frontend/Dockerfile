@@ -18,8 +18,25 @@ COPY . .
 
 # NEXT_PUBLIC_* values are inlined into the client bundle at build time, so this must be a
 # build arg — setting it only at runtime would leave the browser calling the wrong origin.
-ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api/v1
+# ADR 006 makes it a relative, same-origin path; the rewrite below is what reaches the backend.
+ARG NEXT_PUBLIC_API_BASE_URL=/api/v1
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+
+# `rewrites()` is serialised into the build output, so the proxy target must be present at BUILD
+# time as well as at runtime (where the same variable is read by server-side API calls).
+ARG BACKEND_INTERNAL_URL=http://backend:8080
+ENV BACKEND_INTERNAL_URL=$BACKEND_INTERNAL_URL
+
+# Firebase *client* config (ADR 004) — public identifiers, not secrets, and NEXT_PUBLIC_* so they
+# are inlined here rather than read at runtime. All three default to empty: the stack must come up
+# with no Firebase project, and the Google button renders disabled with an explanation instead.
+ARG NEXT_PUBLIC_FIREBASE_API_KEY=
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build

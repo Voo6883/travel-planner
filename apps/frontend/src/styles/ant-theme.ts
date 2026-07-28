@@ -1,31 +1,89 @@
-import type { ThemeConfig } from 'antd';
-import { palette, semanticTokens } from './design-tokens';
+import { theme, type ThemeConfig } from 'antd';
+import {
+  controlHeight,
+  fontFamily,
+  radiusScale,
+  semanticTokens,
+  shadowScale,
+} from './design-tokens';
+
+export type ThemeMode = 'light' | 'dark';
 
 /**
- * Minimal, deliberately non-final bridge from design tokens to Ant Design.
+ * The `docs/UI-UX-DESIGN-SYSTEM.md` §12.2 token mapping, in full.
  *
- * Task 03 maps only what the shell needs so Ant components do not arrive with default
- * Ant blue. The complete component-level theme (buttons, inputs, tables, per-component
- * overrides) belongs to tasks/11-frontend-platform-auth-ui.md against the full
- * docs/UI-UX-DESIGN-SYSTEM.md spec.
+ * Two things in that table are easy to get wrong and are the reason this is a function rather
+ * than a constant:
  *
- * Tailwind overrides Ant where they collide (PLAN §4.2.9).
+ * 1. **Global `colorPrimary` maps to `action-primary-text`, not to the button fill.** In dark mode
+ *    those diverge — text lightens to `#69B1FF` for contrast on a dark canvas while the filled
+ *    button stays `#0958D9` so white label text keeps 4.5:1. Feeding the fill colour into
+ *    `colorPrimary` would make every link and active tab fail contrast in dark mode.
+ * 2. Filled buttons therefore need component-level overrides; the global token cannot express
+ *    "light text, dark fill".
+ *
+ * Tailwind overrides Ant where they collide (PLAN §4.2.9); this exists so Ant's *internals* —
+ * ripples, hover states, disabled shades — stay on the same palette as the utilities.
  */
-export const antTheme: ThemeConfig = {
-  token: {
-    colorPrimary: semanticTokens.light['action-primary-fill'],
-    colorLink: semanticTokens.light['action-primary-text'],
-    colorSuccess: semanticTokens.light.success,
-    colorWarning: semanticTokens.light.warning,
-    colorError: semanticTokens.light.destructive,
-    colorInfo: semanticTokens.light.info,
-    colorBgBase: semanticTokens.light.surface,
-    colorTextBase: semanticTokens.light.foreground,
-    colorBorder: semanticTokens.light['border-subtle'],
-    // Focus ring is owned by globals.css so it stays identical across Ant and non-Ant controls.
-    colorPrimaryHover: palette.blue[700],
-    colorPrimaryActive: palette.blue[800],
-    fontFamily:
-      "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-  },
-};
+export function buildAntTheme(mode: ThemeMode): ThemeConfig {
+  const tokens = semanticTokens[mode];
+
+  return {
+    algorithm: mode === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    token: {
+      colorPrimary: tokens['action-primary-text'],
+      colorPrimaryHover: tokens['action-primary-text-hover'],
+      colorLink: tokens['action-primary-text'],
+      colorLinkHover: tokens['action-primary-text-hover'],
+      colorSuccess: tokens.success,
+      colorWarning: tokens.warning,
+      colorError: tokens.destructive,
+      colorInfo: tokens.info,
+      colorText: tokens.foreground,
+      colorTextSecondary: tokens['foreground-muted'],
+      colorTextTertiary: tokens['foreground-subtle'],
+      colorBgBase: tokens.canvas,
+      colorBgContainer: tokens.surface,
+      colorBgElevated: tokens['surface-elevated'],
+      colorBorder: tokens.border,
+      colorBorderSecondary: tokens['border-subtle'],
+      borderRadius: Number.parseInt(radiusScale.md, 10),
+      borderRadiusLG: Number.parseInt(radiusScale.lg, 10),
+      fontFamily,
+      fontSize: 16,
+      // 44 px is the WCAG 2.2 AA target size (§10.1), applied at every breakpoint (§6.2).
+      controlHeight: controlHeight.default,
+      controlHeightLG: controlHeight.large,
+      boxShadow: shadowScale.sm,
+      boxShadowSecondary: shadowScale.md,
+    },
+    components: {
+      Button: {
+        colorPrimary: tokens['action-primary-fill'],
+        colorPrimaryHover: tokens['action-primary-fill-hover'],
+        colorPrimaryActive: tokens['action-primary-fill-active'],
+        // §12.2 pins white regardless of mode — the fill is dark enough in both.
+        primaryColor: '#FFFFFF',
+        fontWeight: 500,
+      },
+      Card: {
+        borderRadiusLG: Number.parseInt(radiusScale.lg, 10),
+        paddingLG: 24,
+      },
+      Modal: {
+        borderRadiusLG: Number.parseInt(radiusScale.xl, 10),
+      },
+      Drawer: {
+        borderRadiusLG: Number.parseInt(radiusScale.xl, 10),
+      },
+      Table: {
+        headerBg: tokens['surface-subtle'],
+        rowHoverBg: tokens['surface-subtle'],
+        cellPaddingBlock: 14,
+      },
+      Alert: {
+        borderRadiusLG: Number.parseInt(radiusScale.lg, 10),
+      },
+    },
+  };
+}

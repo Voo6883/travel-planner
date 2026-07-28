@@ -13,6 +13,46 @@
   "locale_label": "Language",
   "locale_en": "English",
   "locale_ms": "Bahasa Melayu",
+  "nav": {
+    "primary_label": "Main",
+    "trips": "Trips",
+    "settings": "Settings",
+    "help": "Help",
+    "admin": "Admin",
+    "admin_context": "Admin",
+    "open_menu": "Open menu",
+    "close_menu": "Close menu",
+    "account_menu": "Your account"
+  },
+  "actions": {
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "back": "Go back",
+    "close": "Close",
+    "confirm": "Confirm",
+    "go_to_trips": "Go to trips",
+    "sign_in": "Sign in",
+    "sign_out": "Sign out"
+  },
+  "theme": {
+    "label": "Appearance",
+    "system": "Match system",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "states": {
+    "loading": "Loading…",
+    "checking_session": "Checking your session…",
+    "error_title": "Something went wrong",
+    "empty_title": "Nothing here yet",
+    "offline_title": "You're offline",
+    "offline_body": "Pages you already opened stay readable. Anything that needs the server will wait until you reconnect.",
+    "back_online": "Back online",
+    "permission_denied_title": "You don't have access to this page",
+    "permission_denied_body": "This area is for administrators. Everything in your planner is still available.",
+    "request_reference": "Reference: {requestId}",
+    "retry_after": "You can try again in {seconds} seconds."
+  },
   "errors": {
     "account_disabled": "This account has been disabled. Please contact support.",
     "account_locked": "Too many sign-in attempts. Please wait a few minutes and try again.",

@@ -1,21 +1,12 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { NextIntlClientProvider } from 'next-intl';
-import type { ReactElement } from 'react';
+import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import en from '@/locales/en/common.json';
 import ms from '@/locales/ms/common.json';
+import { renderWithProviders } from '@/test/render';
 import { SystemStatusCard } from './system-status-card';
 
-function renderWithLocale(ui: ReactElement, locale: 'en' | 'ms') {
-  const messages = { common: locale === 'en' ? en : ms };
-  return render(
-    <NextIntlClientProvider locale={locale} messages={messages}>
-      {ui}
-    </NextIntlClientProvider>,
-  );
-}
-
 afterEach(() => {
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -23,7 +14,7 @@ describe('SystemStatusCard', () => {
   it('renders without the backend and reports it as unreachable', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
 
-    renderWithLocale(<SystemStatusCard />, 'en');
+    renderWithProviders(<SystemStatusCard />);
 
     // The shell must survive a dead backend — this is the Task 03 requirement, not a nicety.
     await waitFor(() => {
@@ -35,10 +26,10 @@ describe('SystemStatusCard', () => {
   it('reports ready when the backend answers UP', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'UP' }) }),
+      vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ status: 'UP' }) }),
     );
 
-    renderWithLocale(<SystemStatusCard />, 'en');
+    renderWithProviders(<SystemStatusCard />);
 
     await waitFor(() => {
       expect(screen.getAllByText(en.status_ready).length).toBeGreaterThan(0);
@@ -48,10 +39,10 @@ describe('SystemStatusCard', () => {
   it('treats a malformed payload as unreachable rather than trusting it', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ unexpected: true }) }),
+      vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ unexpected: true }) }),
     );
 
-    renderWithLocale(<SystemStatusCard />, 'en');
+    renderWithProviders(<SystemStatusCard />);
 
     await waitFor(() => {
       expect(screen.getByText(en.status_unreachable)).toBeInTheDocument();
@@ -61,7 +52,7 @@ describe('SystemStatusCard', () => {
   it('renders Malay copy when the locale is ms', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
 
-    renderWithLocale(<SystemStatusCard />, 'ms');
+    renderWithProviders(<SystemStatusCard />, { locale: 'ms' });
 
     expect(screen.getByText(ms.system_status_title)).toBeInTheDocument();
     await waitFor(() => {
@@ -72,7 +63,7 @@ describe('SystemStatusCard', () => {
   it('exposes an accessible section and announces status changes politely', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
 
-    const { container } = renderWithLocale(<SystemStatusCard />, 'en');
+    const { container } = renderWithProviders(<SystemStatusCard />);
 
     expect(screen.getByRole('region', { name: en.system_status_title })).toBeInTheDocument();
     expect(container.querySelector('[aria-live="polite"]')).not.toBeNull();

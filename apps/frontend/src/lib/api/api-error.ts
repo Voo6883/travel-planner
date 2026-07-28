@@ -103,6 +103,18 @@ export class ApiError extends Error {
     return typeof retryAfter === 'number' ? retryAfter : null;
   }
 
+  /**
+   * Which provider a `409 provider_link_required` is about (ADR 009 §4).
+   *
+   * The refusal is not a dead end — the recovery is "sign in to the account that already holds
+   * this address, then connect <provider>" — and naming the provider is what makes that
+   * instruction actionable rather than a riddle.
+   */
+  get linkRequiredProvider(): string | null {
+    const provider = this.details['provider'];
+    return typeof provider === 'string' ? provider : null;
+  }
+
   /** Field errors behind a `400 validation_failed`, for form-level highlighting. */
   get fieldErrors(): Record<string, string> {
     const fields = this.details['fields'];

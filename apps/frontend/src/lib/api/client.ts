@@ -59,12 +59,35 @@ export function csrfToken(): string | null {
   return match ? decodeURIComponent(match.slice(CSRF_COOKIE.length + 1)) : null;
 }
 
+/** ADR 006 default. Relative, so the browser resolves it against the frontend's own origin. */
+export const DEFAULT_API_BASE_PATH = '/api/v1';
+
 /**
- * Base URL including the `/api/v1` prefix, which is why contract path keys omit it. ADR 006 makes
- * this same-origin in the browser so the session cookie is first-party.
+ * Base URL including the `/api/v1` prefix, which is why contract path keys omit it.
+ *
+ * **In the browser this is relative** (ADR 006). That is the whole fix for F-18: `tp_session` is
+ * `httpOnly; SameSite=Lax`, so a cross-origin request to `localhost:8080` would silently drop it
+ * and every authenticated call would fail. A relative URL is same-origin by construction, and
+ * `next.config.ts` `rewrites()` forwards it to Spring Boot.
+ *
+ * On the server there is no origin to resolve a relative URL against, so the server-only
+ * `BACKEND_INTERNAL_URL` is prefixed instead — `http://backend:8080` in Compose,
+ * `http://localhost:8080` on the host. It is deliberately not `NEXT_PUBLIC_*`: the browser must
+ * never learn a second, cookie-less way to reach the API.
  */
 export function apiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api/v1';
+  // `||`, not `??`: an env var set to the empty string is unset in every way that matters, and a
+  // base URL of `''` would silently turn `/auth/login` into a request against the page's path.
+  const configured = process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_PATH;
+  if (isAbsoluteUrl(configured) || typeof window !== 'undefined') {
+    return configured;
+  }
+  const internal = (process.env.BACKEND_INTERNAL_URL || 'http://localhost:8080').replace(/\/+$/, '');
+  return `${internal}${configured}`;
+}
+
+function isAbsoluteUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
 }
 
 /** Correlation id for one call. The backend echoes it and logs it (PLAN §4.0.2-J2). */

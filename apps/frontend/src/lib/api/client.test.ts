@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, apiRequest, CSRF_HEADER, newRequestId } from './client';
+import { ApiError, apiBaseUrl, apiRequest, CSRF_HEADER, newRequestId } from './client';
 
 /**
  * The client boundary is the only place the app talks HTTP, so the properties asserted here —
@@ -31,6 +31,7 @@ function stubFetch(response: Response) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -155,6 +156,45 @@ describe('apiRequest', () => {
     const error = (await apiRequest({ path: '/health' }).catch((thrown) => thrown)) as ApiError;
 
     expect(error.i18nKey).toBe('errors.internal_error');
+  });
+});
+
+/**
+ * ADR 006 — the fix for follow-up F-18.
+ *
+ * `tp_session` is `httpOnly; SameSite=Lax`. A `Lax` cookie is sent only on same-site requests and
+ * top-level GET navigations, so a cross-origin `fetch('http://localhost:8080/api/v1/…')` from
+ * `localhost:3000` carries **no session** — every authenticated request fails, from the first
+ * login attempt onward. These assertions are the regression guard: if the base URL ever becomes
+ * absolute again in the browser, browser authentication breaks silently and this fails loudly.
+ */
+describe('same-origin API base URL (ADR 006)', () => {
+  it('issues a relative, same-origin URL in the browser', async () => {
+    const fetchMock = stubFetch(stubResponse({ body: { status: 'UP' } }));
+
+    await apiRequest({ path: '/health' });
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/health');
+    // Any scheme or protocol-relative prefix here means the request leaves this origin.
+    expect(url.startsWith('/')).toBe(true);
+    expect(url.startsWith('//')).toBe(false);
+    expect(url).not.toMatch(/^[a-z]+:/i);
+  });
+
+  it('defaults to the relative path when NEXT_PUBLIC_API_BASE_URL is unset', () => {
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '');
+
+    expect(apiBaseUrl()).toBe('/api/v1');
+  });
+
+  it('prefixes BACKEND_INTERNAL_URL on the server, where a relative URL cannot resolve', () => {
+    // There is no origin to resolve against during SSR, so the server-only variable supplies one.
+    // It is deliberately not NEXT_PUBLIC_*: the browser must never learn a cookie-less route in.
+    vi.stubGlobal('window', undefined);
+    vi.stubEnv('BACKEND_INTERNAL_URL', 'http://backend:8080');
+
+    expect(apiBaseUrl()).toBe('http://backend:8080/api/v1');
   });
 });
 

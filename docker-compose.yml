@@ -85,8 +85,20 @@ services:
       context: ./apps/frontend
       dockerfile: ../../docker/frontend/Dockerfile
       args:
-        # Browser-facing, so it must be the HOST port — the browser cannot resolve `backend`.
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080/api/v1}
+        # ADR 006: relative and same-origin. The browser calls the frontend, and Next.js
+        # `rewrites()` proxies to the backend — which is what lets the httpOnly, SameSite=Lax
+        # session cookie be sent at all. An absolute cross-origin value here breaks every
+        # authenticated request, so it no longer follows BACKEND_HOST_PORT.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api/v1}
+        # `rewrites()` is serialised into the build output, so the proxy target is needed at
+        # build time too — the runtime variable below covers server-side API calls.
+        BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}
+        # Firebase client config (ADR 004). Public identifiers, never the service account. Empty
+        # by default, so `docker compose up` works with no Firebase project — the Google button
+        # renders disabled with an explanation rather than failing on click.
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}
     container_name: travel-planner-frontend
     restart: unless-stopped
     depends_on:
@@ -94,6 +106,10 @@ services:
         condition: service_started
     environment:
       NODE_ENV: production
+      # The rewrite target (ADR 006). Read by the Next.js server only, at runtime — inside the
+      # network the host is the service name, never localhost. Not NEXT_PUBLIC_*: the browser
+      # must never learn a second, cookie-less way to reach the API.
+      BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}
     ports:
       - '${FRONTEND_HOST_PORT:-3000}:3000'
     healthcheck:

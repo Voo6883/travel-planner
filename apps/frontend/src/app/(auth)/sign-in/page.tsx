@@ -1,18 +1,17 @@
-import { getTranslations } from 'next-intl/server';
-import { PageShell } from '@/components/layout/page-shell';
+import { Suspense } from 'react';
+import { SignInPanel } from '@/features/auth';
 
 /**
- * Placeholder for the `(auth)` route group.
+ * `/sign-in` — UC-A04, and the landing for a failed GitHub round trip (`?error=<code>`).
  *
- * Exists so the route boundary is real and reviewable; it holds no authentication logic.
- * Local login, Firebase Google, and GitHub OAuth are built in tasks/08, 10, and 11.
+ * Composition only (PLAN §4.2.6-D). The `Suspense` boundary is required, not decorative: the
+ * panel reads `useSearchParams`, and Next.js refuses to prerender a page that does so without
+ * one.
  */
-export default async function SignInPlaceholderPage() {
-  const t = await getTranslations('common');
-
+export default function SignInPage() {
   return (
-    <PageShell title={t('app_name')}>
-      <p className="text-sm text-foreground-muted">{t('scaffold_notice')}</p>
-    </PageShell>
+    <Suspense>
+      <SignInPanel />
+    </Suspense>
   );
 }

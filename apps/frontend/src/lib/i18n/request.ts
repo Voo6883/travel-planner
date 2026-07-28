@@ -1,3 +1,4 @@
+import type { AbstractIntlMessages } from 'next-intl';
 import { getRequestConfig } from 'next-intl/server';
 import { cookies } from 'next/headers';
 import { defaultLocale, isSupportedLocale, localeCookieName } from './config';
@@ -14,14 +15,21 @@ export default getRequestConfig(async () => {
   const requested = cookieStore.get(localeCookieName)?.value;
   const locale = isSupportedLocale(requested) ? requested : defaultLocale;
 
-  const common = (await import(`../../locales/${locale}/common.json`)) as {
-    default: Record<string, string>;
-  };
+  const [common, auth] = await Promise.all([
+    loadNamespace(locale, 'common'),
+    loadNamespace(locale, 'auth'),
+  ]);
 
   return {
     locale,
-    messages: {
-      common: common.default,
-    },
+    messages: { common, auth },
   };
 });
+
+/** One namespace file, typed as next-intl's own nested message shape. */
+async function loadNamespace(locale: string, namespace: string): Promise<AbstractIntlMessages> {
+  const loaded = (await import(`../../locales/${locale}/${namespace}.json`)) as {
+    default: AbstractIntlMessages;
+  };
+  return loaded.default;
+}

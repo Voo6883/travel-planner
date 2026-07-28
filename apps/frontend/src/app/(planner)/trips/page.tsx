@@ -1,18 +1,20 @@
 import { getTranslations } from 'next-intl/server';
-import { PageShell } from '@/components/layout/page-shell';
+import { PageHeader } from '@/components/layout/page-header';
+import { EmptyState } from '@/components/ui/empty-state';
 
 /**
- * Placeholder for the `(planner)` route group.
+ * `/trips` — the authenticated landing, and where every completed sign-in arrives.
  *
- * The trip list plus the planner chat composer (PLAN §3.2 entry point) land in tasks/18 and 21.
- * No trip data, no chat, no stepper here.
+ * The trip list and the planner chat composer (PLAN §3.2 entry point) belong to tasks 18 and 21;
+ * this task owns only the guarded route they will fill. What is real here is the guard, the
+ * shell, and the empty state — not placeholder trip data.
  */
-export default async function TripsPlaceholderPage() {
+export default async function TripsPage() {
   const t = await getTranslations('common');
 
   return (
-    <PageShell title={t('app_name')}>
-      <p className="text-sm text-foreground-muted">{t('scaffold_notice')}</p>
-    </PageShell>
+    <PageHeader title={t('nav.trips')} description={t('app_tagline')}>
+      <EmptyState title={t('states.empty_title')} description={t('scaffold_notice')} />
+    </PageHeader>
   );
 }

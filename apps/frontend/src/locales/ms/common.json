@@ -13,6 +13,46 @@
   "locale_label": "Bahasa",
   "locale_en": "English",
   "locale_ms": "Bahasa Melayu",
+  "nav": {
+    "primary_label": "Utama",
+    "trips": "Perjalanan",
+    "settings": "Tetapan",
+    "help": "Bantuan",
+    "admin": "Pentadbir",
+    "admin_context": "Pentadbir",
+    "open_menu": "Buka menu",
+    "close_menu": "Tutup menu",
+    "account_menu": "Akaun anda"
+  },
+  "actions": {
+    "retry": "Cuba lagi",
+    "cancel": "Batal",
+    "back": "Kembali",
+    "close": "Tutup",
+    "confirm": "Sahkan",
+    "go_to_trips": "Pergi ke perjalanan",
+    "sign_in": "Log masuk",
+    "sign_out": "Log keluar"
+  },
+  "theme": {
+    "label": "Penampilan",
+    "system": "Ikut sistem",
+    "light": "Cerah",
+    "dark": "Gelap"
+  },
+  "states": {
+    "loading": "Sedang memuatkan…",
+    "checking_session": "Menyemak sesi anda…",
+    "error_title": "Sesuatu tidak kena",
+    "empty_title": "Belum ada apa-apa di sini",
+    "offline_title": "Anda di luar talian",
+    "offline_body": "Halaman yang sudah anda buka kekal boleh dibaca. Apa-apa yang memerlukan pelayan akan menunggu sehingga anda bersambung semula.",
+    "back_online": "Kembali dalam talian",
+    "permission_denied_title": "Anda tiada akses ke halaman ini",
+    "permission_denied_body": "Kawasan ini untuk pentadbir. Semua dalam perancang anda masih tersedia.",
+    "request_reference": "Rujukan: {requestId}",
+    "retry_after": "Anda boleh cuba lagi dalam {seconds} saat."
+  },
   "errors": {
     "account_disabled": "Akaun ini telah dinyahaktifkan. Sila hubungi sokongan.",
     "account_locked": "Terlalu banyak percubaan log masuk. Sila tunggu beberapa minit dan cuba lagi.",
