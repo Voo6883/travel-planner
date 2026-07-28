@@ -21,3 +21,12 @@ spring:
 logging:
   level:
     com.travelplanner: INFO
+    # The stub mailer logs message bodies at DEBUG, and those bodies carry the verification and
+    # password-reset links. Login is gated on email_verified (UC-A08), so with the stub provider
+    # and this at INFO a developer can register and then has no reachable way to verify — the link
+    # exists only in a message nothing ever delivers. DEBUG here is what makes local sign-up
+    # completable: `docker compose logs backend` shows the link.
+    #
+    # Deliberately scoped to this profile and to the mail package. application-prod.yml does not
+    # set it, and the live Resend adapter never logs a body regardless.
+    com.travelplanner.infrastructure.mail: DEBUG

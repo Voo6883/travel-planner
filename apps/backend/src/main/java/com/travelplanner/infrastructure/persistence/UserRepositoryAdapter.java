@@ -6,9 +6,12 @@ import com.travelplanner.infrastructure.persistence.entity.UserEntity;
 import com.travelplanner.infrastructure.persistence.mapper.UserPersistenceMapper;
 import com.travelplanner.infrastructure.persistence.repository.UserJpaRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 /**
@@ -56,6 +59,25 @@ public class UserRepositoryAdapter implements UserRepositoryPort {
     @Override
     public boolean existsById(UUID userId) {
         return repository.existsById(userId);
+    }
+
+    /**
+     * The admin list (UC-A15). {@code id} is a secondary sort key rather than decoration: without it
+     * two accounts created in the same millisecond are free to swap places between two page
+     * requests, so one appears on both pages and the other on neither.
+     */
+    @Override
+    public List<User> findPage(int page, int pageSize, boolean newestFirst) {
+        Sort order = Sort.by(newestFirst ? Sort.Direction.DESC : Sort.Direction.ASC, "createdAt")
+                .and(Sort.by(Sort.Direction.ASC, "id"));
+        return repository.findAll(PageRequest.of(page, pageSize, order))
+                .map(mapper::toDomain)
+                .getContent();
+    }
+
+    @Override
+    public long countAll() {
+        return repository.count();
     }
 
     @Override

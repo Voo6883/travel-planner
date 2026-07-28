@@ -13,6 +13,7 @@ export type ValidationFailedDetails = components['schemas']['ValidationFailedDet
  * list is needed to narrow an arbitrary server string.
  */
 export const REGISTERED_ERROR_CODES = [
+  'account_closed',
   'account_disabled',
   'account_locked',
   'ai_rate_limited',
@@ -35,6 +36,7 @@ export const REGISTERED_ERROR_CODES = [
   'provider_unavailable',
   'rate_limited',
   'unauthorized',
+  'user_not_found',
   'validation_failed',
   'version_conflict',
 ] as const satisfies readonly ErrorCode[];

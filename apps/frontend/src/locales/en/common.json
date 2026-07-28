@@ -54,6 +54,7 @@
     "retry_after": "You can try again in {seconds} seconds."
   },
   "errors": {
+    "account_closed": "This account was closed by its owner and can no longer be changed.",
     "account_disabled": "This account has been disabled. Please contact support.",
     "account_locked": "Too many sign-in attempts. Please wait a few minutes and try again.",
     "ai_rate_limited": "The planner is busy right now. Please try again in a moment.",
@@ -76,6 +77,7 @@
     "provider_unavailable": "The sign-in provider is unavailable right now. Please try again.",
     "rate_limited": "Too many requests. Please wait a while before trying again.",
     "unauthorized": "Please sign in to continue.",
+    "user_not_found": "There is no account with that identifier.",
     "validation_failed": "Some details are not valid. Please check the highlighted fields.",
     "version_conflict": "This was updated somewhere else. Refresh to see the latest version."
   }

@@ -18,6 +18,17 @@ import org.springframework.http.HttpStatus;
  */
 public enum ApiErrorCode {
 
+    /**
+     * The target of an admin action is a closed account (UC-A14, PLAN §4.0.6).
+     *
+     * <p>{@code 409}: the request is well formed and conflicts with the account's current state. A
+     * closed account has been anonymised and holds no credential, so disabling it changes nothing
+     * and resetting its password would put a credential back on a row that must never have one —
+     * {@code ck_user_deleted_has_no_password} would reject the write anyway, and a typed conflict
+     * is a better answer than a constraint violation.
+     */
+    ACCOUNT_CLOSED("account_closed", HttpStatus.CONFLICT),
+
     /** Credential accepted, but {@code user.enabled} is false (ADR 009 §1). */
     ACCOUNT_DISABLED("account_disabled", HttpStatus.FORBIDDEN),
 
@@ -160,6 +171,17 @@ public enum ApiErrorCode {
 
     /** No valid session; the caller must sign in. */
     UNAUTHORIZED("unauthorized", HttpStatus.UNAUTHORIZED),
+
+    /**
+     * No account with the requested id (PLAN §4.0.6 "standard errors: {@code forbidden},
+     * {@code user_not_found}").
+     *
+     * <p>Distinct from {@link #NOT_FOUND}, which every other surface returns and which deliberately
+     * hides whether a resource exists. Only an administrator can reach this code, and an
+     * administrator is already entitled to list every account — so telling them "no such user"
+     * rather than "no such route" discloses nothing and makes a mistyped id diagnosable.
+     */
+    USER_NOT_FOUND("user_not_found", HttpStatus.NOT_FOUND),
 
     /** Schema or constraint failure. {@code details.fields} maps field name to message. */
     VALIDATION_FAILED("validation_failed", HttpStatus.BAD_REQUEST),

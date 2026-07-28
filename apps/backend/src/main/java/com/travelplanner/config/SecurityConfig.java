@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -47,9 +48,23 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
  *
  * <p>{@code logout} is public on purpose: it must succeed for a caller whose access token has
  * already expired, and a logout that can fail is one users learn to skip.
+ *
+ * <h2>Admin</h2>
+ *
+ * <p>{@code /api/v1/admin/**} requires the {@code ROLE_ADMIN} authority here <em>and</em> carries
+ * {@code @PreAuthorize("hasRole('ADMIN')")} on the controller (PLAN §4.0.6). The two are
+ * independent on purpose: the chain rule covers the whole prefix, including a controller a later
+ * task adds and forgets to annotate, while the annotation travels with the code it guards and
+ * survives a change to this file. One misconfiguration has to defeat both to open the surface.
+ *
+ * <p>{@code ROLE_ADMIN} is the Spring authority; the stored and published role value is
+ * {@code ADMIN}, and {@code JwtAuthenticationFilter} is the single place the prefix is applied.
+ * {@code hasRole} re-adds it, so its argument is the bare name — the two spellings are not
+ * interchangeable and mixing them denies everybody.
  */
 @Configuration
 @EnableConfigurationProperties(AuthSecurityProperties.class)
+@EnableMethodSecurity
 public class SecurityConfig {
 
     /**
@@ -89,6 +104,16 @@ public class SecurityConfig {
         // authenticated confirmation ADR 009 §4 requires.
         "/api/v1/auth/firebase",
     };
+
+    /** Every account-administration endpoint (PLAN §4.0.6), present and future. */
+    private static final String ADMIN_PREFIX = "/api/v1/admin/**";
+
+    /**
+     * The <em>role</em> name, not the authority. {@code hasRole} prepends {@code ROLE_} itself, so
+     * this is {@code ADMIN} and the authority it matches is {@code ROLE_ADMIN} —
+     * {@code hasRole("ROLE_ADMIN")} would look for {@code ROLE_ROLE_ADMIN} and deny everybody.
+     */
+    private static final String ADMIN_ROLE = "ADMIN";
 
     private final AuthSecurityProperties properties;
     private final ApiSecurityErrorHandler errors;
@@ -132,6 +157,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_POST).permitAll()
+                        // PLAN §4.0.6. Written against the prefix rather than the four known
+                        // paths, so an admin endpoint added later is protected before anyone
+                        // remembers to annotate it.
+                        .requestMatchers(ADMIN_PREFIX).hasRole(ADMIN_ROLE)
                         .anyRequest().authenticated())
                 .addFilterAfter(new CsrfCookieFilter(csrfTokens), AnonymousAuthenticationFilter.class);
 

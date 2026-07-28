@@ -1,0 +1,70 @@
+{
+  "status": {
+    "enabled": "Aktif",
+    "disabled": "Dinyahaktifkan",
+    "closed": "Ditutup oleh pemilik"
+  },
+  "field": {
+    "email": "E-mel",
+    "username": "Nama pengguna",
+    "username_absent": "Tidak ditetapkan",
+    "status": "Status",
+    "email_verified": "E-mel disahkan",
+    "verified_yes": "Disahkan",
+    "verified_no": "Belum disahkan",
+    "roles": "Peranan",
+    "created_at": "Dicipta",
+    "updated_at": "Perubahan terakhir",
+    "actions": "Tindakan",
+    "sign_in_methods": "Cara log masuk",
+    "sign_in_methods_none": "Tiada"
+  },
+  "list": {
+    "title": "Pengguna",
+    "description": "Akaun sahaja. Perjalanan, sembang, dan tempahan tidak pernah kelihatan di sini.",
+    "loading": "Memuatkan akaun…",
+    "result_count": "{total} akaun",
+    "empty_title": "Belum ada akaun",
+    "empty_body": "Akaun akan muncul di sini sebaik sahaja seseorang mendaftar.",
+    "manage_action": "Urus"
+  },
+  "detail": {
+    "page_title": "Akaun",
+    "description": "Lihat akaun ini dan urus aksesnya.",
+    "title": "Butiran akaun",
+    "loading": "Memuatkan akaun ini…",
+    "back_to_list": "Kembali ke semua pengguna",
+    "closed_notice": "Pemilik telah memadamkan akaun ini. Butirannya telah dilindungi identiti dan ia tidak boleh diubah lagi."
+  },
+  "actions": {
+    "title": "Urus akses",
+    "body": "Kedua-dua tindakan berkuat kuasa serta-merta dan melog keluar akaun ini daripada setiap peranti."
+  },
+  "status_action": {
+    "enable": "Aktifkan akaun",
+    "disable": "Nyahaktifkan akaun",
+    "enable_confirm_title": "Aktifkan {email}?",
+    "disable_confirm_title": "Nyahaktifkan {email}?",
+    "enable_confirm_body": "Pemilik boleh log masuk semula. Sesi yang telah ditamatkan tidak dipulihkan, jadi mereka perlu log masuk semula.",
+    "disable_confirm_body": "Pemilik dilog keluar daripada setiap peranti serta-merta dan tidak boleh log masuk sehingga anda mengaktifkan semula akaun ini.",
+    "enabled_success": "Akaun ini aktif semula.",
+    "disabled_success": "Akaun ini dinyahaktifkan dan setiap sesi telah ditamatkan."
+  },
+  "reset": {
+    "open_action": "Set semula kata laluan",
+    "title": "Set semula kata laluan untuk {email}",
+    "body": "Pilih kata laluan sementara untuk {email} dan sampaikan sendiri — melalui telefon, atau secara bersemuka.",
+    "warning": "Kata laluan ini tidak pernah dihantar melalui e-mel dan tidak boleh dibaca semula kemudian. Setiap sesi bagi akaun ini tamat serta-merta.",
+    "new_password_label": "Kata laluan sementara",
+    "new_password_help": "Sekurang-kurangnya 8 aksara.",
+    "confirm_password_label": "Sahkan kata laluan sementara",
+    "submit": "Set semula kata laluan",
+    "done_action": "Selesai",
+    "success_title": "Kata laluan telah diset semula",
+    "success_body": "Setiap sesi bagi {email} telah ditamatkan. Berikan kata laluan sementara yang baru anda pilih kepada mereka.",
+    "validation_required": "Masukkan kata laluan sementara.",
+    "validation_length": "Gunakan antara 8 hingga 72 aksara.",
+    "validation_mismatch": "Kedua-dua kata laluan tidak sepadan.",
+    "unavailable_provider_only": "Akaun ini log masuk melalui Google atau GitHub dan tiada kata laluan untuk diset semula."
+  }
+}

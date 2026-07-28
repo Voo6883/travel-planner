@@ -11,6 +11,7 @@ import com.travelplanner.domain.port.UserIdentityRepositoryPort;
 import com.travelplanner.domain.port.UserRepositoryPort;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -70,6 +71,27 @@ public final class AuthTestFakes {
         @Override
         public boolean existsById(UUID userId) {
             return byId.containsKey(userId);
+        }
+
+        /**
+         * Mirrors the adapter's ordering exactly, including the {@code id} tiebreaker — a fake that
+         * sorted only by {@code createdAt} would let a paging test pass while production silently
+         * repeated a row across two pages.
+         */
+        @Override
+        public List<User> findPage(int page, int pageSize, boolean newestFirst) {
+            Comparator<User> order = Comparator.comparing(User::createdAt)
+                    .thenComparing(user -> user.id().toString());
+            return byId.values().stream()
+                    .sorted(newestFirst ? order.reversed() : order)
+                    .skip((long) page * pageSize)
+                    .limit(pageSize)
+                    .toList();
+        }
+
+        @Override
+        public long countAll() {
+            return byId.size();
         }
 
         @Override

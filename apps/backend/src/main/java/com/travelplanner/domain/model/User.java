@@ -99,6 +99,20 @@ public record User(
                 sessionsValidAfter, deletedAt, createdAt, updatedAt);
     }
 
+    /**
+     * PLAN §4.0.6 — an administrator switched the account on or off.
+     *
+     * <p>The flag alone is not the feature. {@code JwtAuthenticationFilter} reads it on every
+     * request, so a disabled account cannot make a <em>new</em> request — but tokens already issued
+     * keep their {@code tv}, and the caller must therefore <em>also</em> terminate sessions through
+     * {@code SessionRevocationService} (ADR 009 §1). This record cannot do that itself: the bump
+     * has to be an atomic increment in SQL.
+     */
+    public User withEnabled(boolean nowEnabled, Instant updatedAt) {
+        return new User(id, username, email, passwordHash, emailVerified, role, nowEnabled,
+                tokenVersion, sessionsValidAfter, deletedAt, createdAt, updatedAt);
+    }
+
     /** UC-A07 and UC-A12 — a reset or a self-service change. The caller supplies an encoded hash. */
     public User withPasswordHash(String newPasswordHash, Instant updatedAt) {
         return new User(id, username, email, newPasswordHash, emailVerified, role, enabled,

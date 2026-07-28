@@ -1,19 +1,17 @@
-import { getTranslations } from 'next-intl/server';
-import { PageHeader } from '@/components/layout/page-header';
-import { EmptyState } from '@/components/ui/empty-state';
+import { redirect } from 'next/navigation';
 
 /**
- * `/admin` — now genuinely guarded (task 11), but still empty.
+ * `/admin` has no content of its own.
  *
- * User administration, audit views, and password reset are task 12. The route exists here only so
- * the `ADMIN` role check is real and reviewable rather than a promise.
+ * Account management is the whole of v1 administration (PLAN §4.0.6), so a landing page here would
+ * be one link on an otherwise empty screen — an extra click between an administrator and the only
+ * thing they came for. It redirects instead, and becomes a real page the first time a second admin
+ * capability exists to choose between.
+ *
+ * The redirect happens inside the `(admin)` group, so `AuthGuard require="admin"` in the layout
+ * still guards the destination: a non-admin is bounced from `/admin/users` exactly as they would
+ * have been from here.
  */
-export default async function AdminPage() {
-  const t = await getTranslations('common');
-
-  return (
-    <PageHeader title={t('nav.admin')}>
-      <EmptyState title={t('states.empty_title')} description={t('scaffold_notice')} />
-    </PageHeader>
-  );
+export default function AdminPage() {
+  redirect('/admin/users');
 }

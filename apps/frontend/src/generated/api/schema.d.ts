@@ -546,6 +546,101 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List every account (UC-A15)
+         * @description Paginated over all accounts, including disabled and closed ones — an administrator who
+         *     cannot see a disabled account cannot re-enable it.
+         *
+         *     `sort` accepts **`created_at`** only, with or without the `-` prefix; any other field is
+         *     `400 validation_failed`. Publishing one field rather than the whole row is deliberate: each
+         *     sortable column is an index this table would have to carry, and none of the others has a
+         *     use case.
+         *
+         *     Returns account state only. Nothing here exposes a user's trips, chats, or bookings.
+         */
+        get: operations["listAdminUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One account's administrative detail (UC-A15)
+         * @description The same account state the list carries, plus the sign-in methods attached to it. Read from
+         *     current database state, so a session revoked a moment ago is already reflected.
+         */
+        get: operations["getAdminUser"];
+        /**
+         * Enable or disable an account (PLAN §4.0.6)
+         * @description **Disabling terminates every session for the account** (ADR 009 §1). The `token_version`
+         *     bump is what makes "disabled" mean disabled now rather than within thirty minutes, and it
+         *     is why this is not a cosmetic flag.
+         *
+         *     An administrator may not disable their own account: it would remove the only role able to
+         *     re-enable it, and a lockout with no recovery path is a worse outcome than the mistake it
+         *     would be protecting against. That is `403 forbidden`.
+         *
+         *     A closed account (UC-A14) is `409 account_closed` — it holds no credential, so there is
+         *     nothing left to switch off.
+         *
+         *     `PUT`, not `PATCH`: `PATCH` is forbidden project-wide (ADR 008 §3). No `expected_version`,
+         *     because `user` is not a versioned aggregate (ADR 008 §1).
+         */
+        put: operations["updateAdminUser"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set a temporary password for an account (UC-A16)
+         * @description The administrator chooses the replacement and communicates it out of band; there is no
+         *     endpoint that reads it back, and it is never echoed in a response or a log.
+         *
+         *     **Every session for the account is terminated** (ADR 009 §1). This action exists for the
+         *     "that account is compromised" case, and a reset that leaves the intruder's session live
+         *     would achieve nothing.
+         *
+         *     An account with no local password (`FIREBASE_GOOGLE` or `GITHUB` only, ADR 009 §4) is not
+         *     addressable here — `409 account_closed` covers a closed account, and a provider-only
+         *     account is refused as `400 validation_failed`, because minting a local password for it
+         *     would add a second way in that its owner never chose.
+         */
+        put: operations["resetAdminUserPassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -606,6 +701,7 @@ export interface components {
          *
          *     | Code | HTTP | Meaning |
          *     |---|---|---|
+         *     | `account_closed` | 409 | The target account was closed by its owner (UC-A14) and can no longer be administered (PLAN §4.0.6) |
          *     | `account_disabled` | 403 | Credential accepted, but the account is switched off (ADR 009 §1) |
          *     | `account_locked` | 423 | Too many failed sign-ins for this identifier and address (ADR 009 §6). `details.retry_after_seconds` carries the wait |
          *     | `ai_rate_limited` | 429 | The AI provider rejected the request for quota reasons. Retryable with backoff |
@@ -628,11 +724,12 @@ export interface components {
          *     | `provider_unavailable` | 503 | The identity provider could not be reached or answered with a fault. Nothing was changed; the caller may retry |
          *     | `rate_limited` | 429 | Too many requests for this mail action from this address or for this email (ADR 009 §6). `details.retry_after_seconds` carries the wait |
          *     | `unauthorized` | 401 | No valid session; the caller must sign in |
+         *     | `user_not_found` | 404 | No account with this id (PLAN §4.0.6). Only ever returned to an administrator, who is already entitled to know which accounts exist — every other surface uses `not_found` |
          *     | `validation_failed` | 400 | Request failed schema or constraint validation. `details.fields` maps field name → message |
          *     | `version_conflict` | 409 | Optimistic-lock mismatch (ADR 008). `details.current_version` carries the server's version |
          * @enum {string}
          */
-        ErrorCode: "account_disabled" | "account_locked" | "ai_rate_limited" | "ai_response_invalid" | "ai_timeout" | "ai_unavailable" | "email_not_verified" | "firebase_email_not_verified" | "forbidden" | "identity_already_linked" | "internal_error" | "invalid_credentials" | "invalid_firebase_token" | "invalid_oauth_state" | "invalid_token" | "last_sign_in_method" | "not_found" | "provider_email_unavailable" | "provider_link_required" | "provider_unavailable" | "rate_limited" | "unauthorized" | "validation_failed" | "version_conflict";
+        ErrorCode: "account_closed" | "account_disabled" | "account_locked" | "ai_rate_limited" | "ai_response_invalid" | "ai_timeout" | "ai_unavailable" | "email_not_verified" | "firebase_email_not_verified" | "forbidden" | "identity_already_linked" | "internal_error" | "invalid_credentials" | "invalid_firebase_token" | "invalid_oauth_state" | "invalid_token" | "last_sign_in_method" | "not_found" | "provider_email_unavailable" | "provider_link_required" | "provider_unavailable" | "rate_limited" | "unauthorized" | "user_not_found" | "validation_failed" | "version_conflict";
         /**
          * @description Shape of `ApiErrorResponse.details` when `code` is `validation_failed`. Documented
          *     separately because it is the only `details` payload with a fixed structure that
@@ -967,6 +1064,83 @@ export interface components {
             total: number;
         };
         /**
+         * @description One row of the admin user list (UC-A15). Account state only — there is no field here, and
+         *     no endpoint anywhere under `/admin`, that reaches a user's trips, chats, or bookings.
+         */
+        AdminUserSummary: {
+            /** Format: uuid */
+            user_id: string;
+            /**
+             * @description Not `format: email`. A closed account's address is the unroutable
+             *     `deleted-<id>@deleted.invalid` placeholder UC-A14 leaves behind, and a strict validator
+             *     would reject the row this list has to be able to show.
+             * @example aisyah@example.com
+             */
+            email: string;
+            /** @description Null for a provider-created account, and for every closed one. */
+            username?: string | null;
+            roles: ("USER" | "ADMIN")[];
+            email_verified: boolean;
+            /**
+             * @description False when an administrator switched the account off, and also false for every closed
+             *     account — `closed` is what tells the two apart.
+             */
+            enabled: boolean;
+            /**
+             * @description The owner deleted the account (UC-A14). The row survives so trips keep an owner, but it
+             *     is anonymised, holds no credential, and refuses every admin mutation.
+             */
+            closed: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description One account in full (UC-A15). The summary plus the sign-in methods attached to it, which is
+         *     what tells an administrator whether "reset password" is even applicable — a provider-only
+         *     account has no local password to replace (ADR 009 §4).
+         */
+        AdminUserDetail: components["schemas"]["AdminUserSummary"] & {
+            linked_providers: ("LOCAL" | "FIREBASE_GOOGLE" | "GITHUB")[];
+            /**
+             * @description `password_hash IS NOT NULL`. The password itself is never exposed in any form —
+             *     this is the single bit an administrator needs, and it is the same bit ADR 009 §4
+             *     keys the OAuth-only rules off.
+             */
+            has_local_password: boolean;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description One page of `AdminUserSummary` plus the shared pagination envelope (PLAN §6.1). */
+        AdminUserPage: components["schemas"]["PageMetadata"] & {
+            items: components["schemas"]["AdminUserSummary"][];
+        };
+        /**
+         * @description The one account field an administrator may change (PLAN §4.0.6). Role is deliberately absent:
+         *     `docs/AGENT-HARNESS.md` §1 puts role hierarchies out of scope, and an endpoint that can grant
+         *     `ADMIN` is a privilege-escalation surface that no use case asks for.
+         */
+        UpdateAdminUserRequest: {
+            /**
+             * @description `false` switches the account off **and terminates every session it holds** (ADR 009 §1).
+             *     `true` restores access; it does not resurrect the terminated sessions, and the owner
+             *     signs in again.
+             */
+            enabled: boolean;
+        };
+        /**
+         * @description The replacement password an administrator sets on someone else's account (UC-A16). It is
+         *     never returned, never logged, and never mailed — the administrator communicates it out of
+         *     band, which is what makes the out-of-band channel the second factor.
+         */
+        AdminResetPasswordRequest: {
+            /**
+             * Format: password
+             * @description Same policy as registration — minimum 8 characters, BCrypt strength 12, and a
+             *     72-character ceiling that is BCrypt's own byte limit rather than an arbitrary cap.
+             */
+            new_password: string;
+        };
+        /**
          * @description Optimistic-concurrency fragment (ADR 008 §2). Every mutation of a versioned aggregate
          *     composes this into its request body:
          *
@@ -1068,6 +1242,48 @@ export interface components {
                  * @example {
                  *       "code": "not_found",
                  *       "message": "The requested resource does not exist.",
+                 *       "details": {}
+                 *     }
+                 */
+                "application/json": components["schemas"]["ApiErrorResponse"];
+            };
+        };
+        /**
+         * @description No account with this id (PLAN §4.0.6). Deliberately distinct from `not_found`: only an
+         *     administrator can reach it, and an administrator may already list every account, so naming
+         *     the condition discloses nothing and makes a mistyped id diagnosable.
+         */
+        UserNotFound: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "code": "user_not_found",
+                 *       "message": "No account exists with that identifier.",
+                 *       "details": {}
+                 *     }
+                 */
+                "application/json": components["schemas"]["ApiErrorResponse"];
+            };
+        };
+        /**
+         * @description The target account was closed by its owner (UC-A14). Its row survives so trips keep an
+         *     owner, but it is anonymised and holds no credential — there is nothing left to disable and
+         *     nothing that may be given a password.
+         */
+        AccountClosed: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "code": "account_closed",
+                 *       "message": "This account has been closed.",
                  *       "details": {}
                  *     }
                  */
@@ -1397,6 +1613,12 @@ export interface components {
          *     rather than a 404 that reads like a routing mistake.
          */
         ProviderParam: "LOCAL" | "FIREBASE_GOOGLE" | "GITHUB";
+        /**
+         * @description The account's surrogate key. Supplied by the administrator, never by the account owner —
+         *     no non-admin endpoint anywhere on this API accepts a user id, because ownership always
+         *     comes from the session cookie.
+         */
+        UserIdParam: string;
         /** @description Zero-based page index (PLAN §6.1). */
         PageParam: number;
         /** @description Items per page. Values above the maximum are rejected, never clamped. */
@@ -1914,6 +2136,147 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listAdminUsers: {
+        parameters: {
+            query?: {
+                /** @description Zero-based page index (PLAN §6.1). */
+                page?: components["parameters"]["PageParam"];
+                /** @description Items per page. Values above the maximum are rejected, never clamped. */
+                page_size?: components["parameters"]["PageSizeParam"];
+                /**
+                 * @description Sort field, optionally prefixed with `-` for descending. Endpoints publish their own
+                 *     allowed field names; an unknown field is `400 validation_failed`.
+                 */
+                sort?: components["parameters"]["SortParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of accounts, newest first by default. */
+            200: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserPage"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getAdminUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The account's surrogate key. Supplied by the administrator, never by the account owner —
+                 *     no non-admin endpoint anywhere on this API accepts a user id, because ownership always
+                 *     comes from the session cookie.
+                 */
+                userId: components["parameters"]["UserIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The requested account. */
+            200: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["UserNotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateAdminUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The account's surrogate key. Supplied by the administrator, never by the account owner —
+                 *     no non-admin endpoint anywhere on this API accepts a user id, because ownership always
+                 *     comes from the session cookie.
+                 */
+                userId: components["parameters"]["UserIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAdminUserRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated account. Sessions are already terminated when it was disabled. */
+            200: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserDetail"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["UserNotFound"];
+            409: components["responses"]["AccountClosed"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    resetAdminUserPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The account's surrogate key. Supplied by the administrator, never by the account owner —
+                 *     no non-admin endpoint anywhere on this API accepts a user id, because ownership always
+                 *     comes from the session cookie.
+                 */
+                userId: components["parameters"]["UserIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description The password was replaced and every session for the account was ended. */
+            204: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["UserNotFound"];
+            409: components["responses"]["AccountClosed"];
             500: components["responses"]["InternalError"];
         };
     };

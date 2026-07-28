@@ -2,6 +2,7 @@ package com.travelplanner.domain.port;
 
 import com.travelplanner.domain.model.User;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,6 +35,26 @@ public interface UserRepositoryPort {
     Optional<User> findByUsernameIgnoreCase(String username);
 
     boolean existsById(UUID userId);
+
+    /**
+     * One page of accounts for the admin list (UC-A15). Task 12's only read that is not keyed on a
+     * single account.
+     *
+     * <p>Disabled and closed accounts are included. An administrator who cannot see a disabled
+     * account cannot re-enable it, and hiding closed ones would make the list disagree with
+     * {@link #countAll()} for no benefit.
+     *
+     * <p>Ordered by {@code created_at} and then by {@code id}. The tiebreaker is not decoration: two
+     * accounts created in the same millisecond would otherwise be free to swap places between page
+     * 1 and page 2, so one of them appears twice and the other never appears at all.
+     *
+     * @param page zero-based page index
+     * @param newestFirst {@code true} for the published default, {@code -created_at}
+     */
+    List<User> findPage(int page, int pageSize, boolean newestFirst);
+
+    /** Total accounts, for the {@code total} field of the page envelope (PLAN §6.1). */
+    long countAll();
 
     boolean existsByEmailIgnoreCase(String email);
 

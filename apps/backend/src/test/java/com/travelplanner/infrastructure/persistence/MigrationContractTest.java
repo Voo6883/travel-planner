@@ -2,6 +2,8 @@ package com.travelplanner.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.travelplanner.domain.enums.AdminAction;
+import com.travelplanner.domain.enums.AdminActionResult;
 import com.travelplanner.domain.enums.TripStatus;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -163,6 +165,55 @@ class MigrationContractTest {
     }
 
     @Test
+    void theAdminAuditTableRecordsWhoDidWhatToWhomAndNothingElse() {
+        // PLAN §4.0.6. The columns are the four facts an investigation needs; what is absent is the
+        // point, and it is absent by shape rather than by discipline — AdminAuditEvent has no field
+        // able to carry a credential, so adding one would mean changing four files including this.
+        String auditMigration = read("V12__create_audit_event_table.sql");
+
+        assertThat(auditMigration).contains("CREATE TABLE audit_event");
+        assertThat(auditMigration).contains("actor_user_id").contains("target_user_id")
+                .contains("action").contains("result").contains("created_at");
+        // The column list only. The trailing COMMENT ON statements say the table holds no password,
+        // and a naive scan of the whole file would fail on its own promise.
+        assertThat(between(stripComments(auditMigration), "CREATE TABLE audit_event (", ");"))
+                .describedAs("an audit row must never be able to hold a credential or an address")
+                .doesNotContain("password")
+                .doesNotContain("email");
+        assertThat(auditMigration)
+                .describedAs("both investigation queries must be one indexed lookup")
+                .contains("ON audit_event (target_user_id, created_at DESC)")
+                .contains("ON audit_event (actor_user_id, created_at DESC)");
+    }
+
+    @Test
+    void theAuditActionAndResultConstraintsListExactlyTheDomainEnumConstants() {
+        String auditMigration = read("V12__create_audit_event_table.sql");
+
+        assertThat(constantsIn(auditMigration, "CONSTRAINT ck_audit_event_action\n"
+                + "        CHECK (action IN (")).containsExactlyInAnyOrderElementsOf(
+                        Stream.of(AdminAction.values()).map(Enum::name).toList());
+        assertThat(constantsIn(auditMigration, "CONSTRAINT ck_audit_event_result\n"
+                + "        CHECK (result IN (")).containsExactlyInAnyOrderElementsOf(
+                        Stream.of(AdminActionResult.values()).map(Enum::name).toList());
+    }
+
+    @Test
+    void noMigrationSeedsAnAccountOrCarriesACredential() {
+        // PLAN §4.0.6 "do not store the plaintext seed password in migration output". The dev admin
+        // is created by a @Profile-gated bean instead, which is also why there is no SQL here for a
+        // production deployment to run by accident.
+        String sql = stripComments(allSql()).toLowerCase(Locale.ROOT);
+
+        assertThat(sql)
+                .describedAs("the dev admin seed belongs to DevAdminSeeder, never to a migration")
+                .doesNotContain("insert into \"user\"")
+                .doesNotContain("123456")
+                .doesNotContain("$2a$")
+                .doesNotContain("$2b$");
+    }
+
+    @Test
     void everyAgentMutableAggregateNamedByAdr008HasAVersionColumn() {
         assertThat(read("V5__create_trip_table.sql")).contains("version");
         assertThat(read("V6__create_trip_brief_table.sql")).contains("version");
@@ -215,6 +266,14 @@ class MigrationContractTest {
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }
+    }
+
+    /** The quoted constants of a {@code CHECK (col IN ('A', 'B'))} clause, in file order. */
+    private static List<String> constantsIn(String sql, String marker) {
+        return Stream.of(between(sql, marker, "))").split(","))
+                .map(value -> value.replace("'", "").trim())
+                .filter(value -> !value.isEmpty())
+                .toList();
     }
 
     private static String between(String source, String start, String end) {

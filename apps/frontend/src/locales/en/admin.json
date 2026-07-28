@@ -1,0 +1,70 @@
+{
+  "status": {
+    "enabled": "Active",
+    "disabled": "Disabled",
+    "closed": "Closed by owner"
+  },
+  "field": {
+    "email": "Email",
+    "username": "Username",
+    "username_absent": "Not set",
+    "status": "Status",
+    "email_verified": "Email verified",
+    "verified_yes": "Verified",
+    "verified_no": "Not verified",
+    "roles": "Role",
+    "created_at": "Created",
+    "updated_at": "Last changed",
+    "actions": "Actions",
+    "sign_in_methods": "Sign-in methods",
+    "sign_in_methods_none": "None"
+  },
+  "list": {
+    "title": "Users",
+    "description": "Accounts only. Trips, chats, and bookings are never visible from here.",
+    "loading": "Loading accounts…",
+    "result_count": "{total} accounts",
+    "empty_title": "No accounts yet",
+    "empty_body": "Accounts appear here as soon as somebody signs up.",
+    "manage_action": "Manage"
+  },
+  "detail": {
+    "page_title": "Account",
+    "description": "View this account and manage its access.",
+    "title": "Account details",
+    "loading": "Loading this account…",
+    "back_to_list": "Back to all users",
+    "closed_notice": "The owner deleted this account. Its details have been anonymised and it can no longer be changed."
+  },
+  "actions": {
+    "title": "Manage access",
+    "body": "Both actions take effect immediately and sign this account out of every device."
+  },
+  "status_action": {
+    "enable": "Enable account",
+    "disable": "Disable account",
+    "enable_confirm_title": "Enable {email}?",
+    "disable_confirm_title": "Disable {email}?",
+    "enable_confirm_body": "The owner will be able to sign in again. Sessions that were ended are not restored, so they will need to sign in.",
+    "disable_confirm_body": "The owner is signed out of every device straight away and cannot sign in again until you enable the account.",
+    "enabled_success": "The account is active again.",
+    "disabled_success": "The account is disabled and every session has ended."
+  },
+  "reset": {
+    "open_action": "Reset password",
+    "title": "Reset the password for {email}",
+    "body": "Choose a temporary password for {email} and pass it on yourself — by phone, or in person.",
+    "warning": "The password is never emailed and cannot be read back later. Every session for this account ends immediately.",
+    "new_password_label": "Temporary password",
+    "new_password_help": "At least 8 characters.",
+    "confirm_password_label": "Confirm temporary password",
+    "submit": "Reset password",
+    "done_action": "Done",
+    "success_title": "Password reset",
+    "success_body": "Every session for {email} has ended. Give them the temporary password you just chose.",
+    "validation_required": "Enter a temporary password.",
+    "validation_length": "Use between 8 and 72 characters.",
+    "validation_mismatch": "The two passwords do not match.",
+    "unavailable_provider_only": "This account signs in through Google or GitHub and has no password to reset."
+  }
+}

@@ -13,6 +13,17 @@ export const queryKeys = {
     all: ['auth'] as const,
     currentUser: () => ['auth', 'me'] as const,
   },
+  /**
+   * Account administration (UC-A15, UC-A16). `users()` is the invalidation prefix: a disable
+   * changes both the row in the list and the detail screen, and invalidating one without the other
+   * leaves an administrator looking at state the server no longer has.
+   */
+  admin: {
+    all: ['admin'] as const,
+    users: () => ['admin', 'users'] as const,
+    userPage: (page: number) => ['admin', 'users', 'page', page] as const,
+    user: (userId: string) => ['admin', 'users', 'detail', userId] as const,
+  },
   platform: {
     all: ['platform'] as const,
     health: () => ['platform', 'health'] as const,

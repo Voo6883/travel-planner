@@ -39,6 +39,7 @@ components:
 
         | Code | HTTP | Meaning |
         |---|---|---|
+        | `account_closed` | 409 | The target account was closed by its owner (UC-A14) and can no longer be administered (PLAN §4.0.6) |
         | `account_disabled` | 403 | Credential accepted, but the account is switched off (ADR 009 §1) |
         | `account_locked` | 423 | Too many failed sign-ins for this identifier and address (ADR 009 §6). `details.retry_after_seconds` carries the wait |
         | `ai_rate_limited` | 429 | The AI provider rejected the request for quota reasons. Retryable with backoff |
@@ -61,9 +62,11 @@ components:
         | `provider_unavailable` | 503 | The identity provider could not be reached or answered with a fault. Nothing was changed; the caller may retry |
         | `rate_limited` | 429 | Too many requests for this mail action from this address or for this email (ADR 009 §6). `details.retry_after_seconds` carries the wait |
         | `unauthorized` | 401 | No valid session; the caller must sign in |
+        | `user_not_found` | 404 | No account with this id (PLAN §4.0.6). Only ever returned to an administrator, who is already entitled to know which accounts exist — every other surface uses `not_found` |
         | `validation_failed` | 400 | Request failed schema or constraint validation. `details.fields` maps field name → message |
         | `version_conflict` | 409 | Optimistic-lock mismatch (ADR 008). `details.current_version` carries the server's version |
       enum:
+        - account_closed
         - account_disabled
         - account_locked
         - ai_rate_limited
@@ -86,6 +89,7 @@ components:
         - provider_unavailable
         - rate_limited
         - unauthorized
+        - user_not_found
         - validation_failed
         - version_conflict
 

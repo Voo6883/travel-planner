@@ -5,6 +5,8 @@ import enCommon from './en/common.json';
 import msCommon from './ms/common.json';
 import enAuth from './en/auth.json';
 import msAuth from './ms/auth.json';
+import enAdmin from './en/admin.json';
+import msAdmin from './ms/admin.json';
 
 /**
  * Guards the i18n contract (PLAN §4.2.10). A missing key renders a raw key string in the UI, so
@@ -35,6 +37,7 @@ function flatten(messages: Messages, prefix = ''): Record<string, string> {
 const namespaces = [
   { name: 'common', en: enCommon, ms: msCommon },
   { name: 'auth', en: enAuth, ms: msAuth },
+  { name: 'admin', en: enAdmin, ms: msAdmin },
 ] as const;
 
 const flatEn = flatten(enCommon);

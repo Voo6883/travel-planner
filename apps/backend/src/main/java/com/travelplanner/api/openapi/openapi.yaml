@@ -85,6 +85,23 @@ tags:
       **Enumeration.** `POST /auth/register` returns the identical body whether or not the address
       is already in use, and `POST /auth/login` returns one `invalid_credentials` for an unknown
       account and a wrong password alike (ADR 009 §6).
+  - name: admin
+    description: |
+      Account administration (PLAN §4.0.6, UC-A15, UC-A16). Every operation requires the
+      `ROLE_ADMIN` authority, which Spring Security derives from the stored role value `ADMIN`.
+
+      **Accounts only.** An administrator manages *accounts* — list, view, enable/disable, reset
+      password. There is deliberately no admin surface onto a user's trips, chats, bookings, or
+      LLM content, and `TripRepositoryPort` has no unscoped lookup for one to be built on.
+
+      **Every mutation is audited.** Actor, target, action, time, and result are written to
+      `audit_event` in the same transaction as the change, so the trail can never claim a change
+      that did not commit.
+
+      **Mutations terminate sessions.** Disabling an account and resetting its password both bump
+      `user.token_version` through the ADR 009 §1 revocation path. Without it a disabled or
+      compromised account keeps working until its access token expires — unacceptable for an
+      account that can spend money.
 
 paths:
   /health:
@@ -797,6 +814,174 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /admin/users:
+    get:
+      tags: [admin]
+      operationId: listAdminUsers
+      summary: List every account (UC-A15)
+      description: |
+        Paginated over all accounts, including disabled and closed ones — an administrator who
+        cannot see a disabled account cannot re-enable it.
+
+        `sort` accepts **`created_at`** only, with or without the `-` prefix; any other field is
+        `400 validation_failed`. Publishing one field rather than the whole row is deliberate: each
+        sortable column is an index this table would have to carry, and none of the others has a
+        use case.
+
+        Returns account state only. Nothing here exposes a user's trips, chats, or bookings.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: One page of accounts, newest first by default.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserPage'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/users/{userId}:
+    get:
+      tags: [admin]
+      operationId: getAdminUser
+      summary: One account's administrative detail (UC-A15)
+      description: |
+        The same account state the list carries, plus the sign-in methods attached to it. Read from
+        current database state, so a session revoked a moment ago is already reflected.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: The requested account.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/UserNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [admin]
+      operationId: updateAdminUser
+      summary: Enable or disable an account (PLAN §4.0.6)
+      description: |
+        **Disabling terminates every session for the account** (ADR 009 §1). The `token_version`
+        bump is what makes "disabled" mean disabled now rather than within thirty minutes, and it
+        is why this is not a cosmetic flag.
+
+        An administrator may not disable their own account: it would remove the only role able to
+        re-enable it, and a lockout with no recovery path is a worse outcome than the mistake it
+        would be protecting against. That is `403 forbidden`.
+
+        A closed account (UC-A14) is `409 account_closed` — it holds no credential, so there is
+        nothing left to switch off.
+
+        `PUT`, not `PATCH`: `PATCH` is forbidden project-wide (ADR 008 §3). No `expected_version`,
+        because `user` is not a versioned aggregate (ADR 008 §1).
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAdminUserRequest'
+      responses:
+        '200':
+          description: The updated account. Sessions are already terminated when it was disabled.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserDetail'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/UserNotFound'
+        '409':
+          $ref: '#/components/responses/AccountClosed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/users/{userId}/reset-password:
+    put:
+      tags: [admin]
+      operationId: resetAdminUserPassword
+      summary: Set a temporary password for an account (UC-A16)
+      description: |
+        The administrator chooses the replacement and communicates it out of band; there is no
+        endpoint that reads it back, and it is never echoed in a response or a log.
+
+        **Every session for the account is terminated** (ADR 009 §1). This action exists for the
+        "that account is compromised" case, and a reset that leaves the intruder's session live
+        would achieve nothing.
+
+        An account with no local password (`FIREBASE_GOOGLE` or `GITHUB` only, ADR 009 §4) is not
+        addressable here — `409 account_closed` covers a closed account, and a provider-only
+        account is refused as `400 validation_failed`, because minting a local password for it
+        would add a second way in that its owner never chose.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminResetPasswordRequest'
+      responses:
+        '204':
+          description: The password was replaced and every session for the account was ended.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/UserNotFound'
+        '409':
+          $ref: '#/components/responses/AccountClosed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
 components:
 
   securitySchemes:
@@ -853,6 +1038,18 @@ components:
       schema:
         type: string
         enum: [LOCAL, FIREBASE_GOOGLE, GITHUB]
+
+    UserIdParam:
+      name: userId
+      in: path
+      required: true
+      description: |
+        The account's surrogate key. Supplied by the administrator, never by the account owner —
+        no non-admin endpoint anywhere on this API accepts a user id, because ownership always
+        comes from the session cookie.
+      schema:
+        type: string
+        format: uuid
 
     PageParam:
       name: page
@@ -1247,6 +1444,124 @@ components:
         page_size: 20
         total: 142
 
+    AdminUserSummary:
+      type: object
+      description: |
+        One row of the admin user list (UC-A15). Account state only — there is no field here, and
+        no endpoint anywhere under `/admin`, that reaches a user's trips, chats, or bookings.
+      required:
+        - user_id
+        - email
+        - roles
+        - email_verified
+        - enabled
+        - closed
+        - created_at
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          description: |
+            Not `format: email`. A closed account's address is the unroutable
+            `deleted-<id>@deleted.invalid` placeholder UC-A14 leaves behind, and a strict validator
+            would reject the row this list has to be able to show.
+          example: aisyah@example.com
+        username:
+          type: string
+          nullable: true
+          description: Null for a provider-created account, and for every closed one.
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [USER, ADMIN]
+        email_verified:
+          type: boolean
+        enabled:
+          type: boolean
+          description: |
+            False when an administrator switched the account off, and also false for every closed
+            account — `closed` is what tells the two apart.
+        closed:
+          type: boolean
+          description: |
+            The owner deleted the account (UC-A14). The row survives so trips keep an owner, but it
+            is anonymised, holds no credential, and refuses every admin mutation.
+        created_at:
+          type: string
+          format: date-time
+
+    AdminUserDetail:
+      description: |
+        One account in full (UC-A15). The summary plus the sign-in methods attached to it, which is
+        what tells an administrator whether "reset password" is even applicable — a provider-only
+        account has no local password to replace (ADR 009 §4).
+      allOf:
+        - $ref: '#/components/schemas/AdminUserSummary'
+        - type: object
+          required: [linked_providers, has_local_password, updated_at]
+          properties:
+            linked_providers:
+              type: array
+              items:
+                type: string
+                enum: [LOCAL, FIREBASE_GOOGLE, GITHUB]
+            has_local_password:
+              type: boolean
+              description: |
+                `password_hash IS NOT NULL`. The password itself is never exposed in any form —
+                this is the single bit an administrator needs, and it is the same bit ADR 009 §4
+                keys the OAuth-only rules off.
+            updated_at:
+              type: string
+              format: date-time
+
+    AdminUserPage:
+      description: One page of `AdminUserSummary` plus the shared pagination envelope (PLAN §6.1).
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminUserSummary'
+
+    UpdateAdminUserRequest:
+      type: object
+      description: |
+        The one account field an administrator may change (PLAN §4.0.6). Role is deliberately absent:
+        `docs/AGENT-HARNESS.md` §1 puts role hierarchies out of scope, and an endpoint that can grant
+        `ADMIN` is a privilege-escalation surface that no use case asks for.
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+          description: |
+            `false` switches the account off **and terminates every session it holds** (ADR 009 §1).
+            `true` restores access; it does not resurrect the terminated sessions, and the owner
+            signs in again.
+
+    AdminResetPasswordRequest:
+      type: object
+      description: |
+        The replacement password an administrator sets on someone else's account (UC-A16). It is
+        never returned, never logged, and never mailed — the administrator communicates it out of
+        band, which is what makes the out-of-band channel the second factor.
+      required: [new_password]
+      properties:
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          description: |
+            Same policy as registration — minimum 8 characters, BCrypt strength 12, and a
+            72-character ceiling that is BCrypt's own byte limit rather than an arbitrary cap.
+
     ExpectedVersion:
       type: object
       description: |
@@ -1338,6 +1653,40 @@ components:
           example:
             code: not_found
             message: The requested resource does not exist.
+            details: {}
+
+    UserNotFound:
+      description: |
+        No account with this id (PLAN §4.0.6). Deliberately distinct from `not_found`: only an
+        administrator can reach it, and an administrator may already list every account, so naming
+        the condition discloses nothing and makes a mistyped id diagnosable.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            code: user_not_found
+            message: No account exists with that identifier.
+            details: {}
+
+    AccountClosed:
+      description: |
+        The target account was closed by its owner (UC-A14). Its row survives so trips keep an
+        owner, but it is anonymised and holds no credential — there is nothing left to disable and
+        nothing that may be given a password.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            code: account_closed
+            message: This account has been closed.
             details: {}
 
     VersionConflict:

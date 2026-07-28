@@ -84,7 +84,7 @@ class OpenApiSpecTest {
                 "ValidationFailed", "Unauthorized", "Forbidden", "NotFound", "VersionConflict",
                 "InternalError", "InvalidCredentials", "SignInForbidden", "AccountLocked",
                 "InvalidProviderToken", "ProviderSignInForbidden", "ProviderLinkConflict",
-                "ProviderEmailUnavailable", "ProviderUnavailable");
+                "ProviderEmailUnavailable", "ProviderUnavailable", "UserNotFound", "AccountClosed");
 
         assertThat(responses).containsKeys(errorResponses.toArray(String[]::new));
         errorResponses.forEach(name -> {
@@ -131,6 +131,56 @@ class OpenApiSpecTest {
     }
 
     @Test
+    void theAdminSurfaceIsExactlyTheCapabilityTablePlanSection406Publishes() {
+        assertThat(spec.getPaths()).containsKeys(
+                "/admin/users", "/admin/users/{userId}", "/admin/users/{userId}/reset-password");
+
+        PathItem detail = spec.getPaths().get("/admin/users/{userId}");
+        assertThat(detail.getGet().getOperationId()).isEqualTo("getAdminUser");
+        assertThat(detail.getPut().getOperationId()).isEqualTo("updateAdminUser");
+        // No DELETE. PLAN §4.0.6 gives an administrator four capabilities and deleting somebody
+        // else's account is not among them — UC-A14 is the owner's own action.
+        assertThat(detail.getDelete()).isNull();
+    }
+
+    @Test
+    void everyAdminOperationRequiresASession() {
+        // The role check is Spring Security's; what the contract has to say is that none of these
+        // is reachable anonymously. An admin path published without `security` would be an
+        // open account-administration API the moment somebody generated a client from it.
+        adminOperations().forEach(operation ->
+                assertThat(operation.getSecurity())
+                        .describedAs("security for %s", operation.getOperationId())
+                        .isNotEmpty());
+    }
+
+    @Test
+    void everyAdminMutationDeclaresTheForbiddenAndUserNotFoundResponses() {
+        // PLAN §4.0.6 "standard errors: forbidden, user_not_found". A mutation that documents
+        // neither leaves a client with no branch for the two outcomes it will actually meet.
+        adminOperations().stream()
+                .filter(operation -> !"listAdminUsers".equals(operation.getOperationId()))
+                .forEach(operation -> assertThat(operation.getResponses())
+                        .describedAs("responses for %s", operation.getOperationId())
+                        .containsKeys("403", "404"));
+    }
+
+    @Test
+    void noAdminSchemaPublishesACredentialOrAnotherUsersContent() {
+        // The two invariants the whole admin slice rests on: an administrator manages accounts, and
+        // never sees a credential. Both are properties of the published shape, so both are testable
+        // here rather than being a convention somebody has to keep.
+        List<String> exposed = List.of("AdminUserSummary", "AdminUserDetail");
+        exposed.forEach(name -> assertThat(propertyNamesOf(name))
+                .describedAs("properties of %s", name)
+                .doesNotContain("password", "password_hash", "new_password", "token_version")
+                .doesNotContain("trips", "trip_id", "conversations", "bookings"));
+
+        // `has_local_password` is the single bit that survives: whether a reset applies at all.
+        assertThat(propertyNamesOf("AdminUserDetail")).contains("has_local_password");
+    }
+
+    @Test
     void paginationParametersMatchThePublishedDefaultsAndCeiling() {
         Map<String, Parameter> parameters = spec.getComponents().getParameters();
         assertThat(parameters).containsKeys("PageParam", "PageSizeParam", "SortParam");
@@ -169,6 +219,37 @@ class OpenApiSpecTest {
                 .forEach(operation -> operation.getResponses().values().forEach(response ->
                         assertThat(response.getContent().keySet())
                                 .containsExactly("text/event-stream")));
+    }
+
+    private static List<Operation> adminOperations() {
+        return spec.getPaths().entrySet().stream()
+                .filter(entry -> entry.getKey().startsWith("/admin/"))
+                .flatMap(entry -> entry.getValue().readOperations().stream())
+                .toList();
+    }
+
+    /**
+     * Property names of a component schema, flattened through {@code allOf}. Both admin response
+     * schemas compose {@code PageMetadata} or {@code AdminUserSummary}, and a check that read only
+     * the outer object's own properties would pass while the composed half published anything at
+     * all.
+     */
+    private static List<String> propertyNamesOf(String schemaName) {
+        return flattenedProperties(spec.getComponents().getSchemas().get(schemaName));
+    }
+
+    private static List<String> flattenedProperties(Schema<?> schema) {
+        if (schema == null) {
+            return List.of();
+        }
+        List<String> names = new java.util.ArrayList<>();
+        if (schema.getProperties() != null) {
+            names.addAll(schema.getProperties().keySet());
+        }
+        if (schema.getAllOf() != null) {
+            schema.getAllOf().forEach(part -> names.addAll(flattenedProperties(part)));
+        }
+        return names;
     }
 
     private static List<Operation> allOperations() {

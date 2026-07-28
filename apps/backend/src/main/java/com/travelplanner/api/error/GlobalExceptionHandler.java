@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -81,6 +82,24 @@ public class GlobalExceptionHandler {
         // rather than returned.
         log.debug("Rejected malformed request", exception);
         return validationFailed(Map.of());
+    }
+
+    /**
+     * Method security denied the call — {@code @PreAuthorize("hasRole('ADMIN')")} on the admin
+     * controller (PLAN §4.0.6).
+     *
+     * <p>{@code ApiSecurityErrorHandler} renders the identical envelope for a denial raised inside
+     * the filter chain, but it never sees this one: {@code @PreAuthorize} runs in a proxy around the
+     * controller method, so its {@code AuthorizationDeniedException} is resolved here first. Without
+     * this handler the catch-all below would turn a correct authorisation decision into
+     * {@code 500 internal_error} — a security control that works but reports itself as a bug.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException denial) {
+        log.debug("Method security denied a call", denial);
+        return ResponseEntity.status(ApiErrorCode.FORBIDDEN.status())
+                .body(ApiErrorResponse.of(ApiErrorCode.FORBIDDEN.code(),
+                        "This action is not allowed."));
     }
 
     /**

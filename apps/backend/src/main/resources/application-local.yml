@@ -22,3 +22,7 @@ spring:
 logging:
   level:
     com.travelplanner: DEBUG
+    # Explicit rather than inherited: the stub mailer's body log is what carries the verification
+    # link, and login is gated on email_verified. Stating it here means narrowing
+    # `com.travelplanner` later cannot silently make local sign-up uncompletable again.
+    com.travelplanner.infrastructure.mail: DEBUG

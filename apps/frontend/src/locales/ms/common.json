@@ -54,6 +54,7 @@
     "retry_after": "Anda boleh cuba lagi dalam {seconds} saat."
   },
   "errors": {
+    "account_closed": "Akaun ini telah ditutup oleh pemiliknya dan tidak boleh diubah lagi.",
     "account_disabled": "Akaun ini telah dinyahaktifkan. Sila hubungi sokongan.",
     "account_locked": "Terlalu banyak percubaan log masuk. Sila tunggu beberapa minit dan cuba lagi.",
     "ai_rate_limited": "Perancang sedang sibuk sekarang. Sila cuba lagi sebentar lagi.",
@@ -76,6 +77,7 @@
     "provider_unavailable": "Pembekal log masuk tidak tersedia buat masa ini. Sila cuba lagi.",
     "rate_limited": "Terlalu banyak permintaan. Sila tunggu sebentar sebelum mencuba lagi.",
     "unauthorized": "Sila log masuk untuk meneruskan.",
+    "user_not_found": "Tiada akaun dengan pengenal pasti itu.",
     "validation_failed": "Sebahagian maklumat tidak sah. Sila semak medan yang ditanda.",
     "version_conflict": "Ini telah dikemas kini di tempat lain. Muat semula untuk melihat versi terkini."
   }
