@@ -1,0 +1,10 @@
+Sign in with {{providers}}
+
+This Travel Planner account does not have a password. It signs in with {{providers}}, so
+there is nothing to reset.
+
+Go to sign in: {{sign_in_url}}
+
+--
+If you did not ask for this, no action is needed - nothing about your account has changed,
+and no password was created for it.

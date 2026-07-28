@@ -159,7 +159,7 @@ class AuthenticationServiceTest {
     private User givenUser(String email, String username, boolean verified, boolean enabled) {
         Instant now = Instant.now();
         User user = new User(UUID.randomUUID(), username, email, hasher.hash("correct-password"),
-                verified, Role.USER, enabled, 0, null, now, now);
+                verified, Role.USER, enabled, 0, null, null, now, now);
         return users.save(user);
     }
 

@@ -1,0 +1,13 @@
+Confirm your email address
+
+Confirm this address to finish setting up your Travel Planner account. You will not be able
+to sign in until you do.
+
+{{verify_link}}
+
+The link works once and expires in 24 hours. If it has expired, ask for a new one from the
+sign-in page: {{app_url}}
+
+--
+If you did not create a Travel Planner account, ignore this message - no account can be used
+until this address is confirmed.

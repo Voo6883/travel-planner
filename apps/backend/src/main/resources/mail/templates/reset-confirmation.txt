@@ -1,0 +1,12 @@
+Your password was changed
+
+The password for your Travel Planner account has just been changed. Every session was signed
+out, on every device, so you will need to sign in again.
+
+IF THIS WAS NOT YOU, reset your password immediately - whoever made this change has been
+signed out too, so a reset now takes the account back.
+
+Reset your password: {{forgot_url}}
+
+--
+Travel Planner - {{app_url}}

@@ -70,6 +70,6 @@ class TransactionBoundaryIntegrationTest extends AbstractPostgresIntegrationTest
         Instant now = Instant.now();
         return users.save(new User(UUID.randomUUID(), null,
                 "user-" + UUID.randomUUID() + "@example.test", null, false, Role.USER, true, 0,
-                null, now, now)).id();
+                null, null, now, now)).id();
     }
 }

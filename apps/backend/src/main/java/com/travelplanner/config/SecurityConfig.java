@@ -54,8 +54,20 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_GET = {"/api/v1/health", "/api/v1/ready"};
 
+    /**
+     * The endpoints a caller uses to obtain, refresh, or end a session — plus the four account
+     * recovery paths from task 09, which are public for the same structural reason: every one of
+     * them exists precisely because the caller cannot sign in.
+     *
+     * <p>The credential on the recovery paths is the single-use token in the mailed link, or nothing
+     * at all for the two that only send mail. Those two are rate-limited per email and per address
+     * instead (ADR 009 §6), because "no credential required" and "no limit" together is an open
+     * mail relay.
+     */
     private static final String[] PUBLIC_POST = {
         "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout",
+        "/api/v1/auth/verify-email/confirm", "/api/v1/auth/verify-email/resend",
+        "/api/v1/auth/password/forgot", "/api/v1/auth/password/reset",
     };
 
     private final AuthSecurityProperties properties;

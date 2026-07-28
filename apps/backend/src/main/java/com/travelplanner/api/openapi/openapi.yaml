@@ -303,6 +303,182 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /auth/verify-email/confirm:
+    post:
+      tags: [auth]
+      operationId: confirmEmailVerification
+      summary: Confirm an email address from the mailed link (UC-A08, ADR 009 §5)
+      description: |
+        Consumes the single-use token from the verification mail and sets `email_verified: true`.
+
+        Public, because the whole point of the flow is that the account cannot sign in yet. The
+        token is the credential: it is 256 random bits, stored only as a SHA-256 digest, and it is
+        marked spent in the same statement that validates it, so a link that is clicked twice —
+        by the user, by a mail scanner, by a browser prefetch — succeeds exactly once.
+
+        Unknown, expired, and already-used tokens all return one `invalid_token`. Distinguishing
+        them would confirm that a given token once existed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmEmailVerificationRequest'
+      responses:
+        '204':
+          description: The address is verified. The caller may now sign in.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+        '400':
+          $ref: '#/components/responses/InvalidToken'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/verify-email/resend:
+    post:
+      tags: [auth]
+      operationId: resendEmailVerification
+      summary: Send the verification mail again (UC-A13)
+      description: |
+        **The response is always the same** — `202` with `status: ACCEPTED` — whether the address is
+        registered, unregistered, already verified, or belongs to an account that signs in only
+        through a provider (ADR 009 §6). The mail, which only the address owner can read, is the
+        channel that says which.
+
+        Rate-limited per email **and** per client address (ADR 009 §6). The limit is keyed on the
+        submitted string rather than on an account, so hitting it reveals nothing about whether an
+        account exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailOnlyRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/MailRequestAccepted'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/password/forgot:
+    post:
+      tags: [auth]
+      operationId: forgotPassword
+      summary: Request a password-reset link (UC-A07)
+      description: |
+        Sends a single-use reset link that expires in one hour (ADR 004).
+
+        **Uniform, and deliberately unhelpful to a stranger.** `202` with `status: ACCEPTED` for a
+        registered address, an unregistered one, and an account that has no local password alike.
+
+        An account created through Google or GitHub has `password_hash IS NULL`. This endpoint does
+        **not** mint a local password for it (ADR 009 §4) — that would turn "I know your email" into
+        a second way into the account. It sends a "sign in with your provider" mail instead, and
+        returns the same body as every other case.
+
+        Rate-limited per email and per client address.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailOnlyRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/MailRequestAccepted'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/password/reset:
+    post:
+      tags: [auth]
+      operationId: resetPassword
+      summary: Set a new password from a reset link (UC-A07)
+      description: |
+        Consumes the single-use reset token and stores the new password.
+
+        **Every session for the account is terminated** (ADR 009 §1): `token_version` is bumped and
+        every stored refresh token is revoked. Anyone still holding a session from before the reset
+        — which, in the case this flow exists for, is the attacker — stops working on their next
+        request rather than at their next token expiry.
+
+        A confirmation mail is sent afterwards, so a reset the account owner did not perform is
+        visible to them immediately.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: The password was replaced and every session was terminated.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+        '400':
+          $ref: '#/components/responses/InvalidToken'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/password:
+    put:
+      tags: [auth]
+      operationId: changePassword
+      summary: Change your own password (UC-A12)
+      description: |
+        Requires the current password, so a borrowed unlocked browser cannot silently take over the
+        account.
+
+        **Every session is terminated, including this one** (ADR 009 §1). That is the point of the
+        feature: a user who changes their password because they believe they were compromised is
+        telling the system to evict everyone. The response therefore clears both session cookies,
+        and the client must sign in again.
+
+        `PUT` rather than `POST` because the endpoint replaces one field of the caller's own
+        account; `PATCH` is forbidden project-wide (ADR 008 §3).
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: The password was replaced and every session, including this one, was ended.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Set-Cookie:
+              $ref: '#/components/headers/SetSessionCookies'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /auth/me:
     get:
       tags: [auth]
@@ -329,6 +505,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CurrentUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags: [auth]
+      operationId: deleteCurrentUser
+      summary: Delete your own account (UC-A14)
+      description: |
+        **Soft delete with PII anonymisation.** The row survives — trips, itineraries, and audit
+        records reference it by id, and a hard delete would either cascade real user data away or
+        leave dangling references. What is erased is everything that identifies a person: the email
+        becomes an unroutable placeholder, the username is released, and the password hash is
+        dropped so no credential remains.
+
+        `deleted_at` is stamped, `enabled` is set to false, and every session is terminated
+        (ADR 009 §1). Without that last step a deleted account's cookie would keep authenticating
+        until it expired.
+
+        Irreversible from the API. There is no undelete endpoint, and the anonymised row cannot be
+        signed into by any provider.
+      security:
+        - cookieAuth: []
+      responses:
+        '204':
+          description: The account is anonymised and every session is terminated.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Set-Cookie:
+              $ref: '#/components/headers/SetSessionCookies'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -450,6 +660,9 @@ components:
     AccountLockedDetails:
       $ref: './errors.yaml#/components/schemas/AccountLockedDetails'
 
+    RateLimitedDetails:
+      $ref: './errors.yaml#/components/schemas/RateLimitedDetails'
+
     RegisterRequest:
       type: object
       description: Local sign-up (UC-A01). All three fields are required.
@@ -516,6 +729,95 @@ components:
           type: string
           enum: [PENDING_VERIFICATION]
           description: Always this value. The account owner learns the real outcome by email.
+
+    EmailOnlyRequest:
+      type: object
+      description: |
+        The body of every "send me a mail about this address" endpoint — forgot-password and
+        resend-verification. One schema for both, because the two must be indistinguishable in
+        every observable way and a shared shape is the cheapest guarantee of that.
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+          description: |
+            Compared case-insensitively. Never confirmed or denied — a syntactically valid address
+            that belongs to nobody produces the same `202` as one that does.
+          example: aisyah@example.com
+      example:
+        email: aisyah@example.com
+
+    ConfirmEmailVerificationRequest:
+      type: object
+      description: The single-use token from the verification mail (UC-A08).
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 20
+          maxLength: 128
+          description: |
+            Opaque, 256 bits of `SecureRandom` in base64url. Only its SHA-256 digest is stored, so
+            a database dump yields no usable links.
+      example:
+        token: 8Zr3n0Qw5tYb2Kd7Lm1Vx9Hs4Jc6Pf0Ag8Ne2Ui5Ro
+
+    ResetPasswordRequest:
+      type: object
+      description: |
+        The reset link's token plus the replacement password (UC-A07). Succeeding here terminates
+        every session for the account.
+      required: [token, new_password]
+      properties:
+        token:
+          type: string
+          minLength: 20
+          maxLength: 128
+          description: The single-use token from the reset mail. Expires one hour after issue.
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          description: |
+            Same policy as registration — minimum 8 characters, BCrypt strength 12, and a
+            72-character ceiling that is BCrypt's own byte limit rather than an arbitrary cap.
+
+    ChangePasswordRequest:
+      type: object
+      description: |
+        Self-service password change for a signed-in caller (UC-A12). The account is taken from the
+        session cookie; there is no user id in the body, because a body-supplied id would be a
+        caller asserting whose password they are changing.
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+          format: password
+          maxLength: 200
+          description: |
+            Proof that the person at the keyboard is the account owner and not someone who found an
+            unlocked browser. A mismatch is `401 invalid_credentials`.
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          description: Must differ from the current password.
+
+    AcceptedResponse:
+      type: object
+      description: |
+        Deliberately constant, exactly like `RegistrationResponse`. Any field that varied with
+        whether the address is registered would be the enumeration oracle ADR 009 §6 closes.
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ACCEPTED]
+          description: Always this value. The submitted address learns the real outcome by mail.
 
     CurrentUser:
       type: object
@@ -804,6 +1106,62 @@ components:
             message: Too many failed sign-in attempts. Try again later.
             details:
               retry_after_seconds: 900
+
+    InvalidToken:
+      description: |
+        The request cannot be completed, for one of two reasons that share this status.
+
+        - `invalid_token` — the verification or password-reset token is unknown, expired, or already
+          spent. **One code for all three**, for the same reason `invalid_credentials` covers four
+          causes: telling "expired" apart from "never existed" confirms that a token was once
+          issued, which is a fact about somebody else's mailbox. The UI's correct reaction is
+          identical in every case — offer to send a fresh link.
+        - `validation_failed` — on `/auth/password/reset` only, the *new password* failed the
+          policy. `details.fields` names it. The token is **not** spent in this case, so the user
+          can correct the password and reuse the same link.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            code: invalid_token
+            message: This link is no longer valid.
+            details: {}
+
+    RateLimited:
+      description: |
+        The per-email or per-address window for this mail action is exhausted (ADR 009 §6).
+        `details.retry_after_seconds` lets the UI show a countdown.
+
+        Keyed on the submitted address and the client IP, never on account existence, so this
+        response is reachable for an unregistered email exactly as it is for a registered one.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            code: rate_limited
+            message: Too many requests. Try again later.
+            details:
+              retry_after_seconds: 3600
+
+    MailRequestAccepted:
+      description: |
+        The request was accepted. This says nothing about whether an account exists — see the
+        operation description.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AcceptedResponse'
 
     InternalError:
       description: Unhandled server fault. `details` is always empty — diagnostics stay in the logs.

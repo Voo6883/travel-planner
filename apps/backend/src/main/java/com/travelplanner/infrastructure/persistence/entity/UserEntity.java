@@ -56,6 +56,10 @@ public class UserEntity {
     @Column(name = "sessions_valid_after")
     private Instant sessionsValidAfter;
 
+    /** UC-A14 soft delete (V10). Null while the account is live. */
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -136,6 +140,14 @@ public class UserEntity {
 
     public void setSessionsValidAfter(Instant sessionsValidAfter) {
         this.sessionsValidAfter = sessionsValidAfter;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(Instant deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public Instant getCreatedAt() {

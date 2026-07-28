@@ -50,6 +50,18 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-travel_planner}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
       DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      # Without this the backend mints a random signing key per process: every restart silently
+      # invalidates every session, and two replicas would reject each other's tokens. Required,
+      # not defaulted — a shared fallback secret is worse than a failure to start.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env (min 32 random chars)}
+      # Mail (§4.0.10). Defaults to the stub, so `docker compose up` works with no Resend account.
+      # Setting MAILER_PROVIDER=resend in .env is the whole switch to live delivery.
+      MAILER_PROVIDER: ${MAILER_PROVIDER:-stub}
+      MAIL_FROM: ${MAIL_FROM:-Travel Planner <noreply@travelplanner.local>}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      # Where mailed links point. The browser resolves this, so it is the HOST port — the same
+      # reasoning as NEXT_PUBLIC_API_BASE_URL below.
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     ports:
       - '${BACKEND_HOST_PORT:-8080}:8080'
     healthcheck:

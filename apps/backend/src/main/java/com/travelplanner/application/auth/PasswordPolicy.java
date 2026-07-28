@@ -53,4 +53,23 @@ public class PasswordPolicy {
         validate(rawPassword);
         return hasher.hash(rawPassword);
     }
+
+    /**
+     * Constant-time check of a candidate against a stored hash.
+     *
+     * <p>Here rather than in each caller so that "how a password is judged" stays one class. Task
+     * 09's change-password needs to verify the current password, and injecting
+     * {@link PasswordHasherPort} into an application service to do it would start a second path to
+     * the algorithm — the thing this class exists to prevent.
+     *
+     * <p>No validation runs first, deliberately: an existing password predates any policy change,
+     * and rejecting it for being too short would lock its owner out of the very endpoint that lets
+     * them fix it.
+     *
+     * @param storedHash may be {@code null} for an OAuth-only account (ADR 009 §4); the
+     *        implementation still consumes comparable time, so timing reveals nothing
+     */
+    public boolean matches(String rawPassword, String storedHash) {
+        return hasher.matches(rawPassword, storedHash);
+    }
 }

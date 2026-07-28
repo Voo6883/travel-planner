@@ -1,0 +1,29 @@
+<!--
+  Sent after a password reset (UC-A07) or a self-service change (UC-A12) succeeds.
+
+  This is the mail that matters most in an incident: it is the only signal an account owner gets
+  that somebody else changed their password, and it is useful only while the attacker's window is
+  still open. It carries no link to the account and no token — a mail sent to an address that may
+  itself be compromised should not be a credential.
+-->
+<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1f2933;max-width:560px;margin:0 auto;padding:24px">
+  <h1 style="font-size:22px;margin:0 0 16px">Your password was changed</h1>
+
+  <p style="margin:0 0 16px">
+    The password for your Travel Planner account has just been changed. Every session was signed
+    out, on every device, so you will need to sign in again.
+  </p>
+
+  <p style="margin:0 0 16px">
+    <strong>If this was not you</strong>, reset your password immediately — whoever made this change
+    has been signed out too, so a reset now takes the account back.
+  </p>
+
+  <p style="margin:0 0 24px">
+    <a href="{{forgot_url}}" style="display:inline-block;background:#b91c1c;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px">Reset my password</a>
+  </p>
+
+  <p style="margin:0;font-size:13px;color:#616e7c">
+    Travel Planner — <a href="{{app_url}}" style="color:#0f766e">{{app_url}}</a>
+  </p>
+</div>

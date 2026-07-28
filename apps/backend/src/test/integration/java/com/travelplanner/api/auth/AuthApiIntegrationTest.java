@@ -402,8 +402,10 @@ class AuthApiIntegrationTest extends AbstractPostgresIntegrationTest {
 
     private void givenVerifiedAccount() throws Exception {
         register(EMAIL, USERNAME, PASSWORD).andExpect(status().isAccepted());
-        // Stands in for task 09's verification link. Until the mailer exists there is no other way
-        // for a locally registered account to become usable, which is recorded in the task report.
+        // A direct column write, kept deliberately after task 09 landed the real verification link.
+        // This suite is about the session model, and going through the mailbox here would couple
+        // every sign-in test to the mail layer. `AccountLifecycleApiIntegrationTest` covers the
+        // genuine link, end to end.
         setEmailVerified(true);
     }
 
@@ -411,7 +413,8 @@ class AuthApiIntegrationTest extends AbstractPostgresIntegrationTest {
         User account = users.findByEmailIgnoreCase(EMAIL).orElseThrow();
         users.save(new User(account.id(), account.username(), account.email(), account.passwordHash(),
                 verified, account.role(), account.enabled(), account.tokenVersion(),
-                account.sessionsValidAfter(), account.createdAt(), account.updatedAt()));
+                account.sessionsValidAfter(), account.deletedAt(), account.createdAt(),
+                account.updatedAt()));
     }
 
     private org.springframework.test.web.servlet.ResultActions register(String email, String username,

@@ -20,7 +20,9 @@
     "forbidden": "Anda tiada kebenaran untuk melakukan ini.",
     "internal_error": "Sesuatu tidak kena di pihak kami. Sila cuba lagi.",
     "invalid_credentials": "E-mel, nama pengguna, atau kata laluan itu tidak betul.",
+    "invalid_token": "Pautan ini tidak lagi sah. Minta pautan baharu dan cuba lagi.",
     "not_found": "Kami tidak menemui apa yang anda cari.",
+    "rate_limited": "Terlalu banyak permintaan. Sila tunggu sebentar sebelum mencuba lagi.",
     "unauthorized": "Sila log masuk untuk meneruskan.",
     "validation_failed": "Sebahagian maklumat tidak sah. Sila semak medan yang ditanda.",
     "version_conflict": "Ini telah dikemas kini di tempat lain. Muat semula untuk melihat versi terkini."

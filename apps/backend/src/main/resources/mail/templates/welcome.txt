@@ -1,0 +1,13 @@
+Welcome to Travel Planner, {{username}}
+
+Travel Planner builds trips by conversation. Describe where you want to go - or that you
+have no idea yet - and it researches real destinations, then turns the one you pick into a
+day-by-day itinerary.
+
+Every recommendation is grounded in the travel knowledge base and shows where it came from.
+Nothing is booked without you confirming it.
+
+Start planning: {{app_url}}
+
+--
+You are receiving this because an account was created with this address at Travel Planner.

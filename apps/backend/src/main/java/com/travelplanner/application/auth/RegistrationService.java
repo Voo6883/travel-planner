@@ -2,13 +2,11 @@ package com.travelplanner.application.auth;
 
 import com.travelplanner.application.support.TransactionalWrite;
 import com.travelplanner.config.RequiresDatabase;
-import com.travelplanner.domain.enums.AuthProvider;
 import com.travelplanner.domain.enums.Role;
 import com.travelplanner.domain.model.User;
-import com.travelplanner.domain.model.UserIdentity;
-import com.travelplanner.domain.port.UserIdentityRepositoryPort;
 import com.travelplanner.domain.port.UserRepositoryPort;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,14 +21,20 @@ import org.springframework.stereotype.Service;
  * {@code void}: a caller cannot branch on something it is not told. An address that is already
  * registered is simply not registered again, and the user is not told which of the two happened.
  *
- * <p>That is not a dead end for the user — it is a deferral. The mail task (09) sends the
- * submitted address either a verification link or a "you already have an account" notice, which is
- * the only channel that can tell the two apart <em>and</em> only reaches the person who actually
- * controls the address. Until task 09 lands there is no such mail, and this is recorded in the
- * task report rather than papered over with a leaky error code.
+ * <p><strong>The answer goes to the mailbox instead.</strong> Task 08 deferred that half; this task
+ * delivers it. All three outcomes now send a mail to the submitted address — a verification link, a
+ * "you already have an account" notice, or a "that username is taken" notice — through
+ * {@link RegistrationOutcomes}. The HTTP response still says nothing, and the person who actually
+ * controls the address still finds out what happened. Without it, a username collision was a dead
+ * end: the form said "check your email" and nothing ever arrived.
  *
- * <p>A username collision is treated the same way, for the same reason: reporting "that username
- * is taken" for a username derived from an email address is a weaker but real enumeration channel.
+ * <p>A username collision is treated as uniformly as an email collision, for the same reason:
+ * reporting "that username is taken" for a username derived from an email address is a weaker but
+ * real enumeration channel.
+ *
+ * <p>Mail is not sent from inside this transaction. {@code MailDispatcher} defers every send to
+ * {@code afterCommit}, so a rolled-back or retried registration cannot mail a verification link for
+ * an account that does not exist.
  *
  * <p>New accounts start {@code email_verified=false}, which UC-A08 turns into a login gate.
  */
@@ -41,14 +45,14 @@ public class RegistrationService {
     private static final Logger log = LoggerFactory.getLogger(RegistrationService.class);
 
     private final UserRepositoryPort users;
-    private final UserIdentityRepositoryPort identities;
     private final PasswordPolicy passwords;
+    private final RegistrationOutcomes outcomes;
 
-    public RegistrationService(UserRepositoryPort users, UserIdentityRepositoryPort identities,
-            PasswordPolicy passwords) {
+    public RegistrationService(UserRepositoryPort users, PasswordPolicy passwords,
+            RegistrationOutcomes outcomes) {
         this.users = users;
-        this.identities = identities;
         this.passwords = passwords;
+        this.outcomes = outcomes;
     }
 
     @TransactionalWrite
@@ -58,42 +62,40 @@ public class RegistrationService {
         // after the existence check would make response timing the oracle the check is hiding.
         String passwordHash = passwords.encode(command.password());
 
-        if (isTaken(command)) {
-            log.info("Registration ignored — identifier already in use");
+        Optional<User> existing = users.findByEmailIgnoreCase(command.email());
+        if (existing.isPresent()) {
+            log.info("Registration ignored — the address is already registered");
+            outcomes.emailAlreadyRegistered(existing.get());
             return;
         }
+        if (usernameTaken(command)) {
+            log.info("Registration ignored — the username is already taken");
+            outcomes.usernameAlreadyTaken(command.email(), command.username());
+            return;
+        }
+        create(command, passwordHash);
+    }
 
+    private void create(RegisterCommand command, String passwordHash) {
         try {
             User saved = users.save(newAccount(command, passwordHash));
-            identities.save(localIdentityFor(saved));
+            outcomes.accountCreated(saved, command.username());
         } catch (DataIntegrityViolationException concurrentDuplicate) {
             // Two simultaneous sign-ups for the same address: the unique index is the real
             // arbiter, and the loser must produce the same silence as the pre-check above rather
-            // than a 500 that reveals the collision.
+            // than a 500 that reveals the collision. No mail either — the winner's verification
+            // link is already on its way to the same mailbox.
             log.info("Registration ignored — concurrent duplicate rejected by a unique index");
         }
     }
 
-    private boolean isTaken(RegisterCommand command) {
-        if (users.existsByEmailIgnoreCase(command.email())) {
-            return true;
-        }
+    private boolean usernameTaken(RegisterCommand command) {
         return command.username() != null && users.existsByUsernameIgnoreCase(command.username());
     }
 
     private static User newAccount(RegisterCommand command, String passwordHash) {
         Instant now = Instant.now();
         return new User(UUID.randomUUID(), command.username(), command.email(), passwordHash,
-                false, Role.USER, true, 0, null, now, now);
-    }
-
-    /**
-     * The {@code LOCAL} row exists from the first moment so that "which providers can sign this
-     * account in?" (UC-A11) has one answer everywhere, and so task 10's linking rules never meet
-     * an account whose local password is invisible to them.
-     */
-    private static UserIdentity localIdentityFor(User user) {
-        return new UserIdentity(UUID.randomUUID(), user.id(), AuthProvider.LOCAL,
-                user.id().toString(), user.email(), Instant.now());
+                false, Role.USER, true, 0, null, null, now, now);
     }
 }

@@ -42,7 +42,7 @@ class PersistenceMappingIntegrationTest extends AbstractPostgresIntegrationTest 
     void aUserRoundTripsThroughEveryColumnIncludingTheAdr009RevocationFields() {
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         User saved = users.save(new User(UUID.randomUUID(), "planner_" + suffix(), email(),
-                "$2a$12$notarealhash", true, Role.USER, true, 3, now, now, now));
+                "$2a$12$notarealhash", true, Role.USER, true, 3, now, null, now, now));
 
         User loaded = users.findById(saved.id()).orElseThrow();
 
@@ -143,7 +143,7 @@ class PersistenceMappingIntegrationTest extends AbstractPostgresIntegrationTest 
     private User newUser(String address) {
         Instant now = Instant.now();
         return new User(UUID.randomUUID(), null, address, null, false, Role.USER, true, 0, null,
-                now, now);
+                null, now, now);
     }
 
     private static String email() {

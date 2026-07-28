@@ -41,8 +41,27 @@ public enum ApiErrorCode {
     /** Sign-in failed. Identical for every cause, so it can never enumerate accounts. */
     INVALID_CREDENTIALS("invalid_credentials", HttpStatus.UNAUTHORIZED),
 
+    /**
+     * A verification or password-reset link is unknown, expired, or already spent (task 09).
+     *
+     * <p>{@code 400} rather than {@code 401}: the caller is not attempting to authenticate, they
+     * submitted a value that is no longer valid input. One code for all three causes, so the
+     * endpoint cannot be asked "did this token ever exist?".
+     */
+    INVALID_TOKEN("invalid_token", HttpStatus.BAD_REQUEST),
+
     /** No resource at this path, or none owned by the caller. */
     NOT_FOUND("not_found", HttpStatus.NOT_FOUND),
+
+    /**
+     * A mail action exceeded its per-email or per-address window (ADR 009 §6).
+     *
+     * <p>{@code 429}, which the {@link #ACCOUNT_LOCKED} javadoc reserves for exactly this: a
+     * request quota, as opposed to an account that is temporarily unusable. The limit is keyed on
+     * the submitted address and the client IP, never on whether an account exists, so it stays
+     * uniform for a registered and an unregistered email alike.
+     */
+    RATE_LIMITED("rate_limited", HttpStatus.TOO_MANY_REQUESTS),
 
     /** No valid session; the caller must sign in. */
     UNAUTHORIZED("unauthorized", HttpStatus.UNAUTHORIZED),

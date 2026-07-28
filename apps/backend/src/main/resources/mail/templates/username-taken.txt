@@ -1,0 +1,10 @@
+That username is taken
+
+Your Travel Planner sign-up could not be completed: the username "{{username}}" already
+belongs to someone else. No account was created with this address, so nothing is waiting for
+you to confirm.
+
+Try another username: {{sign_up_url}}
+
+--
+If you did not try to sign up, ignore this message - nothing was created and nothing changed.

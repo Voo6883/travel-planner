@@ -55,6 +55,20 @@ travelplanner:
       # is dropped over plain HTTP, and the locked local experience is http://localhost (ADR 006).
       secure: false
 
+  # Transactional mail (§4.0.10, ADR 004). The stub is the default everywhere, so a fresh checkout
+  # and CI both work with no provider secret — task 09 forbids making live credentials mandatory.
+  # Set MAILER_PROVIDER=resend, with RESEND_API_KEY and MAIL_FROM, to send for real.
+  mail:
+    provider: ${MAILER_PROVIDER:stub}
+    from: ${MAIL_FROM:Travel Planner <noreply@travelplanner.local>}
+    # The FRONTEND origin, not the API's: a mailed link opens a page, which then calls the confirm
+    # endpoint. Mailing an API URL would show a person who clicked a link a bare 204.
+    app-base-url: ${FRONTEND_URL:http://localhost:3000}
+    resend:
+      # No default and no committed fallback. ResendMailerAdapter refuses to start without it, and
+      # it cannot be constructed at all unless the provider above says `resend`.
+      api-key: ${RESEND_API_KEY:}
+
 server:
   port: 8080
   error:

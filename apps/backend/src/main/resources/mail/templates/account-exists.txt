@@ -1,0 +1,11 @@
+You already have an account
+
+Someone just tried to sign up for Travel Planner with this address, but it is already
+registered. No second account was created and nothing has changed.
+
+Sign in instead: {{sign_in_url}}
+Forgotten your password?  {{forgot_url}}
+
+--
+If it was not you who tried to sign up, no action is needed - a sign-up attempt cannot change
+or reveal anything about an existing account.

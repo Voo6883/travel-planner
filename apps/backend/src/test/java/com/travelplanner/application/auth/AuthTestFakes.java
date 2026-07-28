@@ -27,21 +27,21 @@ import java.util.UUID;
  * <p>They are also what keeps {@code ./gradlew test} free of Docker: every rule these fakes support
  * is a decision the application layer makes, and none of it needs a database to be true.
  */
-final class AuthTestFakes {
+public final class AuthTestFakes {
 
     private AuthTestFakes() {
     }
 
-    static User user(String email, String username, String passwordHash) {
+    public static User user(String email, String username, String passwordHash) {
         Instant now = Instant.now();
         return new User(UUID.randomUUID(), username, email, passwordHash, true, Role.USER, true,
-                0, null, now, now);
+                0, null, null, now, now);
     }
 
-    static final class FakeUsers implements UserRepositoryPort {
+    public static final class FakeUsers implements UserRepositoryPort {
 
-        final Map<UUID, User> byId = new LinkedHashMap<>();
-        int revocations;
+        public final Map<UUID, User> byId = new LinkedHashMap<>();
+        public int revocations;
 
         @Override
         public User save(User user) {
@@ -90,7 +90,7 @@ final class AuthTestFakes {
             revocations++;
             byId.put(userId, new User(user.id(), user.username(), user.email(), user.passwordHash(),
                     user.emailVerified(), user.role(), user.enabled(), user.tokenVersion() + 1,
-                    sessionsValidAfter, user.createdAt(), sessionsValidAfter));
+                    sessionsValidAfter, user.deletedAt(), user.createdAt(), sessionsValidAfter));
             return 1;
         }
 
@@ -100,9 +100,9 @@ final class AuthTestFakes {
         }
     }
 
-    static final class FakeIdentities implements UserIdentityRepositoryPort {
+    public static final class FakeIdentities implements UserIdentityRepositoryPort {
 
-        final List<UserIdentity> saved = new ArrayList<>();
+        public final List<UserIdentity> saved = new ArrayList<>();
 
         @Override
         public UserIdentity save(UserIdentity identity) {
@@ -116,9 +116,9 @@ final class AuthTestFakes {
         }
     }
 
-    static final class FakeRefreshTokens implements RefreshTokenPort {
+    public static final class FakeRefreshTokens implements RefreshTokenPort {
 
-        final Map<UUID, RefreshToken> byId = new LinkedHashMap<>();
+        public final Map<UUID, RefreshToken> byId = new LinkedHashMap<>();
 
         @Override
         public RefreshToken save(RefreshToken token) {
@@ -143,7 +143,7 @@ final class AuthTestFakes {
     }
 
     /** Reversible "hashing", so a test can assert which password was stored without a BCrypt round. */
-    static final class FakeHasher implements PasswordHasherPort {
+    public static final class FakeHasher implements PasswordHasherPort {
 
         @Override
         public String hash(String rawPassword) {

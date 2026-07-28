@@ -118,6 +118,51 @@ class MigrationContractTest {
     }
 
     @Test
+    void mailedTokensAreStoredHashedSingleUseAndExpiring() {
+        // §4.0.10 and ADR 004. Storing the raw token would make a database dump a list of working
+        // password-reset links; without `consumed_at` a link would be redeemable forever.
+        String tokenMigration = read("V8__create_account_token_table.sql");
+
+        assertThat(tokenMigration).contains("CREATE TABLE account_token");
+        assertThat(tokenMigration).contains("token_hash").contains("expires_at")
+                .contains("consumed_at");
+        assertThat(tokenMigration)
+                .describedAs("the redemption lookup must be one indexed equality match")
+                .contains("CREATE UNIQUE INDEX ux_account_token_hash ON account_token (token_hash)");
+        assertThat(stripComments(tokenMigration))
+                .describedAs("a raw token column would defeat hashing at rest")
+                .doesNotContain("token_value")
+                .doesNotContain("raw_token");
+    }
+
+    @Test
+    void theMailRateLimitStoresDigestsRatherThanAddresses() {
+        // ADR 009 §6 requires the limit; PLAN §4.0.10 keeps recipient PII out of the system's
+        // records. A plaintext address column would put back exactly what the logging rule removes.
+        String limitMigration = read("V9__create_mail_rate_limit_table.sql");
+
+        assertThat(limitMigration).contains("CREATE TABLE mail_rate_limit");
+        assertThat(limitMigration).contains("subject_hash").contains("scope");
+        assertThat(stripComments(limitMigration)).doesNotContain("email varchar");
+        assertThat(limitMigration)
+                .contains("ON mail_rate_limit (scope, subject_hash, requested_at)");
+    }
+
+    @Test
+    void aSoftDeletedAccountCanNeverKeepACredential() {
+        // UC-A14. The application anonymises; this makes "deleted implies no password" a schema
+        // rule, so no later code path can put a hash back on a closed account.
+        String softDelete = read("V10__add_user_soft_delete.sql");
+
+        assertThat(softDelete).contains("deleted_at");
+        assertThat(softDelete).contains("ck_user_deleted_has_no_password");
+        assertThat(softDelete)
+                .describedAs("the row must survive: every trip references it (PLAN §8)")
+                .doesNotContain("DROP TABLE")
+                .doesNotContain("DELETE FROM");
+    }
+
+    @Test
     void everyAgentMutableAggregateNamedByAdr008HasAVersionColumn() {
         assertThat(read("V5__create_trip_table.sql")).contains("version");
         assertThat(read("V6__create_trip_brief_table.sql")).contains("version");
