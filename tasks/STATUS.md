@@ -44,7 +44,7 @@
 |---|---|---|---|---|
 | 06 | [OpenAPI and error platform](06-openapi-error-platform.md) | 02, 03, 04, 05 | `done` | Commit `0e295fd`. Contract + error catalog + pagination + `expected_version` + request-id. 53 backend / 26 frontend tests. Drift gate verified in both directions against a committed tree. Open questions: **F-10**, **F-11**. |
 | 07 | [Database and domain foundation](07-database-domain-foundation.md) | 02, 04, 06 | `done` | Commit `717e077`. Migrations V1–V6, pure domain, MapStruct adapters, `@Version` per ADR 008, ADR 009 revocation columns. Unit build Docker-free; 22 Testcontainers tests pass. **Next free migration: `V7`.** Open: **F-13**, **F-14**, **F-15**. |
-| 08 | [Local identity and JWT session](08-local-identity-jwt.md) | 06, 07 | `not_started` | ADR 002 superseded by ADR 004/009 — see harness §7. |
+| 08 | [Local identity and JWT session](08-local-identity-jwt.md) | 06, 07 | `done` | Commit `801759c`. ADR 009 in full: 30-min access + rotating 14-day refresh, reuse detection, composite-keyed lockout, `logout-all`. Migration **V7**. **F-13 and F-14 closed.** New: **F-17**, **F-18**. |
 | 09 | [Mailer and account lifecycle](09-mailer-account-lifecycle.md) | 08 | `not_started` | |
 | 10 | [Firebase and GitHub identity providers](10-external-identity-providers.md) | 08, 09 | `not_started` | No `Validation` section — universal evidence gate applies. |
 | 11 | [Frontend platform and auth UI](11-frontend-platform-auth-ui.md) | 03, 06, 08, 09, 10 | `not_started` | |
