@@ -46,12 +46,26 @@
     "error_title": "Something went wrong",
     "empty_title": "Nothing here yet",
     "offline_title": "You're offline",
-    "offline_body": "Pages you already opened stay readable. Anything that needs the server will wait until you reconnect.",
+    "offline_body": "This page stays open, but nothing new can load and nothing you change will be saved until you reconnect.",
     "back_online": "Back online",
     "permission_denied_title": "You don't have access to this page",
     "permission_denied_body": "This area is for administrators. Everything in your planner is still available.",
     "request_reference": "Reference: {requestId}",
     "retry_after": "You can try again in {seconds} seconds."
+  },
+  "pwa": {
+    "offline_page_title": "You're offline",
+    "offline_page_body": "We can't reach Travel Planner from this device right now. Nothing has been lost — your trips are on the server, exactly as you left them.",
+    "offline_page_available_title": "What works offline",
+    "offline_page_available_body": "This page, and nothing else. Travel Planner does not store your trips on this device.",
+    "offline_page_unavailable_title": "What needs a connection",
+    "offline_page_unavailable_body": "Opening or editing a trip, chatting with the planner, research, and booking. None of them will run in the background — reconnect and try again.",
+    "offline_page_retry": "Try again",
+    "update_ready_title": "An update is ready",
+    "update_ready_body": "Refresh to get the newest version of Travel Planner.",
+    "update_refresh_now": "Refresh now",
+    "update_later": "Later",
+    "update_dismiss": "Dismiss update notice"
   },
   "errors": {
     "account_disabled": "This account has been disabled. Please contact support.",

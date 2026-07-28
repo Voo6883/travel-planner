@@ -3,6 +3,7 @@ import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import '@ant-design/v5-patch-for-react-19';
 import { AppProviders } from '@/components/layout/app-providers';
+import { ServiceWorkerUpdatePrompt } from '@/components/ui/service-worker-update-prompt';
 import { THEME_STORAGE_KEY } from '@/hooks/use-theme-mode';
 import '@/styles/globals.css';
 
@@ -19,6 +20,22 @@ export const viewport: Viewport = {
   initialScale: 1,
   // No maximum-scale / user-scalable=no: pinch zoom must stay available (a11y).
   viewportFit: 'cover',
+  /**
+   * Browser UI colour once installed (design system §9.2). Unlike the manifest's `theme_color`,
+   * which the OS reads once at install time, this meta tag is re-evaluated per colour scheme —
+   * so the address bar and status bar follow the app's own light/dark switch instead of staying
+   * on the light-mode brand blue while the page is dark.
+   *
+   * The values are the `canvas` token for each mode, mirrored from `design-tokens.ts`. They are
+   * intentionally the surface behind the header rather than the brand blue: a status bar tinted
+   * to match the page is what makes a standalone window look native (§9.2 "splash: solid theme
+   * background"), and it cannot fight the no-flash bootstrap script below because both resolve
+   * from the same preference.
+   */
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F8FAFC' },
+    { media: '(prefers-color-scheme: dark)', color: '#0B1220' },
+  ],
 };
 
 /**
@@ -56,6 +73,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           >
             {t('skip_to_content')}
           </a>
+          {/* After the skip link so it never steals the first tab stop, before the page so the
+              notice is not buried below the fold (design system §9.4). */}
+          <ServiceWorkerUpdatePrompt />
           {children}
         </AppProviders>
       </body>

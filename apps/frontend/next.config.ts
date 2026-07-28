@@ -1,9 +1,94 @@
+import { createHash } from 'node:crypto';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
+import withSerwistInit from '@serwist/next';
 import createNextIntlPlugin from 'next-intl/plugin';
 import type { NextConfig } from 'next';
 
-// Serwist (PWA) wrapping is added by tasks/13-pwa-foundation.md — ADR 005 requires it from
-// Phase 0b, not here.
 const withNextIntl = createNextIntlPlugin('./src/lib/i18n/request.ts');
+
+/**
+ * PWA service worker (ADR 005, PLAN §4.2.11).
+ *
+ * Both plugins are pure config transforms, so composing them is safe in either order — each
+ * returns the config it was given with its own webpack/loader additions merged in, and neither
+ * replaces `rewrites`. `withSerwist` is applied outermost only so that Serwist sees the fully
+ * resolved config. `.next/routes-manifest.json` is the check that the ADR 006 proxy survived.
+ */
+const withSerwist = withSerwistInit({
+  swSrc: 'src/sw.ts',
+  swDest: 'public/sw.js',
+
+  /**
+   * No worker in development. A service worker caching a dev build makes every edit look like it
+   * did not apply, and PLAN §4.2.11 locks the behaviour ("SW **disabled** in development").
+   */
+  disable: process.env.NODE_ENV === 'development',
+
+  /**
+   * `ServiceWorkerProvider` registers it instead, so React holds a reference to the worker and
+   * can offer §9.4's "An update is ready" when one is waiting.
+   */
+  register: false,
+
+  /**
+   * The precache manifest, on top of the webpack build assets Serwist collects automatically.
+   *
+   * **This option replaces the `public/` scan, it does not extend it.** `@serwist/next` reads
+   * `additionalPrecacheEntries ?? globSync(globPublicPatterns)` — supplying entries here silently
+   * turns the public-folder scan off, which is why `publicAssetEntries()` below reproduces it
+   * rather than leaving `public/` to Serwist. Passing only the offline page made the icons quietly
+   * stop being precached, and nothing warned about it.
+   *
+   * `/~offline` has to be listed because Serwist resolves `fallbacks.entries` against the
+   * precache, not the network, and the route is request-time rendered (it reads the locale
+   * cookie) so no build-time file exists for a glob to find.
+   */
+  additionalPrecacheEntries: [
+    ...publicAssetEntries(),
+    // `revision` ties the cached copy to the build. Without one the entry is treated as immutable
+    // and a redeployed offline page would never replace the installed one — which matters because
+    // the page's HTML embeds hashed `_next/static` URLs that change on every build.
+    { url: '/~offline', revision: buildRevision() },
+  ],
+});
+
+/**
+ * Everything in `public/`, content-hashed, minus the worker itself.
+ *
+ * Excluding `sw.js` is not optional: a worker that precaches its own previous build pins it in
+ * Cache Storage and can end up unable to update. Serwist's own scan excludes it for the same
+ * reason, and this mirrors that behaviour now that the scan is disabled.
+ */
+function publicAssetEntries(): { url: string; revision: string }[] {
+  const publicDir = join(import.meta.dirname, 'public');
+  if (!existsSync(publicDir)) {
+    return [];
+  }
+
+  return readdirSync(publicDir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => relative(publicDir, join(entry.parentPath, entry.name)).split(sep).join('/'))
+    .filter((file) => file !== 'sw.js' && file !== 'sw.js.map' && file !== '.gitkeep')
+    .map((file) => ({
+      url: `/${file}`,
+      revision: createHash('sha256')
+        .update(readFileSync(join(publicDir, file)))
+        .digest('hex')
+        .slice(0, 16),
+    }));
+}
+
+/**
+ * A per-build identifier for precache entries that are not content-hashed.
+ *
+ * `SOURCE_DATE_EPOCH` first so a reproducible build stays reproducible; otherwise the build
+ * timestamp, which changes exactly when a new image is built and is what invalidates the cached
+ * offline page on deploy.
+ */
+function buildRevision(): string {
+  return process.env.SOURCE_DATE_EPOCH ?? Date.now().toString(36);
+}
 
 /**
  * Where the Next.js **server** reaches Spring Boot (ADR 006). Server-only on purpose: it is not
@@ -53,4 +138,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default withSerwist(withNextIntl(nextConfig));

@@ -10,6 +10,12 @@ apps/backend/build/
 apps/backend/.gradle/
 *.tsbuildinfo
 
+# Serwist service worker — build output of `next build` from apps/frontend/src/sw.ts, written
+# into public/ so Next serves it from the origin root (PLAN §4.2.11: "do not hand-edit").
+# Committing it would let a stale worker outlive the bundle it was generated for.
+apps/frontend/public/sw.js
+apps/frontend/public/sw.js.map
+
 # next-env.d.ts is deliberately NOT ignored: it is committed so `npm ci && npm run typecheck`
 # succeeds without first running a build, which is the order CI uses (tasks/05).
 
