@@ -69,6 +69,32 @@ travelplanner:
       # it cannot be constructed at all unless the provider above says `resend`.
       api-key: ${RESEND_API_KEY:}
 
+  # AI runtime (PLAN §5.4, ADR 007, ADR 010 §5). The deterministic stub is the default everywhere,
+  # so a fresh checkout and CI both work with no provider key — task 14 forbids requiring live keys
+  # in CI. Set AI_PROVIDER_DEFAULT=anthropic (with ANTHROPIC_API_KEY) or =openai (with
+  # OPENAI_API_KEY) for a real model; AiConfigValidator refuses to start if a selected provider has
+  # no credential.
+  ai:
+    provider:
+      default: ${AI_PROVIDER_DEFAULT:stub}
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: ${ANTHROPIC_MODEL:claude-sonnet-4-5}
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      model: ${OPENAI_MODEL:gpt-4.1-mini}
+    # PINNED per ADR 010 §5 — text-embedding-3-small / 1536. Chat may switch providers freely;
+    # embeddings may not, because vectors from two models are not comparable and mixing them
+    # corrupts retrieval silently. Changing these requires an additive migration and a backfill,
+    # not a config edit, and startup validation enforces that.
+    embeddings:
+      provider: ${AI_EMBEDDINGS_PROVIDER:stub}
+      model: text-embedding-3-small
+      dimension: 1536
+    # Optional per-feature routing, e.g. `research: anthropic` (PLAN §5.4). An entry naming a
+    # provider with no credential fails startup, exactly as the default provider does.
+    routing: {}
+
 server:
   port: 8080
   error:

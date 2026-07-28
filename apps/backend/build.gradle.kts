@@ -116,8 +116,29 @@ dependencies {
     implementation("org.mapstruct:mapstruct:1.6.3")
     annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
 
+    // Task 14 — the AI provider platform (ADR 007).
+    //
+    // Reactor Core, not WebFlux. `LlmPort` returns `Flux<LlmEvent>` (ADR 007 supersedes PLAN
+    // §5.1's `Flux<String>`), and a Flux is all that is needed: the application stays a servlet
+    // stack, and task 20 bridges the Flux onto SSE. Pulling in `spring-boot-starter-webflux`
+    // would add a second, competing web server autoconfiguration for one type.
+    // The version is managed by the Spring Boot BOM's reactor-bom import.
+    implementation("io.projectreactor:reactor-core")
+
+    // LangChain4j is confined to `ai/langchain4j/` (AGENTS.md, AI-AGENT-WORKFLOW §4). It is a
+    // normal `implementation` dependency rather than `runtimeOnly` because the adapters compile
+    // against it; the import rule is enforced by review today and by ArchUnit in task 15.
+    //
+    // Neither artifact requires a key to be on the classpath: the provider beans are
+    // @ConditionalOnProperty and the default provider is the deterministic stub, so `./gradlew
+    // build` and CI never need ANTHROPIC_API_KEY or OPENAI_API_KEY.
+    implementation(platform("dev.langchain4j:langchain4j-bom:1.18.0"))
+    implementation("dev.langchain4j:langchain4j-anthropic")
+    implementation("dev.langchain4j:langchain4j-open-ai")
+
     testImplementation(platform("org.springframework.boot:spring-boot-dependencies:3.5.3"))
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 

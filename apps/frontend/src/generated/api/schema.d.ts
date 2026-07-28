@@ -441,6 +441,10 @@ export interface components {
          *     |---|---|---|
          *     | `account_disabled` | 403 | Credential accepted, but the account is switched off (ADR 009 §1) |
          *     | `account_locked` | 423 | Too many failed sign-ins for this identifier and address (ADR 009 §6). `details.retry_after_seconds` carries the wait |
+         *     | `ai_rate_limited` | 429 | The AI provider rejected the request for quota reasons. Retryable with backoff |
+         *     | `ai_response_invalid` | 502 | The model answered, but the answer failed schema validation and a repair attempt did not fix it. A typed "no confident result", never a partially filled object (PLAN §4.1) |
+         *     | `ai_timeout` | 504 | The AI provider did not answer within the configured budget. Not auto-retried — the call already spent its whole budget |
+         *     | `ai_unavailable` | 503 | The AI provider is unreachable, failing, misconfigured, or the circuit breaker is open |
          *     | `email_not_verified` | 403 | Credential accepted, but the address is unconfirmed (UC-A08) |
          *     | `forbidden` | 403 | Authenticated, but not allowed to act on this resource |
          *     | `internal_error` | 500 | Unhandled server fault. `details` is always empty |
@@ -453,7 +457,7 @@ export interface components {
          *     | `version_conflict` | 409 | Optimistic-lock mismatch (ADR 008). `details.current_version` carries the server's version |
          * @enum {string}
          */
-        ErrorCode: "account_disabled" | "account_locked" | "email_not_verified" | "forbidden" | "internal_error" | "invalid_credentials" | "invalid_token" | "not_found" | "rate_limited" | "unauthorized" | "validation_failed" | "version_conflict";
+        ErrorCode: "account_disabled" | "account_locked" | "ai_rate_limited" | "ai_response_invalid" | "ai_timeout" | "ai_unavailable" | "email_not_verified" | "forbidden" | "internal_error" | "invalid_credentials" | "invalid_token" | "not_found" | "rate_limited" | "unauthorized" | "validation_failed" | "version_conflict";
         /**
          * @description Shape of `ApiErrorResponse.details` when `code` is `validation_failed`. Documented
          *     separately because it is the only `details` payload with a fixed structure that
