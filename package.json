@@ -18,17 +18,15 @@
     "docker:reset": "docker compose down -v",
     "docker:logs": "docker compose logs -f",
     "docker:ps": "docker compose ps",
-    "dev:db": "docker compose -f docker-compose.dev.yml up -d",
+    "dev:db": "docker compose -f docker-compose.dev.yml up -d --remove-orphans",
     "dev:db:down": "docker compose -f docker-compose.dev.yml down",
     "dev": "npm run dev:apps",
-    "dev:apps": "concurrently -k -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:apps": "node scripts/dev-apps.mjs",
     "dev:backend": "node scripts/dev-backend.mjs",
     "dev:frontend": "node scripts/dev-frontend.mjs",
     "dev:full": "npm run dev:db && npm run dev:apps",
     "wait": "node scripts/wait.mjs"
   },
   "dependencies": {},
-  "devDependencies": {
-    "concurrently": "^9.1.2"
-  }
+  "devDependencies": {}
 }

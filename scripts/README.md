@@ -12,6 +12,7 @@ Contract defined by [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) §
 | `prereq.mjs` | Cross-platform dispatcher behind `npm run prereq` |
 | `dev-backend.mjs` | Spring Boot hot reload (`npm run dev:backend`) |
 | `dev-frontend.mjs` | Next.js HMR dev server (`npm run dev:frontend`) |
+| `dev-apps.mjs` | Runs backend + frontend together (`npm run dev:apps`) |
 | `tests/test-check-prerequisites.sh` | Unit tests for the bash gate |
 | `tests/check-prerequisites.tests.ps1` | Unit tests for the PowerShell gate |
 | `tests/run-prereq-tests.mjs` | Cross-platform dispatcher behind `npm run prereq:test` |
