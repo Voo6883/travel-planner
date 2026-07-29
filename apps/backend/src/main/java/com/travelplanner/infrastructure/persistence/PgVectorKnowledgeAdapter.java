@@ -58,11 +58,15 @@ import org.springframework.transaction.annotation.Transactional;
  * has no JPQL equivalent. The translation this class performs is
  * {@code destinationId -> destinationSlug}: the query object is keyed by id, while V18's partial
  * HNSW indexes are predicated on the slug, and only a slug lets the planner pick the right index.
+ *
+ * <p>PLAN and task 17 name this {@code PgVectorKnowledgeAdapter}. Earlier drafts used
+ * {@code KnowledgeRepositoryAdapter}; the behaviour is unchanged — hybrid vector + {@code tsvector}
+ * fusion lives in {@link KnowledgeVectorSearch}.
  */
 @Component
 @RequiresDatabase
 @Transactional(readOnly = true)
-public class KnowledgeRepositoryAdapter implements KnowledgePort {
+public class PgVectorKnowledgeAdapter implements KnowledgePort {
 
     private final DestinationJpaRepository destinations;
     private final DestinationGuideJpaRepository guides;
@@ -87,7 +91,7 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
     private final KnowledgeVectorSearch vectorSearch;
 
     @SuppressWarnings("checkstyle:ParameterNumber")
-    public KnowledgeRepositoryAdapter(
+    public PgVectorKnowledgeAdapter(
             DestinationJpaRepository destinations,
             DestinationGuideJpaRepository guides,
             DestinationAreaJpaRepository areas,

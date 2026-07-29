@@ -21,7 +21,7 @@ class KnowledgeConfigValidatorTest {
     private static final String[] LOCAL = {"local"};
     private static final String[] NO_PROFILE = {};
 
-    private static final List<String> REAL_ADAPTER = List.of("KnowledgeRepositoryAdapter");
+    private static final List<String> REAL_ADAPTER = List.of("PgVectorKnowledgeAdapter");
     private static final List<String> STUB_ADAPTER = List.of("StubDestinationKnowledgeAdapter");
 
     @Test
@@ -102,7 +102,7 @@ class KnowledgeConfigValidatorTest {
         // Two ports wired at once is a misconfiguration in its own right, but the dangerous half is
         // that the stub might be the one that wins primary selection. Neither may be present.
         assertThatThrownBy(() -> KnowledgeConfigValidator.validate(
-                PROD, false, List.of("KnowledgeRepositoryAdapter", "StubDestinationKnowledgeAdapter")))
+                PROD, false, List.of("PgVectorKnowledgeAdapter", "StubDestinationKnowledgeAdapter")))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("StubDestinationKnowledgeAdapter");
     }

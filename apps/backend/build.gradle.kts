@@ -228,15 +228,16 @@ tasks.register<Test>("integrationTest") {
     shouldRunAfter(tasks.named("test"))
 }
 
+// Task 17 — seed quality gate usable in CI without a database (ADR 010 Consequences / PM-K03).
+tasks.register<JavaExec>("validateKnowledgeSeed") {
+    group = "verification"
+    description = "Validate classpath knowledge/sample seed files (duplicates, orphans, coordinates)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.travelplanner.infrastructure.knowledge.ValidateKnowledgeSeed")
+}
+
 // -----------------------------------------------------------------------------------------
 // Task 15 — Checkstyle (PLAN §4.0.9, §13).
-//
-// Scoped to `main` and the two test source sets, and deliberately narrow: line length, naming,
-// and import hygiene. Task 15 explicitly forbids enforcing subjective method/file size heuristics,
-// so no such module appears in the ruleset.
-//
-// `maxWarnings = 0` with every rule at severity=error means a violation fails the build rather
-// than printing into a report nobody opens.
 // -----------------------------------------------------------------------------------------
 checkstyle {
     toolVersion = "10.21.0"

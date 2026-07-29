@@ -23,7 +23,7 @@ import org.springframework.core.env.Environment;
  *
  * <p>The adapters are inspected by <em>bean definition</em> — {@code allowEagerInit = false} — so
  * asking the question does not construct anything. Injecting {@code ObjectProvider<KnowledgePort>}
- * and streaming it would instantiate {@code KnowledgeRepositoryAdapter} from inside a configuration
+ * and streaming it would instantiate {@code PgVectorKnowledgeAdapter} from inside a configuration
  * class's initialisation, ahead of the post-processor that wraps it in its
  * {@code @Transactional(readOnly = true)} proxy. The check would then have silently disabled the
  * read-only transactions it was meant to protect — a validator that breaks the thing it validates

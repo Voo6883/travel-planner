@@ -32,24 +32,19 @@ import org.springframework.stereotype.Component;
  *
  * <h2>Why the destination slug is inlined rather than bound</h2>
  *
- * <p>This one is easy to get subtly wrong. V18 creates one <em>partial</em> HNSW index per
- * destination, so that the destination filter is applied before the ANN search (ADR 010 §5 —
- * post-filtering discards the index's global top-k and a small destination can come back empty).
- * Postgres will only use a partial index when it can prove the query predicate implies the index
- * predicate, and with a bind parameter it cannot: {@code destination_slug = $1} does not imply
+ * <p>V18 creates one <em>partial</em> HNSW index per destination. Postgres will only use a partial
+ * index when it can prove the query predicate implies the index predicate, and with a bind
+ * parameter it cannot: {@code destination_slug = $1} does not imply
  * {@code destination_slug = 'tokyo-jp'} under a generic plan. Binding the slug would therefore
  * disable the very index the migration exists to provide, and nothing would fail — recall would
- * just quietly degrade.
+ * just quietly degrade. The slug is interpolated as a literal; {@link #SAFE_SLUG} makes that safe.
  *
- * <p>The slug is consequently interpolated as a literal, and {@link #SAFE_SLUG} is what makes that
- * safe. Slugs originate from our own {@code destination} table and are constrained to lowercase
- * alphanumerics and hyphens; anything else is rejected outright rather than escaped. The embedding
- * model name is a compile-time constant for the same planner reason.
+ * <h2>Hybrid fusion</h2>
  *
- * <p><strong>Unverified until seeding.</strong> With the tables empty, {@code EXPLAIN} reports a
- * sequential scan whatever the query looks like, so index usage cannot be confirmed yet. Task 17
- * seeds the corpus; the first thing to check afterwards is that {@code EXPLAIN ANALYZE} on this
- * query names {@code ix_poi_embedding_hnsw_<destination>}.
+ * <p>ADR 010 §5 requires vector + {@code tsvector} fusion. The plan's worked examples ("street
+ * food", "temples") are lexical and underperform under pure vector search. Scores are fused by
+ * {@link HybridRetrievalScore}; the similarity floor applies to the <em>fused</em> score so a
+ * strong lexical hit with a weak stub vector is not discarded before ranking.
  */
 @Component
 @RequiresDatabase
@@ -66,6 +61,18 @@ public class KnowledgeVectorSearch {
      * not match is a bug or an attack, and neither deserves a best-effort quoting attempt.
      */
     private static final Pattern SAFE_SLUG = Pattern.compile("^[a-z0-9-]{1,120}$");
+
+    private static final String POI_TSVECTOR = """
+            to_tsvector('simple',
+                coalesce(p.name, '') || ' ' || coalesce(p.description, '') || ' '
+                    || coalesce(array_to_string(p.tags, ' '), ''))
+            """;
+
+    private static final String GUIDE_TSVECTOR = """
+            to_tsvector('simple',
+                coalesce(g.overview, '') || ' ' || coalesce(g.food, '') || ' '
+                    || coalesce(g.practical, ''))
+            """;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -97,24 +104,34 @@ public class KnowledgeVectorSearch {
     }
 
     private List<KnowledgeMatch> runPoiSearch(KnowledgeQuery query, String slug) {
-        // `1 - (embedding <=> v)` converts cosine DISTANCE to cosine SIMILARITY, which is what the
-        // similarity floor and KnowledgeMatch.score are expressed in. Getting the direction wrong
-        // would invert the ranking while still returning plausible-looking rows.
         String sql = """
                 SELECT pe.poi_id, p.destination_id,
                        p.name || CASE WHEN p.description IS NULL THEN '' ELSE ' — ' || p.description END,
-                       1 - (pe.embedding <=> CAST(:embedding AS vector)),
+                       fused.score,
                        ks.source_ref, ks.name, ks.licence, ks.attribution_text, ks.source_url,
                        ks.trust_tier, p.retrieved_at
                 FROM poi_embedding pe
                 JOIN poi p ON p.id = pe.poi_id
                 JOIN knowledge_source ks ON ks.id = p.source_id
+                CROSS JOIN LATERAL (
+                  SELECT LEAST(1.0, GREATEST(0.0,
+                      %f * (1 - (pe.embedding <=> CAST(:embedding AS vector)))
+                    + %f * (ts_rank_cd(%s, plainto_tsquery('simple', :queryText))
+                            / (1.0 + ts_rank_cd(%s, plainto_tsquery('simple', :queryText))))
+                  )) AS score
+                ) fused
                 WHERE pe.destination_slug = '%s'
                   AND pe.embedding_model = '%s'
-                  AND 1 - (pe.embedding <=> CAST(:embedding AS vector)) >= :floor
-                ORDER BY pe.embedding <=> CAST(:embedding AS vector)
+                  AND fused.score >= :floor
+                ORDER BY fused.score DESC
                 LIMIT :topK
-                """.formatted(slug, PINNED_MODEL);
+                """.formatted(
+                HybridRetrievalScore.VECTOR_WEIGHT,
+                HybridRetrievalScore.TEXT_WEIGHT,
+                POI_TSVECTOR.trim(),
+                POI_TSVECTOR.trim(),
+                slug,
+                PINNED_MODEL);
 
         return toMatches(runQuery(sql, query), KnowledgeMatchType.POI);
     }
@@ -127,18 +144,31 @@ public class KnowledgeVectorSearch {
                             WHEN 'FOOD' THEN COALESCE(g.food, '')
                             ELSE COALESCE(g.practical, '')
                        END,
-                       1 - (ge.embedding <=> CAST(:embedding AS vector)),
+                       fused.score,
                        ks.source_ref, ks.name, ks.licence, ks.attribution_text, ks.source_url,
                        ks.trust_tier, g.retrieved_at
                 FROM destination_guide_embedding ge
                 JOIN destination_guide g ON g.id = ge.guide_id
                 JOIN knowledge_source ks ON ks.id = g.source_id
+                CROSS JOIN LATERAL (
+                  SELECT LEAST(1.0, GREATEST(0.0,
+                      %f * (1 - (ge.embedding <=> CAST(:embedding AS vector)))
+                    + %f * (ts_rank_cd(%s, plainto_tsquery('simple', :queryText))
+                            / (1.0 + ts_rank_cd(%s, plainto_tsquery('simple', :queryText))))
+                  )) AS score
+                ) fused
                 WHERE ge.destination_slug = '%s'
                   AND ge.embedding_model = '%s'
-                  AND 1 - (ge.embedding <=> CAST(:embedding AS vector)) >= :floor
-                ORDER BY ge.embedding <=> CAST(:embedding AS vector)
+                  AND fused.score >= :floor
+                ORDER BY fused.score DESC
                 LIMIT :topK
-                """.formatted(slug, PINNED_MODEL);
+                """.formatted(
+                HybridRetrievalScore.VECTOR_WEIGHT,
+                HybridRetrievalScore.TEXT_WEIGHT,
+                GUIDE_TSVECTOR.trim(),
+                GUIDE_TSVECTOR.trim(),
+                slug,
+                PINNED_MODEL);
 
         return toMatches(runQuery(sql, query), KnowledgeMatchType.GUIDE);
     }
@@ -147,6 +177,7 @@ public class KnowledgeVectorSearch {
     private List<Object[]> runQuery(String sql, KnowledgeQuery query) {
         return entityManager.createNativeQuery(sql)
                 .setParameter("embedding", toVectorLiteral(query.embedding()))
+                .setParameter("queryText", query.text())
                 .setParameter("floor", query.similarityFloor())
                 .setParameter("topK", query.topK())
                 .getResultList();

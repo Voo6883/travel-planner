@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
  *
  * <h2>Why {@code ObjectProvider}</h2>
  *
- * <p>{@code KnowledgeRepositoryAdapter} is {@code @RequiresDatabase}, so in the database-less
+ * <p>{@code PgVectorKnowledgeAdapter} is {@code @RequiresDatabase}, so in the database-less
  * context {@code ./gradlew test} starts — the {@code test} profile excludes
  * {@code DataSourceAutoConfiguration} outright — there is no {@link KnowledgePort} bean at all. A
  * constructor-injected port would fail context startup there and quietly give the unit suite a

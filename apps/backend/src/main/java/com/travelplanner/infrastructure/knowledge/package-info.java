@@ -47,5 +47,10 @@
  *   <li>{@code @RequiresDatabase} — there is nothing to seed without a datasource, and
  *       {@code ./gradlew test} runs with none.</li>
  * </ul>
+ *
+ * <p>{@link StubDestinationKnowledgeAdapter} and {@link SampleKnowledgeValidator} /
+ * {@link ValidateKnowledgeSeed} also live here: the stub is constructed by contract tests (and may
+ * be wired only under an explicit property), and {@code ./gradlew validateKnowledgeSeed} is the CI
+ * seed-quality command from task 17.
  */
 package com.travelplanner.infrastructure.knowledge;
