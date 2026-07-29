@@ -1,0 +1,39 @@
+{
+  "panel": {
+    "planner_title": "Rancang perjalanan baharu",
+    "trip_title": "Sembang perjalanan",
+    "log_label": "Perbualan",
+    "load_older": "Muatkan mesej terdahulu",
+    "loading_history": "Memuatkan mesej terdahulu…",
+    "empty_title": "Mula merancang",
+    "empty_body": "Beritahu saya ke mana anda ingin pergi, lebih kurang bila, dan bajet anda."
+  },
+  "sender": {
+    "user": "Anda",
+    "assistant": "Pembantu",
+    "system": "Kemas kini"
+  },
+  "status": {
+    "pending": "Menghantar…",
+    "sent": "Dihantar",
+    "failed": "Tidak dihantar",
+    "streaming": "Sedang membalas…",
+    "interrupted": "Terganggu",
+    "stopped": "Dihentikan",
+    "reconnecting": "Menyambung semula…",
+    "trip_created": "Perjalanan dicipta — diteruskan dalam perancang anda"
+  },
+  "tools": {
+    "running": "Sedang mengusahakannya…"
+  },
+  "composer": {
+    "label": "Mesej",
+    "placeholder": "Tanya apa sahaja tentang perjalanan anda",
+    "send": "Hantar",
+    "stop": "Henti",
+    "hint": "Enter menghantar. Shift dan Enter memulakan baris baharu."
+  },
+  "actions": {
+    "retry": "Cuba lagi"
+  }
+}

@@ -641,6 +641,250 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/destinations/supported": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every destination the knowledge base fully covers (ADR 010 §4)
+         * @description The `FULL` coverage list, and therefore the exact set of destinations that may enter C2
+         *     ranking. Anything absent from it is `404 destination_not_covered` wherever it is named.
+         *
+         *     **No session required.** The picker renders this before a visitor has one, and the chat
+         *     agent quotes it when refusing an uncovered city. A 401 here would make both impossible,
+         *     and the catalogue is curated public data — three cities in v1 (ADR 010 §1).
+         *
+         *     **Not paginated.** The whole list is small by design and the refusal path has to carry it
+         *     inline, so it is returned whole rather than a page at a time.
+         *
+         *     Destinations are identified by `slug` only. The surrogate `destination.id` stays
+         *     server-side: the slug is what the seeds, the URLs, and `destination_not_covered`'s
+         *     `details.supported` already use, and a second identifier would only split clients between
+         *     the two.
+         */
+        get: operations["listSupportedDestinations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's trips (UC-C1-01)
+         * @description Every trip owned by the caller, newest first.
+         *
+         *     **Not paginated.** One person's trips are a list they scroll, not a corpus, and shipping
+         *     `page`/`page_size`/`total` that no client would vary is three fields of ceremony. The key
+         *     stays `trips` if that ever changes.
+         *
+         *     Each item carries its `version`, because a client that lists trips is one rename away from
+         *     needing it and ADR 008 §1 requires the read before a write to supply it.
+         */
+        get: operations["listTrips"];
+        put?: never;
+        /**
+         * Create a trip (UC-C1-01)
+         * @description Creates a `DRAFT` trip and its empty brief in one transaction, in the documented lock order
+         *     (`trip` then `trip_brief`). A trip whose brief row was missing would make every later read
+         *     a "does it exist yet?" branch, and an empty brief is precisely what `DRAFT` means.
+         *
+         *     The owner comes from the session cookie and is never in the body: an actor a request can
+         *     assert is not an actor anything may be attributed to.
+         *
+         *     No `expected_version` — ADR 008 versions edits to existing state, and there is none here
+         *     for a concurrent writer to have replaced.
+         */
+        post: operations["createTrip"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One trip
+         * @description A trip owned by somebody else answers `404 not_found`, identically to one that does not
+         *     exist. `TripRepositoryPort` publishes no unscoped lookup, so the two cases are
+         *     indistinguishable here by construction rather than by discipline — a `403` would confirm
+         *     that another user's trip exists to anyone who asked.
+         */
+        get: operations["getTrip"];
+        /**
+         * Rename a trip
+         * @description The name is the only field a client may write on the trip row.
+         *
+         *     **There is no `status` in the body, deliberately.** `trip.status` is derived from brief
+         *     completeness by `PUT .../brief`, and moved to `ARCHIVED` by the archive action. A client
+         *     able to set it directly could declare `BRIEF_COMPLETE` over an empty brief and walk past
+         *     the gate PLAN §3.1 puts in front of C2.
+         *
+         *     An archived trip is read-only for every actor, the agent included, so a rename on one is
+         *     `400 validation_failed`.
+         */
+        put: operations["renameTrip"];
+        post?: never;
+        /**
+         * Delete a trip
+         * @description Removes the trip and, by `ON DELETE CASCADE`, its brief.
+         *
+         *     **No `expected_version`, and that is a decision rather than an omission.** ADR 008 versions
+         *     writes that are *based on* prior content, so the loser of a race can re-read and re-apply
+         *     its edit. A delete is based on nothing and has nothing to re-apply: the caller's intent is
+         *     "this trip should not exist", and that does not become wrong because the agent changed a
+         *     field a moment earlier. Carrying the version would also mean a request body on `DELETE`,
+         *     which intermediaries are entitled to drop — a concurrency control that silently stops
+         *     working behind some proxies is worse than none.
+         *
+         *     `404` for a trip that is not the caller's, so a delete cannot be used to probe for one.
+         */
+        delete: operations["deleteTrip"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}/actions/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a trip
+         * @description Moves the trip to `ARCHIVED`, after which it is view-only for every actor, the agent
+         *     included (PLAN §3.1).
+         *
+         *     A typed action rather than a `status` field on `PUT` (ADR 008 §3). Archiving is not a field
+         *     edit, and giving it the same request shape as a rename is how one gets sent by accident.
+         *
+         *     Not idempotent: archiving an already-archived trip is `400 validation_failed`, because the
+         *     second call is a client acting on a stale view and ADR 008's whole position is that such a
+         *     client should be told rather than quietly agreed with.
+         *
+         *     It still carries `expected_version` — making a trip read-only while the agent is mid-edit
+         *     loses that edit like any other write does.
+         */
+        post: operations["archiveTrip"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}/brief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the trip brief and its outstanding questions (UC-C1-01, UC-C1-04)
+         * @description The brief, the trip's status, and the clarification questions the brief still needs — in
+         *     one response, because they are only consistent together. A client that fetched the brief
+         *     and the status separately would, between the two calls, see a `BRIEF_COMPLETE` trip beside
+         *     a brief the agent had just re-opened, and would render a "start research" button the server
+         *     then refuses.
+         *
+         *     This is the read that precedes every write, so it is the read that supplies the `version`
+         *     those writes must echo (ADR 008 §1). `version` here is the **brief's**; the trip carries its
+         *     own, and the two advance independently.
+         */
+        get: operations["getTripBrief"];
+        /**
+         * Save the whole trip brief (UC-C1-01)
+         * @description The whole-body save the debounced intake form issues (PLAN §4.2).
+         *
+         *     **An omitted field clears it.** This is a `PUT` of the whole resource, not a merge:
+         *     `PATCH` is forbidden project-wide (ADR 008 §3), and a `PUT` that read absence as "leave
+         *     unchanged" would give a client no way at all to un-set a field it entered by mistake. To
+         *     change one field without re-sending the rest, use the clarification action below — the
+         *     typed diff ADR 008 §3 exists for exactly that.
+         *
+         *     **The response is the new full resource** (ADR 008 §2), including the incremented `version`,
+         *     the recomputed `clarification`, and the trip `status` the save moved the trip to. Status is
+         *     computed from the saved brief on every write, so no request can declare `BRIEF_COMPLETE`
+         *     over a brief that is not.
+         *
+         *     **Destination preference is checked against coverage.** A slug the knowledge base has never
+         *     curated is `404 destination_not_covered` carrying `details.supported` (ADR 010 §4) — it is
+         *     never accepted and then ranked near zero, which would read to the user as "we considered it
+         *     and it is a poor match" when the truth is that nobody ever looked. An empty `destinations`
+         *     is a legitimate answer meaning "no preference", and lets C2 rank the whole covered set.
+         *
+         *     The status the save can move the trip to is limited to `CLARIFICATION_NEEDED` and
+         *     `BRIEF_COMPLETE`, and a trip that has already left the intake phase is refused with
+         *     `400 validation_failed` rather than dragged back into it.
+         */
+        put: operations["updateTripBrief"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}/brief/actions/answer-clarification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer outstanding clarification questions (UC-C1-04)
+         * @description Applies typed answers to the fields their questions were asked about, then re-validates —
+         *     the brief either completes or returns a shorter list of questions.
+         *
+         *     **A typed `POST` action, not a `PUT`** (ADR 008 §3). PLAN §4.1.3 sketched this as
+         *     `PUT .../brief/clarification`; the ADR supersedes that, and the reason is the one it gives:
+         *     re-sending nine brief fields to answer one question means eight of them were read some time
+         *     ago, and each is a chance to overwrite something the agent changed since — from a form
+         *     control the user never touched.
+         *
+         *     Three things are refused rather than ignored, because a silently dropped answer is
+         *     indistinguishable to the user from one the server accepted and then lost:
+         *
+         *     - an answer to a question that is not outstanding — it was already answered or never asked,
+         *       and applying it would make this endpoint a second, unvalidated way to write arbitrary
+         *       brief fields;
+         *     - an answer whose value type does not match the question's `type`;
+         *     - two answers to the same question, where "last one wins" would be a coin toss.
+         *
+         *     No coverage check: no clarification question sets a destination, so none can name an
+         *     uncovered one.
+         */
+        post: operations["answerTripBriefClarification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1165,6 +1409,437 @@ export interface components {
             new_password: string;
         };
         /**
+         * @description A map position. One object rather than two sibling fields, because the domain refuses a
+         *     half-set coordinate: "latitude known, longitude null" silently places a city on the
+         *     Greenwich meridian and looks like data rather than like the mistake it is. Nesting the pair
+         *     means a client reads it as present or absent and never has to decide what a lone latitude
+         *     means.
+         * @example {
+         *       "latitude": 35.6762,
+         *       "longitude": 139.6503
+         *     }
+         */
+        GeoCoordinates: {
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+        };
+        /**
+         * @description One fully covered destination (ADR 010 §4).
+         *
+         *     There is no id. `slug` is the public handle — it is what the curated seeds, the URLs, and
+         *     `DestinationNotCoveredDetails.supported` are all keyed on, and publishing the surrogate key
+         *     beside it would give clients two ways to name one place and guarantee that half of them
+         *     pick the one this API does not accept back.
+         */
+        SupportedDestination: {
+            /**
+             * @description Stable handle, also the partition key for the per-destination indexes.
+             * @example tokyo-jp
+             */
+            slug: string;
+            /**
+             * @description Display name in English. `ms` strings are translated at presentation.
+             * @example Tokyo
+             */
+            name: string;
+            /**
+             * @description ISO 3166-1 alpha-2. App packs are per country rather than per city (ADR 010 §1), so a
+             *     client that shows "apps to install" resolves them from this rather than from the slug.
+             * @example JP
+             */
+            country_code: string;
+            /**
+             * @description IANA zone. A property of the place, not of a trip — the picker needs it to show local
+             *     time before any itinerary exists.
+             * @example Asia/Tokyo
+             */
+            timezone: string;
+            /** @description Absent when the destination was curated without a position. */
+            coordinates?: components["schemas"]["GeoCoordinates"] | null;
+        };
+        /**
+         * @description The body of `GET /destinations/supported`.
+         *
+         *     An object rather than a bare array: a top-level array cannot gain a field, and this
+         *     response will want one — the `sample_data: true` flag ADR 010 §3 requires in development,
+         *     or a coverage timestamp. Wrapping now costs one key; wrapping later breaks every generated
+         *     client.
+         * @example {
+         *       "destinations": [
+         *         {
+         *           "slug": "tokyo-jp",
+         *           "name": "Tokyo",
+         *           "country_code": "JP",
+         *           "timezone": "Asia/Tokyo",
+         *           "coordinates": {
+         *             "latitude": 35.6762,
+         *             "longitude": 139.6503
+         *           }
+         *         },
+         *         {
+         *           "slug": "bangkok-th",
+         *           "name": "Bangkok",
+         *           "country_code": "TH",
+         *           "timezone": "Asia/Bangkok",
+         *           "coordinates": {
+         *             "latitude": 13.7563,
+         *             "longitude": 100.5018
+         *           }
+         *         }
+         *       ]
+         *     }
+         */
+        SupportedDestinations: {
+            /**
+             * @description Every `FULL` destination, in a stable order. An empty array is a truthful answer and
+             *     means nothing has been curated yet — the picker says so rather than inventing options.
+             */
+            destinations: components["schemas"]["SupportedDestination"][];
+        };
+        /**
+         * @description Wizard progress for a trip — the exact vocabulary of the "Trip status" table in
+         *     `USE-CASES.md`, in the order that table lists it (PLAN §3.1).
+         *
+         *     **Read-only on the wire.** No request body anywhere on this API accepts a status. It is
+         *     derived from brief completeness, and moved to `ARCHIVED` by the archive action; a client
+         *     able to set it could declare `BRIEF_COMPLETE` over an empty brief and step past the gate in
+         *     front of C2.
+         *
+         *     C1 owns `DRAFT`, `CLARIFICATION_NEEDED`, and `BRIEF_COMPLETE`. The rest are published here
+         *     because a client has to be able to render a trip in any of them, not because C1 can set
+         *     them.
+         * @example DRAFT
+         * @enum {string}
+         */
+        TripStatus: "DRAFT" | "BRIEF_COMPLETE" | "CLARIFICATION_NEEDED" | "RESEARCH_QUEUED" | "RESEARCH_RUNNING" | "RESEARCH_READY" | "DESTINATION_SELECTED" | "ITINERARY_READY" | "BOOKING_IN_PROGRESS" | "BOOKED" | "ARCHIVED";
+        /**
+         * @description One trip, as every trip endpoint returns it.
+         *
+         *     No `user_id`: ownership comes from the session on every request, and echoing the owner back
+         *     would publish an identifier that no endpoint on this API accepts as input.
+         */
+        Trip: {
+            /** Format: uuid */
+            trip_id: string;
+            /** @example Japan in spring */
+            name: string;
+            status: components["schemas"]["TripStatus"];
+            /**
+             * Format: uuid
+             * @description The chosen recommendation. Absent until C2 completes (UC-C2-06).
+             */
+            selected_recommendation_id?: string | null;
+            /**
+             * Format: int32
+             * @description The optimistic lock (ADR 008 §1). Published on every read because a client that cannot
+             *     see the version cannot send `expected_version`, and would have no option but to force
+             *     overwrite.
+             * @example 3
+             */
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /**
+         * @description The body of `GET /trips`.
+         *
+         *     An object rather than a bare array: a top-level array cannot gain a field, and this one
+         *     will want page metadata when a single user's trip list stops being a screenful. Wrapping
+         *     now costs one key; wrapping later breaks every generated client.
+         */
+        TripList: {
+            /** @description Newest first. Empty for a new account, which is an answer rather than an error. */
+            trips: components["schemas"]["Trip"][];
+        };
+        /**
+         * @description The name is the only field. Everything else about a new trip is the server's: the owner
+         *     from the session, `DRAFT` as the status, and an empty brief written in the same
+         *     transaction.
+         */
+        CreateTripRequest: {
+            /** @example Japan in spring */
+            name: string;
+        };
+        RenameTripRequest: components["schemas"]["ExpectedVersion"] & {
+            /** @example Kyoto and Osaka */
+            name: string;
+        };
+        ArchiveTripRequest: components["schemas"]["ExpectedVersion"] & Record<string, never>;
+        /**
+         * @description An amount and its currency (PLAN §4.0.2-A).
+         *
+         *     **`amount` is a decimal string, not a JSON number.** Money is `BigDecimal` in Java and
+         *     `numeric` in Postgres for the whole of its life precisely because binary floating point
+         *     cannot represent `4000.10`; serialising it as a JSON number hands it to a JavaScript client
+         *     as a `double` and undoes that at the last hop. A string survives the round trip exactly.
+         *
+         *     The server rejects a negative amount, an unknown currency code, and more decimal places
+         *     than the currency has minor units — 2 for `USD`, 0 for `JPY`.
+         */
+        Money: {
+            /**
+             * @description Non-negative decimal, in the currency's own precision.
+             * @example 4000.00
+             */
+            amount: string;
+            /**
+             * @description ISO 4217.
+             * @example MYR
+             */
+            currency: string;
+        };
+        /**
+         * @description An inclusive span of calendar days. `start_date == end_date` is a one-day trip.
+         *
+         *     Calendar dates, never instants: "arrive on 3 April" is a fact about the destination, and
+         *     turning it into a point on the UTC timeline needs a timezone the traveller has not chosen
+         *     yet — one that would shift the date across a boundary for anybody east of Greenwich.
+         *
+         *     One object rather than two sibling fields on the brief, so a client reads dates as present
+         *     or absent and never has to decide what a start with no end means.
+         */
+        DateRange: {
+            /**
+             * Format: date
+             * @example 2026-04-03
+             */
+            start_date: string;
+            /**
+             * Format: date
+             * @example 2026-04-12
+             */
+            end_date: string;
+        };
+        /**
+         * @description How many people are travelling.
+         *
+         *     Two counts rather than one total, because the split changes the answer rather than only the
+         *     arithmetic: room occupancy, entry pricing, and the `area_coverage` term of the C2 fit score
+         *     all treat a family of four differently from four adults. At least one adult, and at most 20
+         *     travellers — above that no C4 supplier quotes as a single party, so a brief that exceeded it
+         *     would produce an itinerary that cannot be booked.
+         */
+        PartySize: {
+            /**
+             * Format: int32
+             * @example 2
+             */
+            adults: number;
+            /**
+             * Format: int32
+             * @example 0
+             */
+            children: number;
+        };
+        /**
+         * @description How far the dates may move (UC-C1-04).
+         *
+         *     Kept separate from `dates` rather than modelled as a widened range: a range says which days
+         *     were entered, flexibility says how much C2 may shift them for a cheaper week or a better
+         *     season. Widening the range would lose the original intent and make `seasonality_fit` score
+         *     a window the user never asked for.
+         * @example FLEXIBLE_WEEK
+         * @enum {string}
+         */
+        DateFlexibility: "FIXED" | "FLEXIBLE_WEEK" | "FLEXIBLE_MONTH";
+        /**
+         * @description How densely the traveller wants their days filled. An ordinal band rather than a number,
+         *     because nobody can answer "how many activities per day" honestly and a number invites a
+         *     precision the itinerary would then be held to.
+         * @example MODERATE
+         * @enum {string}
+         */
+        TravelPace: "RELAXED" | "MODERATE" | "PACKED";
+        /**
+         * @description What the traveller wants out of the trip — the `interests` half of the C2 fit score
+         *     (PLAN §4.1.2).
+         *
+         *     A closed vocabulary, aligned one-to-one with the knowledge base's POI categories. Free text
+         *     would be friendlier to type and useless to rank: "temples and ramen" cannot be intersected
+         *     with anything the corpus stores, so the interest term would silently contribute zero and
+         *     the user would be told their interests were considered when they were not.
+         * @example FOOD
+         * @enum {string}
+         */
+        TravelInterest: "FOOD" | "SIGHTSEEING" | "MUSEUMS" | "NATURE" | "SHOPPING" | "NIGHTLIFE" | "EXPERIENCES";
+        /**
+         * @description What kind of value a question is asking for. The frontend picks a control from it, and the
+         *     server picks which field of `ClarificationAnswer` it will read — an answer whose filled
+         *     slot disagrees with this is `400 validation_failed`, never a silently ignored answer.
+         * @example MONEY
+         * @enum {string}
+         */
+        ClarificationType: "TEXT" | "NUMBER" | "MONEY" | "DATE_RANGE" | "CHOICE" | "MULTI_CHOICE";
+        /**
+         * @description One typed question the brief cannot be completed without (UC-C1-04).
+         *
+         *     `prompt_key` is a translation key, never a sentence: the frontend resolves it against
+         *     `locales/<lang>/trip_brief.json`, so one payload renders in English and Malay. An English
+         *     string here would be user-facing copy the Malay build could never reach (PLAN §11).
+         */
+        ClarificationQuestion: {
+            /**
+             * @description Stable and `snake_case`, and also the name of the brief field the answer sets — it is
+             *     what the answer action routes on. One of `travel_dates`, `date_flexibility`,
+             *     `departure_city`, `budget_max`, `party_size`, `interests`, `pace`.
+             * @example budget_max
+             */
+            id: string;
+            /**
+             * @description i18n key under the `trip_brief` namespace.
+             * @example trip_brief.clarify_budget
+             */
+            prompt_key: string;
+            type: components["schemas"]["ClarificationType"];
+            /**
+             * @description The permitted values for `CHOICE` and `MULTI_CHOICE`, and empty for every other type.
+             *     Carried in the question rather than fetched separately, so a client renders the control
+             *     from one payload.
+             * @example []
+             */
+            options: string[];
+            /**
+             * @description Whether the brief can complete without an answer. Every question C1 generates is
+             *     required, because it only ever asks about a field completeness depends on; the flag is
+             *     here for the LLM-authored questions task 19 adds, which can be optional.
+             * @example true
+             */
+            required: boolean;
+        };
+        /**
+         * @description The typed gap between this brief and a complete one (UC-C1-04, PLAN §4.1.3).
+         *
+         *     **Derived on every read and every write, never stored.** The questions are a pure function
+         *     of the brief's current fields, so the completeness rule and the question list are one
+         *     computation read two ways. A stored question table would be a second copy of that rule, and
+         *     the two would disagree the first time the agent wrote a field through `update_trip_brief`
+         *     without passing through the endpoint that refreshed the table.
+         *
+         *     Always present, and empty exactly when the brief is complete — so a client never has to
+         *     tell "no questions" apart from "questions not computed".
+         *
+         *     Destination preference is deliberately never asked about: an empty preference is a
+         *     legitimate answer that lets C2 rank the whole covered set, and demanding one would make the
+         *     product unusable for the traveller whose actual question is "where should I go?".
+         */
+        Clarification: {
+            /** @description In a stable order, so answering one does not reshuffle the form. */
+            questions: components["schemas"]["ClarificationQuestion"][];
+        };
+        /**
+         * @description One answer to one outstanding question — the typed diff ADR 008 §3 requires of an action
+         *     body.
+         *
+         *     **Exactly one slot must be filled**, and it must be the one the question's `type` names.
+         *     The alternative — a single `value` string parsed according to the type — cannot carry a
+         *     budget (an amount plus a currency) or a date range (two dates) without inventing a text
+         *     encoding, and a text encoding is a parser that fails at runtime in a place this contract
+         *     cannot describe.
+         */
+        ClarificationAnswer: {
+            /**
+             * @description The `ClarificationQuestion.id` being answered.
+             * @example budget_max
+             */
+            question_id: string;
+            /** @description For `TEXT`. */
+            text?: string | null;
+            /**
+             * Format: int32
+             * @description For `NUMBER`.
+             */
+            number?: number | null;
+            /** @description For `MONEY`. */
+            money?: components["schemas"]["Money"] | null;
+            /** @description For `DATE_RANGE`. */
+            date_range?: components["schemas"]["DateRange"] | null;
+            /** @description For `CHOICE`. One of the question's `options`. */
+            choice?: string | null;
+            /**
+             * @description For `MULTI_CHOICE`. An empty array counts as unfilled — selecting nothing is not an
+             *     answer, it is the question restated.
+             */
+            choices?: string[] | null;
+        };
+        /**
+         * @description The structured requirement set for one trip — what C1 produces and C2 consumes — together
+         *     with the trip status it implies and the questions it still needs.
+         *
+         *     The three travel in one payload because they are only consistent together, and this is the
+         *     body of every brief read **and** of every successful brief mutation (ADR 008 §2: "every
+         *     mutation returns the new full resource with its incremented version"). After a save the
+         *     client holds exactly what the server holds, so the debounced form's next keystroke does not
+         *     race a refetch it would otherwise have to make.
+         *
+         *     Every field is nullable or empty, because a brief under construction is incomplete by
+         *     definition and PLAN §4.1.3 answers incompleteness with `clarification` rather than a
+         *     rejected save. What is *present* is always valid.
+         *
+         *     There is no brief id: the brief is the trip's one child, addressed only through `tripId`.
+         */
+        TripBrief: {
+            /** Format: uuid */
+            trip_id: string;
+            /**
+             * @description The **trip's** status, carried here because it changes as a consequence of saving the
+             *     brief. A client that had to fetch it separately would, in the gap, render a "start
+             *     research" button for a brief the agent had just re-opened.
+             */
+            status: components["schemas"]["TripStatus"];
+            /**
+             * @description Candidate `destination.slug` values, most-preferred first. Empty means "no preference",
+             *     which is a legitimate answer rather than a gap. Every slug is checked against the
+             *     covered set on save (ADR 010 §4).
+             * @example [
+             *       "kuala-lumpur"
+             *     ]
+             */
+            destinations: string[];
+            dates?: components["schemas"]["DateRange"] | null;
+            date_flexibility?: components["schemas"]["DateFlexibility"] | null;
+            /**
+             * @description Free text, deliberately not a slug. People depart from places the knowledge base has
+             *     never curated, and requiring coverage on the origin would refuse a valid trip.
+             * @example Kuala Lumpur
+             */
+            departure_city?: string | null;
+            /** @description The ceiling for the whole trip, not a per-day figure. */
+            budget?: components["schemas"]["Money"] | null;
+            party?: components["schemas"]["PartySize"] | null;
+            /** @description Duplicates are collapsed; order is not meaningful. */
+            interests: components["schemas"]["TravelInterest"][];
+            pace?: components["schemas"]["TravelPace"] | null;
+            clarification: components["schemas"]["Clarification"];
+            /**
+             * Format: int32
+             * @description The **brief's** optimistic lock, and what `expected_version` means on both brief write
+             *     paths. The trip carries its own; the two advance independently (ADR 008 §1).
+             * @example 7
+             */
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        UpdateTripBriefRequest: components["schemas"]["ExpectedVersion"] & {
+            destinations?: string[];
+            dates?: components["schemas"]["DateRange"] | null;
+            date_flexibility?: components["schemas"]["DateFlexibility"] | null;
+            departure_city?: string | null;
+            budget?: components["schemas"]["Money"] | null;
+            party?: components["schemas"]["PartySize"] | null;
+            interests?: components["schemas"]["TravelInterest"][];
+            pace?: components["schemas"]["TravelPace"] | null;
+        };
+        AnswerClarificationRequest: components["schemas"]["ExpectedVersion"] & {
+            answers: components["schemas"]["ClarificationAnswer"][];
+        };
+        /**
          * @description Optimistic-concurrency fragment (ADR 008 §2). Every mutation of a versioned aggregate
          *     composes this into its request body:
          *
@@ -1309,6 +1984,68 @@ export interface components {
                  *       "code": "account_closed",
                  *       "message": "This account has been closed.",
                  *       "details": {}
+                 *     }
+                 */
+                "application/json": components["schemas"]["ApiErrorResponse"];
+            };
+        };
+        /**
+         * @description The **new full resource** with its incremented `version` (ADR 008 §2). Returning the whole
+         *     trip rather than an acknowledgement is what makes the conflict rules usable: the client
+         *     holds exactly what the server holds, including the version its next write must echo.
+         */
+        TripMutated: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Trip"];
+            };
+        };
+        /**
+         * @description The brief, the trip status it implies, and the outstanding questions — one consistent
+         *     payload, and the **new full resource** after any mutation (ADR 008 §2). `version` is the
+         *     brief's, and is what `expected_version` means on both brief write paths.
+         */
+        TripBriefState: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["TripBrief"];
+            };
+        };
+        /**
+         * @description Nothing to write, for one of two reasons that share `404`.
+         *
+         *     - `not_found` — no trip with this id, **or** one that is not the caller's. Deliberately
+         *       identical, so the endpoint cannot confirm that another user's trip exists.
+         *     - `destination_not_covered` — a named destination has no curated knowledge (ADR 010 §4).
+         *       `details.requested` echoes the slug so a typo is visible and `details.supported` lists the
+         *       ones that are covered, because the honest answer to "can you plan Osaka?" is "no, but
+         *       here is what we do know". It is never accepted and then ranked near zero, which would
+         *       read as "we considered it and it is a poor match" when nobody ever looked.
+         */
+        TripBriefNotFound: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "code": "destination_not_covered",
+                 *       "message": "No curated travel knowledge exists for 'osaka' yet.",
+                 *       "details": {
+                 *         "requested": "osaka",
+                 *         "supported": [
+                 *           "kuala-lumpur",
+                 *           "penang",
+                 *           "singapore"
+                 *         ]
+                 *       }
                  *     }
                  */
                 "application/json": components["schemas"]["ApiErrorResponse"];
@@ -1643,6 +2380,12 @@ export interface components {
          *     comes from the session cookie.
          */
         UserIdParam: string;
+        /**
+         * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+         *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+         *     `403`, so this parameter cannot be used to probe for another user's trips.
+         */
+        TripIdParam: string;
         /** @description Zero-based page index (PLAN §6.1). */
         PageParam: number;
         /** @description Items per page. Values above the maximum are rejected, never clamped. */
@@ -2301,6 +3044,276 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["UserNotFound"];
             409: components["responses"]["AccountClosed"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listSupportedDestinations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every fully covered destination, in a stable order. Empty when none is curated. */
+            200: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportedDestinations"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listTrips: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's trips, newest first. Empty for a new account. */
+            200: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createTrip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTripRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description The new trip, including the `version` its first brief save will have to echo — so the
+             *     client does not need a second request to obtain it.
+             */
+            201: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Trip"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getTrip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The requested trip. */
+            200: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Trip"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    renameTrip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameTripRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["TripMutated"];
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteTrip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The trip and its brief are gone. Nothing in the body — no resource is left. */
+            204: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    archiveTrip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveTripRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["TripMutated"];
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getTripBrief: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["TripBriefState"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateTripBrief: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTripBriefRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["TripBriefState"];
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["TripBriefNotFound"];
+            409: components["responses"]["VersionConflict"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    answerTripBriefClarification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerClarificationRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["TripBriefState"];
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
             500: components["responses"]["InternalError"];
         };
     };

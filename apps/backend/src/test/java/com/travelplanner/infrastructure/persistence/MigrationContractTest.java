@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.travelplanner.domain.enums.AdminAction;
 import com.travelplanner.domain.enums.AdminActionResult;
+import com.travelplanner.domain.enums.ConversationScope;
+import com.travelplanner.domain.enums.ConversationState;
+import com.travelplanner.domain.enums.ChatMessageRole;
+import com.travelplanner.domain.enums.ChatMessageStatus;
 import com.travelplanner.domain.enums.TripStatus;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -220,6 +224,117 @@ class MigrationContractTest {
     }
 
     @Test
+    void chatOrderingIsASequenceRatherThanATimestamp() {
+        // tasks/20 Definition of Done: "Durable chat messages reload in order." A created_at cannot
+        // give that — Postgres fixes now() for a whole transaction, so every row one turn writes
+        // shares a value and ORDER BY created_at over them is undefined, not merely imprecise.
+        // ADR 007 also needs the column as a resume cursor ("Client sends Last-Event-ID; server
+        // replays persisted frames after that id").
+        String chatMigration = read("V19__create_conversation_tables.sql");
+
+        assertThat(chatMigration).contains("CREATE TABLE message");
+        // Column-shape assertions run against whitespace-normalised SQL: the migrations align
+        // their column types into visual columns, and a test that depended on that alignment would
+        // fail the next time somebody added a longer column name.
+        assertThat(normalised(chatMigration)).contains("seq bigint NOT NULL");
+        assertThat(chatMigration)
+                .describedAs("uniqueness is what makes the ordering a guarantee, not an intention")
+                .contains("CONSTRAINT uq_message_conversation_seq UNIQUE (conversation_id, seq)");
+        assertThat(normalised(chatMigration))
+                .describedAs("the allocator lives on the parent so one row lock serialises appends")
+                .contains("next_message_seq bigint NOT NULL DEFAULT 1");
+    }
+
+    @Test
+    void aRetriedChatSendCannotCommitTwice() {
+        // tasks/20 Definition of Done: "Disconnect/retry cannot duplicate committed user messages."
+        // Look-then-insert alone cannot promise that — two retries racing after a dropped response
+        // would both pass the lookup — so the unique index is the actual guarantee.
+        String chatMigration = read("V19__create_conversation_tables.sql");
+
+        assertThat(normalised(chatMigration)).contains("client_message_id varchar(64)");
+        assertThat(chatMigration).contains(
+                "CONSTRAINT uq_message_conversation_client_id UNIQUE (conversation_id, client_message_id)");
+        assertThat(chatMigration)
+                .describedAs("only a client-sent message can be retried, so only it carries a key")
+                .contains("CONSTRAINT ck_message_client_id_is_user_only");
+    }
+
+    @Test
+    void aPartialAssistantMessageIsMarkedRatherThanDiscarded() {
+        // tasks/20: partial assistant messages must be "explicitly marked or safely discarded".
+        // ADR 007 chose marking: "Partial assistant message persisted with status=interrupted;
+        // never silently discarded".
+        String chatMigration = read("V19__create_conversation_tables.sql");
+
+        assertThat(chatMigration).contains("'INTERRUPTED'");
+        assertThat(chatMigration).contains("CONSTRAINT ck_message_completed_at_matches_status");
+    }
+
+    @Test
+    void theChatSchemaHasNowhereToPutChainOfThought() {
+        // tasks/20 Definition of Done: "No hidden chain-of-thought is stored or returned", and its
+        // Do-not list: "Do not expose internal reasoning or raw provider events". The guarantee is
+        // structural — there is no column able to hold a reasoning trace, so storing one would mean
+        // changing the migration, the entity, the mapper and the domain record.
+        String columns = between(stripComments(read("V19__create_conversation_tables.sql")),
+                "CREATE TABLE message (", ");").toLowerCase(Locale.ROOT);
+
+        assertThat(columns)
+                .doesNotContain("reasoning")
+                .doesNotContain("thinking")
+                .doesNotContain("thought")
+                .doesNotContain("scratchpad")
+                .doesNotContain("raw_provider")
+                .doesNotContain("provider_event");
+    }
+
+    @Test
+    void everyChatReadCanBeScopedToItsOwner() {
+        // PLAN §4.0.2-L. `message` deliberately carries no user_id — the owner lives on
+        // `conversation`, and duplicating it would create a second source of truth — so the two
+        // parent tables are the ones that must be indexed by owner.
+        String chatMigration = read("V19__create_conversation_tables.sql");
+
+        assertThat(chatMigration).contains("ON conversation (user_id, created_at DESC)");
+        assertThat(chatMigration).contains("ON planner_session (user_id, created_at DESC)");
+        assertThat(between(stripComments(chatMigration), "CREATE TABLE message (", ");"))
+                .describedAs("a duplicated owner column could disagree with the conversation's")
+                .doesNotContain("user_id");
+    }
+
+    @Test
+    void aTripHasAtMostOneConversationAndAUserAtMostOneOpenPlannerSession() {
+        // PLAN §3.2: "one persistent conversation from create_trip until archived". Both are
+        // partial-by-NULL or explicitly partial, so planner threads and closed sessions stay
+        // unconstrained — the asymmetry is the product requirement, not an accident.
+        String chatMigration = read("V19__create_conversation_tables.sql");
+
+        assertThat(chatMigration).contains("CONSTRAINT uq_conversation_trip_id UNIQUE (trip_id)");
+        assertThat(chatMigration).contains(
+                "CREATE UNIQUE INDEX uq_planner_session_user_open ON planner_session (user_id) "
+                        + "WHERE ended_at IS NULL");
+    }
+
+    @Test
+    void theChatCheckConstraintsListExactlyTheDomainEnumConstants() {
+        String chatMigration = read("V19__create_conversation_tables.sql");
+
+        assertThat(constantsIn(chatMigration, "CONSTRAINT ck_conversation_scope CHECK (scope IN ("))
+                .containsExactlyInAnyOrderElementsOf(
+                        Stream.of(ConversationScope.values()).map(Enum::name).toList());
+        assertThat(constantsIn(chatMigration, "CONSTRAINT ck_conversation_state CHECK (state IN ("))
+                .containsExactlyInAnyOrderElementsOf(
+                        Stream.of(ConversationState.values()).map(Enum::name).toList());
+        assertThat(constantsIn(chatMigration, "CONSTRAINT ck_message_role CHECK (role IN ("))
+                .containsExactlyInAnyOrderElementsOf(
+                        Stream.of(ChatMessageRole.values()).map(Enum::name).toList());
+        assertThat(constantsIn(chatMigration, "CONSTRAINT ck_message_status CHECK (status IN ("))
+                .containsExactlyInAnyOrderElementsOf(
+                        Stream.of(ChatMessageStatus.values()).map(Enum::name).toList());
+    }
+
+    @Test
     void theBaselineEnablesPgvector() {
         assertThat(read("V1__enable_extensions.sql").toLowerCase(Locale.ROOT))
                 .contains("create extension if not exists vector");
@@ -244,6 +359,16 @@ class MigrationContractTest {
                 .map(MigrationContractTest::read)
                 .map(MigrationContractTest::stripComments)
                 .reduce("", (left, right) -> left + "\n" + right);
+    }
+
+    /**
+     * The same SQL with every run of whitespace collapsed to one space. Column declarations are
+     * visually aligned in these files, so an assertion on a declaration must not depend on how many
+     * spaces the alignment currently needs — that would turn "somebody added a longer column name"
+     * into a failing contract test.
+     */
+    private static String normalised(String sql) {
+        return sql.replaceAll("\\s+", " ");
     }
 
     private static String stripComments(String sql) {

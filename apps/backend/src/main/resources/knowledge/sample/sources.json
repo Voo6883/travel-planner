@@ -1,0 +1,14 @@
+{
+  "format_version": 1,
+  "sources": [
+    {
+      "source_ref": "stub:sample",
+      "name": "Sample data (not a real source)",
+      "licence": "SAMPLE_DATA",
+      "attribution_text": "Sample data generated for local development. Not sourced from any publisher, not verified, and not fit for any travel decision.",
+      "source_url": null,
+      "retrieved_at": null,
+      "trust_tier": "SAMPLE"
+    }
+  ]
+}

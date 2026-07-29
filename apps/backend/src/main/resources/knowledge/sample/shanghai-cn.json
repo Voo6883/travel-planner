@@ -1,0 +1,506 @@
+{
+  "format_version": 1,
+  "destination": {
+    "slug": "shanghai-cn",
+    "name": "Shanghai",
+    "country_code": "CN",
+    "timezone": "Asia/Shanghai",
+    "latitude": 31.2304,
+    "longitude": 121.4737,
+    "coverage_level": "PARTIAL"
+  },
+  "guide": {
+    "locale": "en",
+    "source_ref": "stub:sample",
+    "overview": "SAMPLE DATA — this is not a description of Shanghai. It is placeholder narrative held under the reserved stub:sample source so that development and CI can exercise guide storage, per-field-group chunking and vector retrieval without shipping a single unsourced fact. The sample city is laid out as four invented areas: a sample old town, a sample riverside, a sample station district and a sample hill park. Nothing in this text was taken from a publisher, and none of it should ever be shown to a traveller.",
+    "food": "SAMPLE DATA — this is not a description of food in Shanghai. The sample food scene is written around three invented venues: a riverside market selling street food, a noodle house in the sample old town, and a night food street beside the sample station. It exists so that a query such as \"street food\" can be shown to retrieve the FOOD chunk rather than the overview, which is the whole point of embedding the three field groups separately.",
+    "practical": "SAMPLE DATA — this is not practical advice for Shanghai. Sample transport is a metro, a city bus, a river ferry, taxis and walking; the sample app pack lists one ride-hailing, transit, payment and translation app per country, all with deliberately unresolvable store links. Every opening time, fare, band and price in this dataset is a placeholder and must never be quoted to anyone."
+  },
+  "areas": [
+    {
+      "slug": "sample-old-town",
+      "name": "Sample Old Town",
+      "description": "SAMPLE DATA — an invented neighbourhood. Stands in for a walkable historic quarter with temples and small restaurants. Not a real place.",
+      "latitude": 31.2504,
+      "longitude": 121.4937,
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-riverside",
+      "name": "Sample Riverside",
+      "description": "SAMPLE DATA — an invented neighbourhood. Stands in for a waterfront strip with a market, bars and boat trips. Not a real place.",
+      "latitude": 31.2104,
+      "longitude": 121.4837,
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-station-district",
+      "name": "Sample Station District",
+      "description": "SAMPLE DATA — an invented neighbourhood. Stands in for the busy blocks around a main station. Not a real place.",
+      "latitude": 31.2304,
+      "longitude": 121.4737,
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-hill-park",
+      "name": "Sample Hill Park",
+      "description": "SAMPLE DATA — an invented neighbourhood. Stands in for green space on a slope above the city. Not a real place.",
+      "latitude": 31.2604,
+      "longitude": 121.4537,
+      "source_ref": "stub:sample"
+    }
+  ],
+  "pois": [
+    {
+      "slug": "sample-riverside-market",
+      "name": "Sample Riverside Market",
+      "description": "SAMPLE DATA — an invented venue. A riverside street food market used to exercise FOOD retrieval for queries such as \"street food\". Not a real market; nothing here is sourced.",
+      "category": "FOOD",
+      "area_slug": "sample-riverside",
+      "tags": [
+        "street food",
+        "market",
+        "sample"
+      ],
+      "locale": "en",
+      "latitude": 31.2094,
+      "longitude": 121.4857,
+      "opening_hours": "SAMPLE DATA — no real opening hours",
+      "price_band": "BUDGET",
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-noodle-house",
+      "name": "Sample Noodle House",
+      "description": "SAMPLE DATA — an invented venue. A small noodle restaurant in the sample old town, present so that a cheap sit-down meal exists in the FOOD category. Not a real restaurant.",
+      "category": "FOOD",
+      "area_slug": "sample-old-town",
+      "tags": [
+        "noodles",
+        "local dishes",
+        "sample"
+      ],
+      "locale": "en",
+      "latitude": 31.2524,
+      "longitude": 121.4927,
+      "opening_hours": null,
+      "price_band": "BUDGET",
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-night-food-street",
+      "name": "Sample Night Food Street",
+      "description": "SAMPLE DATA — an invented venue. An evening street food lane beside the sample station, giving the corpus a second \"street food\" chunk to rank against. Not a real street.",
+      "category": "FOOD",
+      "area_slug": "sample-station-district",
+      "tags": [
+        "street food",
+        "night market",
+        "sample"
+      ],
+      "locale": "en",
+      "latitude": 31.2324,
+      "longitude": 121.4707,
+      "opening_hours": "SAMPLE DATA — no real opening hours",
+      "price_band": "BUDGET",
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-old-town-temple",
+      "name": "Sample Old Town Temple",
+      "description": "SAMPLE DATA — an invented sight. A placeholder temple used to exercise the lexical half of hybrid retrieval for queries such as \"temples\". Not a real temple, and no religious site is described here.",
+      "category": "SIGHT",
+      "area_slug": "sample-old-town",
+      "tags": [
+        "temples",
+        "heritage",
+        "sample"
+      ],
+      "locale": "en",
+      "latitude": 31.2494,
+      "longitude": 121.4947,
+      "opening_hours": "SAMPLE DATA — no real opening hours",
+      "price_band": "FREE",
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-city-museum",
+      "name": "Sample City Museum",
+      "description": "SAMPLE DATA — an invented museum. Exists so the MUSEUM category is populated and a paid indoor option is available to the sample planner. Not a real museum.",
+      "category": "MUSEUM",
+      "area_slug": "sample-old-town",
+      "tags": [
+        "museum",
+        "history",
+        "sample"
+      ],
+      "locale": "en",
+      "latitude": 31.2484,
+      "longitude": 121.4907,
+      "opening_hours": "SAMPLE DATA — no real opening hours",
+      "price_band": "MODERATE",
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-hill-viewpoint",
+      "name": "Sample Hill Viewpoint",
+      "description": "SAMPLE DATA — an invented viewpoint. A walk up through the sample hill park, present so the NATURE category and a free outdoor option exist. Not a real viewpoint.",
+      "category": "NATURE",
+      "area_slug": "sample-hill-park",
+      "tags": [
+        "park",
+        "walking",
+        "viewpoint",
+        "sample"
+      ],
+      "locale": "en",
+      "latitude": 31.2614,
+      "longitude": 121.4547,
+      "opening_hours": null,
+      "price_band": "FREE",
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-craft-market",
+      "name": "Sample Craft Market",
+      "description": "SAMPLE DATA — an invented market. A craft and souvenir market on the sample riverside, populating the SHOPPING category. Not a real market.",
+      "category": "SHOPPING",
+      "area_slug": "sample-riverside",
+      "tags": [
+        "shopping",
+        "crafts",
+        "souvenirs",
+        "sample"
+      ],
+      "locale": "en",
+      "latitude": 31.2124,
+      "longitude": 121.4827,
+      "opening_hours": "SAMPLE DATA — no real opening hours",
+      "price_band": "MODERATE",
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-riverside-bar-lane",
+      "name": "Sample Riverside Bar Lane",
+      "description": "SAMPLE DATA — an invented lane of bars. Populates the NIGHTLIFE category so an evening slot can be scheduled in a sample itinerary. Not a real venue.",
+      "category": "NIGHTLIFE",
+      "area_slug": "sample-riverside",
+      "tags": [
+        "nightlife",
+        "bars",
+        "sample"
+      ],
+      "locale": "en",
+      "latitude": 31.2074,
+      "longitude": 121.4817,
+      "opening_hours": null,
+      "price_band": "MODERATE",
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-river-cruise",
+      "name": "Sample River Cruise",
+      "description": "SAMPLE DATA — an invented activity. A bookable boat trip along the sample river, populating the EXPERIENCE category and the EXPENSIVE price band. Not a real operator.",
+      "category": "EXPERIENCE",
+      "area_slug": "sample-riverside",
+      "tags": [
+        "boat",
+        "sightseeing",
+        "sample"
+      ],
+      "locale": "en",
+      "latitude": 31.2054,
+      "longitude": 121.4877,
+      "opening_hours": "SAMPLE DATA — no real opening hours",
+      "price_band": "EXPENSIVE",
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-central-station",
+      "name": "Sample Central Station",
+      "description": "SAMPLE DATA — an invented station. The sample transport hub every route segment below runs to or from. Not a real station.",
+      "category": "TRANSPORT_HUB",
+      "area_slug": "sample-station-district",
+      "tags": [
+        "station",
+        "transport",
+        "sample"
+      ],
+      "locale": "en",
+      "latitude": 31.2314,
+      "longitude": 121.4747,
+      "opening_hours": null,
+      "price_band": "FREE",
+      "source_ref": "stub:sample"
+    }
+  ],
+  "transport_modes": [
+    {
+      "slug": "sample-metro",
+      "name": "Sample Metro",
+      "kind": "METRO",
+      "description": "SAMPLE DATA — an invented metro network. Present so the METRO kind and a cheap, tourist-usable mode exist. No real line, fare or frequency is described.",
+      "cost_band": "BUDGET",
+      "tourist_friendly": true,
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-city-bus",
+      "name": "Sample City Bus",
+      "kind": "BUS",
+      "description": "SAMPLE DATA — an invented bus network. Marked not tourist-friendly so the flag is exercised by something. No real route is described.",
+      "cost_band": "BUDGET",
+      "tourist_friendly": false,
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-river-ferry",
+      "name": "Sample River Ferry",
+      "kind": "FERRY",
+      "description": "SAMPLE DATA — an invented ferry. Gives the sample riverside a second way in, and populates the FERRY kind. No real service is described.",
+      "cost_band": "BUDGET",
+      "tourist_friendly": true,
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-taxi",
+      "name": "Sample Taxi",
+      "kind": "TAXI",
+      "description": "SAMPLE DATA — invented taxi availability. Populates the TAXI kind and the MODERATE cost band. No real fare is described.",
+      "cost_band": "MODERATE",
+      "tourist_friendly": true,
+      "source_ref": "stub:sample"
+    },
+    {
+      "slug": "sample-walking",
+      "name": "Sample Walking",
+      "kind": "WALK",
+      "description": "SAMPLE DATA — walking, as a mode the planner can fall back to. Populates the WALK kind and the FREE cost band.",
+      "cost_band": "FREE",
+      "tourist_friendly": true,
+      "source_ref": "stub:sample"
+    }
+  ],
+  "route_segments": [
+    {
+      "from_area_slug": "sample-old-town",
+      "to_area_slug": "sample-station-district",
+      "transport_mode_slug": "sample-metro",
+      "duration_minutes": 9,
+      "estimated": false,
+      "notes": "SAMPLE DATA — an invented journey time between two invented areas.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "from_area_slug": "sample-station-district",
+      "to_area_slug": "sample-riverside",
+      "transport_mode_slug": "sample-metro",
+      "duration_minutes": 12,
+      "estimated": false,
+      "notes": "SAMPLE DATA — an invented journey time between two invented areas.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "from_area_slug": "sample-riverside",
+      "to_area_slug": "sample-old-town",
+      "transport_mode_slug": "sample-river-ferry",
+      "duration_minutes": 20,
+      "estimated": true,
+      "notes": "SAMPLE DATA — an invented journey time, flagged estimated so the null-leg fallback path has an example.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "from_area_slug": "sample-station-district",
+      "to_area_slug": "sample-hill-park",
+      "transport_mode_slug": "sample-city-bus",
+      "duration_minutes": 25,
+      "estimated": true,
+      "notes": "SAMPLE DATA — an invented journey time, flagged estimated.",
+      "source_ref": "stub:sample"
+    }
+  ],
+  "seasonality": [
+    {
+      "month": 1,
+      "weather_band": "COLD",
+      "crowd_band": "LOW",
+      "price_band": "BUDGET",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "month": 2,
+      "weather_band": "COOL",
+      "crowd_band": "LOW",
+      "price_band": "BUDGET",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "month": 3,
+      "weather_band": "MILD",
+      "crowd_band": "MODERATE",
+      "price_band": "MODERATE",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "month": 4,
+      "weather_band": "WARM",
+      "crowd_band": "MODERATE",
+      "price_band": "MODERATE",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "month": 5,
+      "weather_band": "HOT",
+      "crowd_band": "HIGH",
+      "price_band": "EXPENSIVE",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "month": 6,
+      "weather_band": "WET",
+      "crowd_band": "HIGH",
+      "price_band": "EXPENSIVE",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "month": 7,
+      "weather_band": "STORMY",
+      "crowd_band": "PEAK",
+      "price_band": "LUXURY",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "month": 8,
+      "weather_band": "HOT",
+      "crowd_band": "PEAK",
+      "price_band": "EXPENSIVE",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "month": 9,
+      "weather_band": "WARM",
+      "crowd_band": "HIGH",
+      "price_band": "MODERATE",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "month": 10,
+      "weather_band": "MILD",
+      "crowd_band": "MODERATE",
+      "price_band": "MODERATE",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "month": 11,
+      "weather_band": "COOL",
+      "crowd_band": "LOW",
+      "price_band": "BUDGET",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    },
+    {
+      "month": 12,
+      "weather_band": "COLD",
+      "crowd_band": "LOW",
+      "price_band": "BUDGET",
+      "notes": "SAMPLE DATA — an illustrative band rotation, identical for every sample destination. Not a climate, crowd or price observation.",
+      "source_ref": "stub:sample"
+    }
+  ],
+  "price_history": [
+    {
+      "category": "HOTEL_NIGHT",
+      "amount": 111,
+      "currency": "CNY",
+      "observed_on": "2026-01-01",
+      "source_ref": "stub:sample"
+    },
+    {
+      "category": "HOTEL_NIGHT",
+      "amount": 111,
+      "currency": "CNY",
+      "observed_on": "2026-04-01",
+      "source_ref": "stub:sample"
+    },
+    {
+      "category": "MEAL_MID_RANGE",
+      "amount": 222,
+      "currency": "CNY",
+      "observed_on": "2026-01-01",
+      "source_ref": "stub:sample"
+    },
+    {
+      "category": "MEAL_MID_RANGE",
+      "amount": 222,
+      "currency": "CNY",
+      "observed_on": "2026-04-01",
+      "source_ref": "stub:sample"
+    },
+    {
+      "category": "TRANSIT_DAY_PASS",
+      "amount": 333,
+      "currency": "CNY",
+      "observed_on": "2026-01-01",
+      "source_ref": "stub:sample"
+    },
+    {
+      "category": "TRANSIT_DAY_PASS",
+      "amount": 333,
+      "currency": "CNY",
+      "observed_on": "2026-04-01",
+      "source_ref": "stub:sample"
+    }
+  ],
+  "travel_apps": [
+    {
+      "country_code": "CN",
+      "slug": "sample-ride-hailing",
+      "name": "Sample Ride-Hailing App",
+      "category": "RIDEHAILING",
+      "description": "SAMPLE DATA — an invented app. Populates the RIDEHAILING category of the country app pack. Not a real product; the store links deliberately do not resolve.",
+      "ios_url": "https://example.invalid/sample-app/sample-ride-hailing/ios",
+      "android_url": "https://example.invalid/sample-app/sample-ride-hailing/android",
+      "source_ref": "stub:sample"
+    },
+    {
+      "country_code": "CN",
+      "slug": "sample-transit",
+      "name": "Sample Transit App",
+      "category": "TRANSIT",
+      "description": "SAMPLE DATA — an invented app. Populates the TRANSIT category of the country app pack. Not a real product; the store links deliberately do not resolve.",
+      "ios_url": "https://example.invalid/sample-app/sample-transit/ios",
+      "android_url": "https://example.invalid/sample-app/sample-transit/android",
+      "source_ref": "stub:sample"
+    },
+    {
+      "country_code": "CN",
+      "slug": "sample-payment",
+      "name": "Sample Payment App",
+      "category": "PAYMENT",
+      "description": "SAMPLE DATA — an invented app. Populates the PAYMENT category of the country app pack. Not a real product; the store links deliberately do not resolve.",
+      "ios_url": "https://example.invalid/sample-app/sample-payment/ios",
+      "android_url": "https://example.invalid/sample-app/sample-payment/android",
+      "source_ref": "stub:sample"
+    },
+    {
+      "country_code": "CN",
+      "slug": "sample-translation",
+      "name": "Sample Translation App",
+      "category": "TRANSLATION",
+      "description": "SAMPLE DATA — an invented app. Populates the TRANSLATION category of the country app pack. Not a real product; the store links deliberately do not resolve.",
+      "ios_url": "https://example.invalid/sample-app/sample-translation/ios",
+      "android_url": "https://example.invalid/sample-app/sample-translation/android",
+      "source_ref": "stub:sample"
+    }
+  ]
+}

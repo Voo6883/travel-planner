@@ -4,9 +4,11 @@ import { NextIntlClientProvider } from 'next-intl';
 import type { ReactElement, ReactNode } from 'react';
 import enAdmin from '@/locales/en/admin.json';
 import enAuth from '@/locales/en/auth.json';
+import enChat from '@/locales/en/chat.json';
 import enCommon from '@/locales/en/common.json';
 import msAdmin from '@/locales/ms/admin.json';
 import msAuth from '@/locales/ms/auth.json';
+import msChat from '@/locales/ms/chat.json';
 import msCommon from '@/locales/ms/common.json';
 
 export type TestLocale = 'en' | 'ms';
@@ -34,8 +36,8 @@ export function renderWithProviders(ui: ReactElement, options: RenderOptions = {
 
 export function messagesFor(locale: TestLocale) {
   return locale === 'en'
-    ? { common: enCommon, auth: enAuth, admin: enAdmin }
-    : { common: msCommon, auth: msAuth, admin: msAdmin };
+    ? { common: enCommon, auth: enAuth, admin: enAdmin, chat: enChat }
+    : { common: msCommon, auth: msAuth, admin: msAdmin, chat: msChat };
 }
 
 function wrap(children: ReactNode, locale: TestLocale) {

@@ -181,6 +181,22 @@ class OpenApiSpecTest {
     }
 
     @Test
+    void theCoverageEndpointIsPublicAndPublishesSlugsRatherThanIds() {
+        // ADR 010 §4. `security` is deliberately absent: this backs the destination picker and the
+        // agent's honest "I do not cover that yet", both of which run before anybody signs in. A
+        // generated client that demanded a session here could not call it from the landing page.
+        Operation supported = spec.getPaths().get("/destinations/supported").getGet();
+        assertThat(supported.getOperationId()).isEqualTo("listSupportedDestinations");
+        assertThat(supported.getSecurity()).isNull();
+
+        // One public handle, not two. `destination_not_covered` already lists slugs in
+        // `details.supported`, and a second identifier would split clients between them.
+        assertThat(propertyNamesOf("SupportedDestination"))
+                .contains("slug", "name", "country_code", "timezone")
+                .doesNotContain("id", "destination_id", "coverage_level");
+    }
+
+    @Test
     void paginationParametersMatchThePublishedDefaultsAndCeiling() {
         Map<String, Parameter> parameters = spec.getComponents().getParameters();
         assertThat(parameters).containsKeys("PageParam", "PageSizeParam", "SortParam");

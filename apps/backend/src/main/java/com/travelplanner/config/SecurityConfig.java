@@ -81,10 +81,17 @@ public class SecurityConfig {
      * <p>They are {@code GET} because a provider redirect is a top-level navigation and there is no
      * other verb a browser can arrive with. That also puts them outside CSRF protection, which is
      * why {@code state} exists.
+     *
+     * <p>{@code /destinations/supported} is public because ADR 010 §4 gives it two jobs that both
+     * happen before anybody signs in: it backs the destination picker, and it is the list the chat
+     * agent's honest "I do not cover that yet" has to name. A picker that answers 401 cannot do
+     * either. It publishes a curated three-city catalogue and nothing about any user, so there is
+     * no per-caller data behind the decision.
      */
     private static final String[] PUBLIC_GET = {
         "/api/v1/health", "/api/v1/ready",
         "/api/v1/auth/oauth/github/start", "/api/v1/auth/oauth/github/callback",
+        "/api/v1/destinations/supported",
     };
 
     /**

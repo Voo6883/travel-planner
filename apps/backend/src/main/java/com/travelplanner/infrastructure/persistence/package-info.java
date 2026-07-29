@@ -16,6 +16,7 @@
  *
  * <pre>
  *   user  →  trip  →  trip_brief  →  (itinerary_day → itinerary_item → booking, later tasks)
+ *         →  planner_session  →  conversation  →  message
  * </pre>
  *
  * The order follows foreign-key direction, parent before child. Two transactions that both touch
@@ -23,6 +24,33 @@
  * cycle; one transaction taking {@code trip_brief} first would deadlock against the other under
  * ordinary concurrent editing. Later tasks extend the chain to the right — they must not insert a
  * table in the middle without updating this note.
+ *
+ * <h3>Where the chat tables sit, and why (task 20)</h3>
+ *
+ * The three chat tables form a second branch off {@code user} rather than a continuation of the
+ * trip chain, because that is what their foreign keys say: {@code planner_session} references
+ * {@code user} only, and {@code conversation} references {@code user}, {@code trip} (nullable), and
+ * {@code planner_session}. Having two parents is exactly why {@code conversation} cannot be placed
+ * anywhere earlier — it must follow <em>both</em> {@code trip} and {@code planner_session}, and the
+ * position shown is the only one that does. {@code message} then follows {@code conversation}, its
+ * single parent.
+ *
+ * <p>The ordering is not theoretical here; one everyday operation depends on it. Appending a
+ * message takes a {@code PESSIMISTIC_WRITE} lock on its {@code conversation} row to allocate
+ * {@code next_message_seq} (see {@code ConversationJpaRepository#findByIdAndUserIdForUpdate}) and
+ * then inserts into {@code message}. A transaction that instead locked a {@code message} row first
+ * and reached for its conversation afterwards would deadlock against every concurrent append.
+ *
+ * <p>The {@code create_trip} handoff (PLAN §3.2) is the multi-table write that spans both branches:
+ * it inserts a {@code trip}, then updates {@code conversation} to link it, then stamps
+ * {@code planner_session.ended_at}. Taken in the order above — {@code trip} before
+ * {@code planner_session} before {@code conversation} — it cannot cycle against an ordinary append,
+ * which touches only the tail of the same order.
+ *
+ * <p>Nothing in the chat branch carries an ADR 008 {@code version} column, and that is deliberate
+ * rather than an omission: ADR 008 §1 lists the agent-mutable aggregates that get optimistic
+ * locking, and a conversation is not one. Two concurrent appends are both wanted, so the pessimistic
+ * lock queues the second where a version check would fail it.
  *
  * <h2>Timestamps</h2>
  *
