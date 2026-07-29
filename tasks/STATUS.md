@@ -3,7 +3,7 @@
 > Deliverable of [Task 00](00-plan-baseline.md). Single source of truth for what is `done`.
 > Baseline and dependency rationale: [`EXECUTION-BASELINE.md`](EXECUTION-BASELINE.md).
 
-**Baseline commit:** `aa20043` · **Working branch:** `dev` · **Last updated:** 2026-07-28
+**Baseline commit:** `aa20043` · **Working branch:** `dev` · **Last updated:** 2026-07-29
 
 ## Status values
 
@@ -51,7 +51,7 @@
 | 12 | [Admin platform](12-admin-platform.md) | 07, 08, 09, 11 | `done` | Commit `3acc779`. Migration **V12**. Disable/reset terminate sessions, proven with a live cookie. Seed absent under `prod` (allow-list, not denylist). Review fixed a stale-write that silently undid revocation. |
 | 13 | [PWA foundation](13-pwa-foundation.md) | 04, 11 | `done` | Commit `6a18a37`. `/api/v1/**` network-only, enforced per-rule **and** by ordering. Declined PLAN §4.2.11's `defaultCache` row — see **F-21**. |
 | 14 | [AI provider platform](14-ai-provider-platform.md) | 06, 07, 09 | `done` | Commit `12b6b23`. Migration **V11**. `Flux<LlmEvent>` sealed union per ADR 007. Open: **F-22** (LLM stub not blocked in prod), **F-23** (Reactor in `domain/`). |
-| 15 | [Architecture and quality gates](15-quality-gates.md) | 02–14 | `in_progress` | Branch `agent/task-15-quality-gates`. Checkstyle 10.21.0, JaCoCo 0.8.12 (LINE 85 / BRANCH 70 over domain+application), 8 ArchUnit rules, ESLint import boundaries, Prettier, Vitest thresholds, Actuator. `./gradlew build` and the frontend chain both green locally — see [`docs/QUALITY-GATES.md`](../docs/QUALITY-GATES.md). **Not `done`: not committed, no PR, evidence gate not accepted.** New: **F-25**. |
+| 15 | [Architecture and quality gates](15-quality-gates.md) | 02–14 | `done` | Commit `bd6ca0d`, merged `95970f5`. Checkstyle 10.21.0, JaCoCo 0.8.12 (LINE 85 / BRANCH 70 over domain+application, measured 86.3 / 75.4), 8/8 ArchUnit rules, ESLint import boundaries proven to fail on probe violations, Prettier, Vitest thresholds, Actuator (4 exposed / 4 sensitive 404). Clean `./gradlew build` green with 15 tasks executed; frontend `format:check`+`lint`+`typecheck`+`test:coverage`+`build` all exit 0, 226 tests. Thresholds and exception process: [`docs/QUALITY-GATES.md`](../docs/QUALITY-GATES.md). Found and fixed **F-26**. New: **F-25**. |
 
 ## Phase 1 — knowledge, intake, chat, research, itinerary
 
@@ -105,11 +105,11 @@
 
 | Status | Count |
 |---|---|
-| `done` | **15** |
-| `in_progress` | 1 |
+| `done` | **16** |
+| `in_progress` | 0 |
 | `blocked` | 0 |
 | `review` | 0 |
-| `not_started` | 27 |
+| `not_started` | 26 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*
 
