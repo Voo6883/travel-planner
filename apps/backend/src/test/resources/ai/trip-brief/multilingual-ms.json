@@ -1,0 +1,20 @@
+{
+  "description": "Malay input, English enum values out. PLAN section 11 ships en and ms.",
+  "locale": "ms",
+  "user_text": "Kami dua orang dewasa dari Kuala Lumpur mahu ke Pulau Pinang pada 3 hingga 12 April 2026. Bajet kami RM4000 semuanya. Kami suka makanan dan mahu perjalanan yang santai. Tarikh kami tetap.",
+  "model_reply": {
+    "destinations": ["penang"],
+    "surprise_me": false,
+    "start_date": "2026-04-03",
+    "end_date": "2026-04-12",
+    "date_flexibility": "FIXED",
+    "departure_city": "Kuala Lumpur",
+    "budget_amount": "4000.00",
+    "budget_currency": "MYR",
+    "adults": 2,
+    "children": 0,
+    "interests": ["FOOD"],
+    "pace": "RELAXED",
+    "ambiguous_fields": []
+  }
+}

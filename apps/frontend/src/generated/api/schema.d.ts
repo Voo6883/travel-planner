@@ -885,6 +885,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/planner/chat/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read planner chat history (UC-C5-08)
+         * @description One page of the caller's planner conversation.
+         *
+         *     **Page 0 is the newest page.** A chat panel opens at the bottom and pages backwards, so
+         *     page 1 means "the messages before the ones on screen", not "the second thing that ever
+         *     happened". The `page`/`page_size`/`total` envelope and its validation are the platform's
+         *     (PLAN §6.1) — zero-based, default 20, rejected rather than clamped above 100 — only the
+         *     anchor differs, and it is documented here because the shape cannot express it.
+         *
+         *     **Within a page the order is the server's `seq`, ascending, always.** There is no `sort`
+         *     parameter: `seq` is the only ordering the schema can guarantee, and offering a choice would
+         *     publish one the endpoint does not have.
+         *
+         *     A caller with no conversation yet gets an empty page and a null `conversation_id`.
+         */
+        get: operations["listPlannerChatMessages"];
+        put?: never;
+        /**
+         * Send a planner message and stream the assistant turn (UC-C5-08)
+         * @description Commits the user's message and streams the assistant's reply as Server-Sent Events
+         *     (ADR 007).
+         *
+         *     **`POST`, not `EventSource`.** `EventSource` is GET-only and cannot set headers, so it can
+         *     carry neither this body nor the `X-XSRF-TOKEN` that ADR 006 requires. Send
+         *     `Accept: text/event-stream, application/json` — the stream type is what selects this
+         *     operation, and `application/json` is what lets a refusal reach you as the §6.1 envelope
+         *     rather than as a status with an empty body. A caller that accepts only the stream type gets
+         *     the status and nothing to render.
+         *
+         *     **The first planner turn creates the conversation.** Send no `conversation_id`; the server
+         *     resolves the caller's open `planner_session`, opens one if there is none, and returns the
+         *     thread's id in `X-Conversation-Id`.
+         *
+         *     **Every refusal is still HTTP.** The turn is opened — conversation resolved, user message
+         *     committed, assistant row reserved — before the response commits to `200`. An archived
+         *     thread, a trip that is not yours, or a body that does not validate is answered with a
+         *     status. After `200` the envelope can only travel in-band, as `event: error`.
+         *
+         *     **Retrying is safe.** Re-send with the same `client_message_id` and the committed message
+         *     is reused rather than duplicated; the assistant turn is generated again, because the
+         *     previous one was marked `interrupted` when the connection dropped.
+         */
+        post: operations["sendPlannerChatMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}/chat/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a trip's chat history (UC-C5-09)
+         * @description One page of the trip's conversation. Paging, ordering, and the newest-page-first anchor are
+         *     exactly as `listPlannerChatMessages` documents them.
+         *
+         *     An owned trip that has never been chatted about returns an empty page; a trip that is not
+         *     the caller's returns `404`, so an empty history can never be used to confirm that somebody
+         *     else's trip exists.
+         */
+        get: operations["listTripChatMessages"];
+        put?: never;
+        /**
+         * Send a message in a trip's conversation and stream the reply (UC-C5-09)
+         * @description The same transport as the planner path, against the trip's one persistent conversation
+         *     (PLAN §3.2). The conversation is created on first use; a trip that is not the caller's is
+         *     `404 not_found`, identically to one that does not exist.
+         *
+         *     See `sendPlannerChatMessage` for the `Accept` header, the idempotency rule, and why every
+         *     refusal is still an HTTP status.
+         */
+        post: operations["sendTripChatMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1867,8 +1958,169 @@ export interface components {
              */
             expected_version: number;
         };
+        /**
+         * @description What a stored turn element is.
+         *
+         *     **Lower-case snake, deliberately** (STATUS F-31). The Java enum and the `ck_message_role`
+         *     CHECK constraint spell these `USER`, `TOOL_CALL`, and so on — those are the persisted
+         *     values and cannot change. ADR 007's wire vocabulary is lower-case, so the conversion
+         *     happens once, in the chat DTO layer (`api/dto/chat/ChatWireNames`), and a client never has
+         *     to normalise case. Chat is the only surface with this rule: `roles` and `linked_providers`
+         *     elsewhere in this contract stay upper-case.
+         *
+         *     There is no `reasoning` member and there must never be one — tasks/20 forbids storing or
+         *     returning hidden chain-of-thought, and the absence of a role to persist it under is what
+         *     makes that structural rather than procedural.
+         * @enum {string}
+         */
+        ChatMessageRole: "user" | "assistant" | "system" | "tool_call" | "tool_result" | "lifecycle_event";
+        /**
+         * @description How a stored message ended, or that it has not ended yet. Lower-case snake for the reason
+         *     `ChatMessageRole` gives.
+         *
+         *     `interrupted` is ADR 007's persisted partial turn: a client that disconnects mid-answer
+         *     leaves the text that arrived, labelled. `failed` is the same shape after a provider error.
+         *     A reader that only needs "whole answer or not" treats everything except `complete` as
+         *     partial; the distinction is kept on the wire because only the server can know it.
+         * @enum {string}
+         */
+        ChatMessageStatus: "streaming" | "complete" | "interrupted" | "failed";
+        /**
+         * @description One stored message.
+         *
+         *     No `seq`: it is the ordering the server sorts by, not a value a client has a use for, and
+         *     publishing it would invite arithmetic on a counter that is allowed to contain gaps. No
+         *     `conversation_id` either — the page carries it once.
+         */
+        ChatMessage: {
+            /** Format: uuid */
+            message_id: string;
+            role: components["schemas"]["ChatMessageRole"];
+            /**
+             * @description User-visible text only. Never a provider reasoning trace and never a raw provider
+             *     event — there is no column it could be stored in (migration V19) and no frame it could
+             *     arrive on (ADR 007).
+             */
+            content: string;
+            status: components["schemas"]["ChatMessageStatus"];
+            /**
+             * @description The retry key the client minted before sending. Present only on a `user` message —
+             *     only a client-authored message can be re-sent — and null on everything the server
+             *     wrote.
+             */
+            client_message_id?: string | null;
+            /**
+             * Format: date-time
+             * @description When the row was written. **Not an ordering.** `now()` is fixed for a whole transaction
+             *     in Postgres, so every row one turn writes shares this value byte for byte; the order is
+             *     the server's `seq`, and it has already been applied.
+             */
+            created_at: string;
+        };
+        /**
+         * @description One page of conversation history — the shared `page`/`page_size`/`total` envelope plus this
+         *     endpoint's own typed items and the conversation they belong to.
+         */
+        ChatHistoryPage: components["schemas"]["PageMetadata"] & {
+            /**
+             * Format: uuid
+             * @description Null when the caller has no conversation on this surface yet — a new account
+             *     opening the planner home. That is an empty page rather than a `404`, because "you
+             *     have not started chatting" is an answer, and a 404 would put the client into an
+             *     error state on the happy path of a first visit.
+             */
+            conversation_id?: string | null;
+            /** @description Oldest first within the page, ordered by the server's `seq`. */
+            items: components["schemas"]["ChatMessage"][];
+        };
+        /**
+         * @description The body of both chat `POST`s.
+         *
+         *     `conversation_id` is optional in both directions: the first planner turn is the request
+         *     that *creates* a conversation, and a trip's thread is addressed by its path. Supplied, it
+         *     must be the caller's and must belong to the addressed surface, or the answer is `404`.
+         */
+        SendChatMessageRequest: {
+            /**
+             * @description **The idempotency key, and it is required.** The client mints it before sending and
+             *     reuses it verbatim on every retry; `uq_message_conversation_client_id` refuses a second
+             *     insert under it, and it comes back on the `message_start` echo so the optimistic bubble
+             *     already on screen is updated rather than duplicated.
+             *
+             *     Not server-generated with a fallback: a server-generated key would differ on the retry
+             *     and would therefore guarantee the duplicate it exists to prevent.
+             * @example 019279e2-6f2c-7c3a-9a1f-2c9a4f0e1b77
+             */
+            client_message_id: string;
+            /**
+             * @description The user's message. Markdown is sanitised server-side on persist (ADR 007).
+             * @example A week in Japan in spring, mid budget.
+             */
+            content: string;
+            /** Format: uuid */
+            conversation_id?: string | null;
+        };
     };
     responses: {
+        /**
+         * @description The assistant turn, as Server-Sent Events.
+         *
+         *     **The event union is deliberately not modelled here** (ADR 007). No OpenAPI generator emits
+         *     a usable `text/event-stream` client, so the most safety-critical type in the application
+         *     cannot come from `npm run codegen`. It is hand-authored in
+         *     `apps/frontend/src/lib/api/chat-events.ts` and mirrored by the backend's sealed
+         *     `application/chat/ChatStreamEvent`, so that adding a member is a compile error on at least
+         *     one side. This body is therefore documented in prose; the schema below says only that the
+         *     response is a byte stream.
+         *
+         *     Frames, in the order they arrive:
+         *
+         *     | `event:` | Meaning |
+         *     |---|---|
+         *     | `message_start` | A message opened. The first is the server's echo of your own message and carries `client_message_id` — that field is how an optimistic bubble is reconciled instead of duplicated. The second opens the assistant turn. |
+         *     | `text_delta` | A chunk of the answer. Rendered as plain text while streaming (ADR 007). |
+         *     | `tool_use_start`, `tool_input_delta`, `tool_use_end`, `tool_result` | Tool lifecycle. Representable; nothing emits them until tasks 21/22. |
+         *     | `trip_created` | The handoff (PLAN §3.2). Emitted after the tool commits, never parsed from prose. Nothing emits it yet. |
+         *     | `usage` | Token accounting. Nothing in the UI renders it. |
+         *     | `message_end` | How the message finished: `complete`, `interrupted`, or `failed`. |
+         *     | `done` | The turn finished normally. The server closes after this. |
+         *     | `error` | A terminal failure carrying the §6.1 envelope, then close. **Never a bare stream abort.** `code` is always a registered `ErrorCode`; the provider's own text is logged, never streamed. |
+         *
+         *     A `: ping` comment arrives every 15 seconds so a proxy does not reap a connection that is
+         *     waiting on a model rather than idle.
+         *
+         *     **`id:`** carries the `seq` of the message a frame opens or closes, and appears on nothing
+         *     else. An id on every frame would promise a resume position that nothing can replay — token
+         *     deltas are not persisted individually — and repeating one message's `seq` across its own
+         *     deltas would make a client's duplicate filter discard every token after the first. Frames
+         *     after `Last-Event-ID` are not replayed yet; a reconnect re-sends the same
+         *     `client_message_id`, which the idempotency key already makes safe.
+         *
+         *     **Disconnecting is safe and is not a loss.** The server cancels the model call and marks the
+         *     partial assistant message `interrupted`; whatever text arrived is kept and reloads labelled
+         *     as cut short.
+         */
+        ChatEventStream: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                "X-Conversation-Id": components["headers"]["XConversationId"];
+                "X-Accel-Buffering": components["headers"]["XAccelBuffering"];
+                [name: string]: unknown;
+            };
+            content: {
+                "text/event-stream": string;
+            };
+        };
+        /** @description One page of conversation history, newest page first, `seq` ascending within it. */
+        ChatHistory: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ChatHistoryPage"];
+            };
+        };
         /**
          * @description The request failed schema or constraint validation. `details.fields` maps field name to
          *     an English message (`ValidationFailedDetails`).
@@ -2369,6 +2621,12 @@ export interface components {
     };
     parameters: {
         /**
+         * @description Read a specific conversation rather than the surface's current one. Must be the caller's and
+         *     must belong to the addressed surface; anything else is `404 not_found`, so this cannot be
+         *     used to probe for another user's threads.
+         */
+        ConversationIdParam: string;
+        /**
          * @description The sign-in method, exactly as `CurrentUser.linked_providers` publishes it. `LOCAL` is
          *     addressable so that an unsupported operation on it is a registered `validation_failed`
          *     rather than a 404 that reads like a routing mistake.
@@ -2416,6 +2674,18 @@ export interface components {
          *     found in the logs.
          */
         XRequestId: string;
+        /**
+         * @description The conversation the turn was appended to. Present so a client that let the server open a
+         *     planner conversation can address it immediately, without a second request — it cannot go in
+         *     the body, because the body is a stream.
+         */
+        XConversationId: string;
+        /**
+         * @description Always `no`. nginx and several CDNs buffer an upstream response by default, which for SSE
+         *     means the user sees nothing at all until the turn is over — the one failure mode that makes
+         *     streaming pointless while looking like it works.
+         */
+        XAccelBuffering: string;
     };
     pathItems: never;
 }
@@ -3314,6 +3584,114 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listPlannerChatMessages: {
+        parameters: {
+            query?: {
+                /** @description Zero-based page index (PLAN §6.1). */
+                page?: components["parameters"]["PageParam"];
+                /** @description Items per page. Values above the maximum are rejected, never clamped. */
+                page_size?: components["parameters"]["PageSizeParam"];
+                /**
+                 * @description Read a specific conversation rather than the surface's current one. Must be the caller's and
+                 *     must belong to the addressed surface; anything else is `404 not_found`, so this cannot be
+                 *     used to probe for another user's threads.
+                 */
+                conversation_id?: components["parameters"]["ConversationIdParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ChatHistory"];
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    sendPlannerChatMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendChatMessageRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ChatEventStream"];
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listTripChatMessages: {
+        parameters: {
+            query?: {
+                /** @description Zero-based page index (PLAN §6.1). */
+                page?: components["parameters"]["PageParam"];
+                /** @description Items per page. Values above the maximum are rejected, never clamped. */
+                page_size?: components["parameters"]["PageSizeParam"];
+                /**
+                 * @description Read a specific conversation rather than the surface's current one. Must be the caller's and
+                 *     must belong to the addressed surface; anything else is `404 not_found`, so this cannot be
+                 *     used to probe for another user's threads.
+                 */
+                conversation_id?: components["parameters"]["ConversationIdParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ChatHistory"];
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    sendTripChatMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendChatMessageRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ChatEventStream"];
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
         };
     };

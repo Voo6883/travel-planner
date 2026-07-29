@@ -1,0 +1,20 @@
+{
+  "description": "A first message that names dates and party only. Five fields are asked, none guessed.",
+  "locale": "en",
+  "user_text": "There are two of us and we can travel 3 to 12 April 2026.",
+  "model_reply": {
+    "destinations": [],
+    "surprise_me": false,
+    "start_date": "2026-04-03",
+    "end_date": "2026-04-12",
+    "date_flexibility": null,
+    "departure_city": null,
+    "budget_amount": null,
+    "budget_currency": null,
+    "adults": 2,
+    "children": 0,
+    "interests": [],
+    "pace": null,
+    "ambiguous_fields": []
+  }
+}

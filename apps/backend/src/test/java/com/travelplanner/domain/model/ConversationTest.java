@@ -197,6 +197,25 @@ class ConversationTest {
         assertThatThrownBy(archived::requireAppendable).isInstanceOf(ValidationFailedException.class);
         assertThatThrownBy(() -> archived.recordAppend(NOW)).isInstanceOf(ValidationFailedException.class);
         assertThatThrownBy(() -> archived.archive(NOW)).isInstanceOf(ValidationFailedException.class);
+        assertThatThrownBy(() -> archived.touchLastMessageAt(NOW))
+                .isInstanceOf(ValidationFailedException.class);
+    }
+
+    @Test
+    void touchingTheLastMessageInstantDoesNotHandOutASequenceNumber() {
+        // The distinction `recordAppend` cannot express. A caller that allocated its number through
+        // `ConversationRepositoryPort.allocateSequence` has already advanced the stored counter under
+        // a row lock; persisting `recordAppend`'s result on top of that would write the counter back
+        // one short and hand the same number out twice — a violation of
+        // `uq_message_conversation_seq` raised in a different request from the one that caused it.
+        Conversation conversation = Conversation.startPlanner(OWNER, SESSION, NOW);
+
+        Conversation touched = conversation.touchLastMessageAt(NOW.plusSeconds(30));
+
+        assertThat(touched.nextMessageSeq()).isEqualTo(conversation.nextMessageSeq());
+        assertThat(touched.lastMessageAtIfPresent()).contains(NOW.plusSeconds(30));
+        assertThat(touched.updatedAt()).isEqualTo(NOW.plusSeconds(30));
+        assertThat(touched.createdAt()).isEqualTo(NOW);
     }
 
     @Test

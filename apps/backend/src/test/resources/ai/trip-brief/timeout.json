@@ -1,0 +1,6 @@
+{
+  "description": "The provider did not answer in its budget. Not retried; the form is offered instead.",
+  "locale": "en",
+  "user_text": "Penang in April for two, RM4000, we like food.",
+  "model_failure": "ai_timeout"
+}

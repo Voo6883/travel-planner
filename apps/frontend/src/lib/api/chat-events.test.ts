@@ -60,23 +60,33 @@ describe('parseChatFrame — every event the contract defines', () => {
 
   it('collapses every non-complete backend status onto interrupted', () => {
     // The backend enum has four constants; a reader only needs to know whether the answer is whole.
-    const statuses = ['INTERRUPTED', 'FAILED', 'STREAMING'];
+    // The collapse survived F-31 — it is a real decision. The case normalisation next to it did not.
+    const statuses = ['interrupted', 'failed', 'streaming'];
 
     for (const status of statuses) {
       const parsed = parseChatFrame(`event: message_end\ndata: {"message_id":"m1","status":"${status}"}`);
       expect(parsed.event).toEqual({ type: 'message_end', messageId: 'm1', status: 'interrupted' });
     }
 
-    const complete = parseChatFrame('event: message_end\ndata: {"message_id":"m1","status":"COMPLETE"}');
+    const complete = parseChatFrame('event: message_end\ndata: {"message_id":"m1","status":"complete"}');
     expect(complete.event).toEqual({ type: 'message_end', messageId: 'm1', status: 'complete' });
   });
 
-  it('accepts an upper-case role, because the enum casing is not settled', () => {
-    // The Java constants are USER/ASSISTANT/SYSTEM and the contract publishes some enums upper
-    // case. Dropping the frame over capitalisation would lose the user's own message.
+  it('reads the lower-case roles the contract publishes', () => {
+    // STATUS F-31 is settled: chat DTOs serialise lower-case snake and `ChatWireNamesTest` asserts
+    // it for every constant of both enums, so this parser no longer normalises case.
+    for (const role of ['user', 'assistant', 'system']) {
+      const parsed = parseChatFrame(`event: message_start\ndata: {"message_id":"m1","role":"${role}"}`);
+      expect(parsed.event).toMatchObject({ type: 'message_start', role });
+    }
+  });
+
+  it('does not silently accept an upper-case role now that the contract is settled', () => {
+    // An upper-case role would mean the server regressed. Rendering it anyway would hide that here
+    // while every other chat surface broke — so the frame becomes an explicit `ignored`, never text.
     const parsed = parseChatFrame('event: message_start\ndata: {"message_id":"m1","role":"ASSISTANT"}');
 
-    expect(parsed.event).toMatchObject({ type: 'message_start', role: 'assistant' });
+    expect(parsed.event).toEqual({ type: 'ignored', reason: 'invalid_payload', eventName: 'message_start' });
   });
 
   it('parses the whole tool lifecycle', () => {

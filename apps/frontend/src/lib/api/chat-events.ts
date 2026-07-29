@@ -187,14 +187,15 @@ export interface ChatFrame {
 // -------------------------------------------------------------------------------------------
 
 /**
- * Case-insensitive: the backend's enum constants are `USER`/`ASSISTANT`/`SYSTEM`, and the contract
- * publishes some enums upper-case while ADR 007's wire names are lower-case. Dropping a message
- * over capitalisation would lose a user's own words for a difference that carries no meaning.
+ * Exactly the values ADR 007 publishes — no case normalisation (STATUS F-31, now closed).
+ *
+ * The backend's constants really are `USER`/`ASSISTANT`/`SYSTEM`, but the conversion to the wire
+ * now happens once, in `api/dto/chat/ChatWireNames`, and `ChatWireNamesTest` asserts it for every
+ * constant of both chat enums. This parser used to lower-case defensively because nothing had
+ * decided; accepting both cases now would mean an upper-case regression reached a user as a working
+ * conversation here and a broken one everywhere else.
  */
-const roleSchema = z.preprocess(
-  (value) => (typeof value === 'string' ? value.toLowerCase() : value),
-  z.union([z.literal('user'), z.literal('assistant'), z.literal('system')]),
-);
+const roleSchema = z.union([z.literal('user'), z.literal('assistant'), z.literal('system')]);
 
 const textDeltaSchema = z.object({ text: z.string(), message_id: z.string().nullish() });
 
@@ -324,15 +325,19 @@ const EVENT_PARSERS: Record<string, (data: unknown) => ChatStreamEvent | null> =
 /**
  * Collapses the backend's four message statuses onto the two a reader can act on.
  *
- * `INTERRUPTED` and `FAILED` both mean "this is not the whole answer"; an absent status means the
+ * `interrupted` and `failed` both mean "this is not the whole answer"; an absent status means the
  * server did not think the distinction applied, which for a turn that reached `message_end`
  * normally is `complete`.
+ *
+ * The collapse stays and the case normalisation that used to sit beside it is gone (STATUS F-31):
+ * four statuses onto two is this layer's decision, while lower-casing was compensation for an
+ * unsettled contract. The wire is lower-case now, asserted on the server for every constant.
  */
 function endStatus(status: string | null | undefined): MessageEndStatus {
   if (status === null || status === undefined) {
     return 'complete';
   }
-  return status.toLowerCase() === 'complete' ? 'complete' : 'interrupted';
+  return status === 'complete' ? 'complete' : 'interrupted';
 }
 
 interface RawErrorEnvelope {

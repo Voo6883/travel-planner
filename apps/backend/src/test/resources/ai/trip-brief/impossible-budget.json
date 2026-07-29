@@ -1,0 +1,20 @@
+{
+  "description": "A negative budget and a thirty-person party. Money and PartySize refuse both.",
+  "locale": "en",
+  "user_text": "Thirty of us are going, and honestly the budget is less than nothing.",
+  "model_reply": {
+    "destinations": [],
+    "surprise_me": false,
+    "start_date": "2026-04-03",
+    "end_date": "2026-04-12",
+    "date_flexibility": "FLEXIBLE_WEEK",
+    "departure_city": "Kuala Lumpur",
+    "budget_amount": "-5",
+    "budget_currency": "MYR",
+    "adults": 30,
+    "children": 0,
+    "interests": ["SIGHTSEEING"],
+    "pace": "PACKED",
+    "ambiguous_fields": []
+  }
+}

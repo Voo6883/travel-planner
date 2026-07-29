@@ -1,0 +1,20 @@
+{
+  "description": "Values the model could produce but is not confident in. Confidence, not parseability, decides.",
+  "locale": "en",
+  "user_text": "A few of us want to go somewhere sometime in spring, nothing too expensive.",
+  "model_reply": {
+    "destinations": [],
+    "surprise_me": false,
+    "start_date": "2026-03-01",
+    "end_date": "2026-05-31",
+    "date_flexibility": "FLEXIBLE_MONTH",
+    "departure_city": null,
+    "budget_amount": "2000.00",
+    "budget_currency": "MYR",
+    "adults": 3,
+    "children": 0,
+    "interests": [],
+    "pace": null,
+    "ambiguous_fields": ["travel_dates", "budget_max", "party_size"]
+  }
+}

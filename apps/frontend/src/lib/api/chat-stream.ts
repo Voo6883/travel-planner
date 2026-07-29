@@ -39,7 +39,18 @@ export interface SendChatMessageRequest {
   readonly signal?: AbortSignal;
 }
 
-export const SSE_ACCEPT_HEADER = 'text/event-stream';
+/**
+ * `text/event-stream` selects the streaming operation; `application/json` is what makes a refusal
+ * readable.
+ *
+ * Content negotiation applies to the error response too. With the stream type alone the server has
+ * no converter that can write the §6.1 envelope, so a `400` or a `404` arrives as a status with an
+ * empty body — the one shape `apiErrorFromResponse` cannot turn into something a user can act on.
+ * Both types are published on the operation in `openapi.yaml`, and
+ * `ChatControllerTest.aClientAcceptingOnlyTheStreamCannotBeToldWhyItsRequestWasRefused` pins the
+ * behaviour on the server side so this header cannot be narrowed by accident.
+ */
+export const SSE_ACCEPT_HEADER = 'text/event-stream, application/json';
 export const LAST_EVENT_ID_HEADER = 'Last-Event-ID';
 
 /**

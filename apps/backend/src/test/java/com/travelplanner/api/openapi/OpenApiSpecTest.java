@@ -227,14 +227,33 @@ class OpenApiSpecTest {
     }
 
     @Test
-    void streamingOperationsAreMarkedAndCarryOnlyEventStreamContent() {
-        // Inert until tasks 20/21 add the two chat paths. It exists now so the codegen-drift gate
-        // can never start demanding a generated client for an SSE path (ADR 007).
+    void streamingOperationsAreMarkedAndTheirSuccessBodyIsOnlyEventStream() {
+        // The marker is what tells the codegen-drift gate never to demand a generated client for
+        // an SSE path (ADR 007). Task 20 filled it in with the two chat POSTs.
+        //
+        // Narrowed from "every response" to "the 2xx response" when those paths landed. The
+        // original was written while nothing was marked, and it asserted something an SSE
+        // operation cannot satisfy: a refusal that happens *before* the stream opens is an
+        // ordinary `application/json` §6.1 envelope, and must be, because a client cannot read a
+        // status with no body. Only once the response has committed to 200 does the envelope have
+        // to travel in-band as `event: error` — which is a property of the 200 body, and is what
+        // this now checks.
         allOperations().stream()
                 .filter(operation -> Boolean.TRUE.equals(extension(operation, "x-sse-stream")))
-                .forEach(operation -> operation.getResponses().values().forEach(response ->
-                        assertThat(response.getContent().keySet())
+                .forEach(operation -> operation.getResponses().entrySet().stream()
+                        .filter(response -> response.getKey().startsWith("2"))
+                        .forEach(response -> assertThat(response.getValue().getContent().keySet())
                                 .containsExactly("text/event-stream")));
+    }
+
+    @Test
+    void bothChatSendOperationsAreMarkedAsStreams() {
+        // A path that streams without the marker is one the drift gate would try to generate a
+        // client for, and ADR 007 records why that cannot work.
+        assertThat(spec.getPaths().get("/planner/chat/messages").getPost())
+                .satisfies(operation -> assertThat(extension(operation, "x-sse-stream")).isEqualTo(true));
+        assertThat(spec.getPaths().get("/trips/{tripId}/chat/messages").getPost())
+                .satisfies(operation -> assertThat(extension(operation, "x-sse-stream")).isEqualTo(true));
     }
 
     private static List<Operation> adminOperations() {

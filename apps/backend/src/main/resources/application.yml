@@ -55,6 +55,15 @@ travelplanner:
       # is dropped over plain HTTP, and the locked local experience is http://localhost (ADR 006).
       secure: false
 
+  # Chat streaming (§3.2, ADR 007, task 20).
+  chat:
+    # ADR 007's 15-second `: ping`. It exists so a proxy does not reap a connection that is waiting
+    # on a model rather than idle — the wait between the request and the first token is exactly the
+    # window an idle-timeout closes. Milliseconds rather than a Duration because `@Value` conversion
+    # to java.time.Duration depends on Boot's ApplicationConversionService reaching the bean factory,
+    # which is dependable for @ConfigurationProperties and not for a plain injected value.
+    heartbeat-interval-ms: ${CHAT_HEARTBEAT_INTERVAL_MS:15000}
+
   # External identity providers (§4.0.5, ADR 004). Every credential defaults to empty and the
   # development stand-ins take over, so a fresh checkout and CI both work with no Firebase project
   # and no GitHub OAuth app — task 10 forbids relying on a live provider in CI. Both stand-ins

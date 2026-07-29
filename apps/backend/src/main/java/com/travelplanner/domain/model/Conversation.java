@@ -168,6 +168,31 @@ public record Conversation(
     }
 
     /**
+     * Advances {@code last_message_at} only, leaving {@link #nextMessageSeq()} exactly as it is.
+     *
+     * <p>The counterpart to {@link #recordAppend(Instant)}, for the caller that allocated its
+     * sequence number through {@code ConversationRepositoryPort.allocateSequence} instead of from
+     * this record. That allocation already advanced the stored counter under a row lock, so a
+     * caller that then persisted {@code recordAppend}'s result — computed from a snapshot taken
+     * <em>before</em> the allocation — would write the counter back one short and hand the same
+     * number out twice. The second append would fail {@code uq_message_conversation_seq}, and it
+     * would fail in a different request from the one that caused it.
+     *
+     * <p>Not "just an updated timestamp": {@code last_message_at} is what orders the conversation
+     * list, so a thread that stopped advancing it sinks to the bottom while still being the one the
+     * user is talking in.
+     *
+     * @throws ValidationFailedException when the conversation is archived. An archived thread has
+     *         no appends to record, and a timestamp saying otherwise would be a lie in the column
+     *         the list is ordered by
+     */
+    public Conversation touchLastMessageAt(Instant now) {
+        requireAppendable();
+        return new Conversation(id, userId, tripId, plannerSessionId, scope, state,
+                nextMessageSeq, now, archivedAt, createdAt, now);
+    }
+
+    /**
      * @throws ValidationFailedException when the conversation is read-only. Public because the
      *         service layer needs the same refusal before it starts a model call — discovering the
      *         thread was archived after the tokens were paid for is too late.

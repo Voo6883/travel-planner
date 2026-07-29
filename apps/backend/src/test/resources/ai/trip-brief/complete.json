@@ -1,0 +1,20 @@
+{
+  "description": "Every field in one message. The happy path C2 is unblocked by.",
+  "locale": "en",
+  "user_text": "Two of us are flying from Kuala Lumpur to Penang from 3 to 12 April 2026. Our whole budget is RM4000. We are going for the food and want a relaxed pace, and the dates are fixed around a wedding.",
+  "model_reply": {
+    "destinations": ["penang"],
+    "surprise_me": false,
+    "start_date": "2026-04-03",
+    "end_date": "2026-04-12",
+    "date_flexibility": "FIXED",
+    "departure_city": "Kuala Lumpur",
+    "budget_amount": "4000.00",
+    "budget_currency": "MYR",
+    "adults": 2,
+    "children": 0,
+    "interests": ["FOOD"],
+    "pace": "RELAXED",
+    "ambiguous_fields": []
+  }
+}

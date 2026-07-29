@@ -1,0 +1,20 @@
+{
+  "description": "UC-C1-05. The traveller has no destination in mind; a model that names one anyway loses.",
+  "locale": "en",
+  "user_text": "Surprise me! Two adults from Kuala Lumpur, 3 to 12 April 2026, RM4000, we like food, relaxed, fixed dates.",
+  "model_reply": {
+    "destinations": ["bali"],
+    "surprise_me": true,
+    "start_date": "2026-04-03",
+    "end_date": "2026-04-12",
+    "date_flexibility": "FIXED",
+    "departure_city": "Kuala Lumpur",
+    "budget_amount": "4000.00",
+    "budget_currency": "MYR",
+    "adults": 2,
+    "children": 0,
+    "interests": ["FOOD"],
+    "pace": "RELAXED",
+    "ambiguous_fields": []
+  }
+}

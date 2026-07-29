@@ -8,11 +8,11 @@ import { apiRequest, type ApiPath } from './client';
  * is an ordinary JSON endpoint, so it goes through `apiRequest` like everything else and gets the
  * same base URL, credentials, correlation id, and error translation.
  *
- * <b>One unavoidable gap.</b> The chat paths are not published in `src/generated/api/schema.d.ts`
- * yet — the backend routes are being written in parallel, and ADR 007 documents the two chat paths
- * as `text/event-stream` with a description-only body. `chatPath()` below is the single place that
- * gap is expressed. When the contract publishes them, delete the cast and the compiler will check
- * every call site here for free.
+ * The chat paths are published in `src/generated/api/schema.d.ts` as of task 20, so the history
+ * request and its response are contract-checked like every other JSON endpoint. The `as` casts
+ * below are the same ones `admin-api.ts` uses and for the same reason: `apiRequest` is keyed on the
+ * generated path union, and appending a query string produces a string the union does not contain.
+ * The cast asserts the path, never the shape.
  */
 
 /**
@@ -41,16 +41,13 @@ export function chatMessagesPath(target: ChatTarget): string {
 }
 
 /**
- * Widens a chat path to the generated path union.
+ * How many messages a page of history holds.
  *
- * Deliberately a named function rather than an inline `as`: it is the only unchecked path in the
- * app, and it should be greppable.
+ * Sent explicitly on every request, so it is this application's choice rather than the contract's:
+ * the published default is 20 (`PageQuery.DEFAULT_PAGE_SIZE`, the same one `/admin/users` uses) and
+ * the ceiling is 100. A chat panel is taller than an admin table and one "load older" per screenful
+ * is a worse experience than one slightly larger page, so it asks for 30.
  */
-export function chatPath(path: string): ApiPath {
-  return path as ApiPath;
-}
-
-/** Matches the admin convention — the contract's published page size default. */
 export const CHAT_HISTORY_PAGE_SIZE = 30;
 
 export type ChatMessageRole = 'user' | 'assistant' | 'system';
@@ -84,17 +81,16 @@ export interface ChatHistoryPage {
 }
 
 /**
- * Case-insensitive because the enum's case is not settled.
+ * Exactly the values the contract publishes — no case normalisation (STATUS F-31, now closed).
  *
- * The backend enum constants are `USER`/`ASSISTANT`/`SYSTEM`, and the existing contract publishes
- * some enums upper-case (`roles`, `linked_providers`) while ADR 007's wire names are lower-case
- * snake case. Rejecting the whole history page over capitalisation would be a blank conversation
- * for a difference that carries no meaning — so it is normalised here, once.
+ * This used to lower-case defensively, because the Java constants are `USER`/`ASSISTANT`/`SYSTEM`
+ * and nothing had decided which case reached the wire. It is decided: chat DTOs serialise
+ * lower-case snake through `api/dto/chat/ChatWireNames`, `ChatWireNamesTest` asserts it for every
+ * constant of both enums, and `ChatMessageRole` in the contract enumerates the lower-case values.
+ * Normalising here as well would mean an upper-case regression on the server passed silently on
+ * this one surface and broke on every other.
  */
-const roleSchema = z.preprocess(
-  (value) => (typeof value === 'string' ? value.toLowerCase() : value),
-  z.union([z.literal('user'), z.literal('assistant'), z.literal('system')]),
-);
+const roleSchema = z.union([z.literal('user'), z.literal('assistant'), z.literal('system')]);
 
 const historyMessageSchema = z.object({
   message_id: z.string(),
@@ -139,10 +135,24 @@ export async function fetchChatHistory(query: ChatHistoryQuery, signal?: AbortSi
   });
 
   return apiRequest({
-    path: chatPath(`${chatMessagesPath(query.target)}?${search.toString()}`),
+    path: historyPath(query.target, search),
     signal,
     validate: (payload) => parseHistoryPage(payload),
   });
+}
+
+/**
+ * The generated path key for a history request.
+ *
+ * The cast is the one `admin-api.ts` makes for the same reason: `apiRequest` is keyed on the
+ * generated union and a query string produces a value that union cannot contain. What is asserted
+ * is the *path*; the response shape is still checked, by zod here and by the generated
+ * `ChatHistoryPage` at the call sites that use it.
+ */
+function historyPath(target: ChatTarget, search: URLSearchParams): ApiPath {
+  return target.scope === 'planner'
+    ? (`/planner/chat/messages?${search.toString()}` as '/planner/chat/messages')
+    : (`/trips/${target.tripId}/chat/messages?${search.toString()}` as '/trips/{tripId}/chat/messages');
 }
 
 function parseHistoryPage(payload: unknown): ChatHistoryPage {
@@ -170,19 +180,24 @@ function parseHistoryPage(payload: unknown): ChatHistoryPage {
 /**
  * Anything the server says other than `complete` is a partial answer.
  *
- * `STREAMING` (the writer went away mid-turn) and `FAILED` (an ADR 007 `StreamError` after some
- * text) both land on `interrupted`, because a reader only cares whether the answer is whole. The
- * comparison is case-insensitive for the reason given on `roleSchema`.
+ * `streaming` (the writer went away mid-turn) and `failed` (an ADR 007 `StreamError` after some
+ * text) both land on `interrupted`, because a reader only cares whether the answer is whole.
  *
- * An *absent* status is treated as complete rather than as partial. The column is non-null on the
- * backend, so an omitted field means the DTO does not carry one — which is the shape a user message
- * takes — and labelling every reloaded user message "Interrupted" would be noise, not caution.
+ * <b>This collapse stays; the case normalisation that used to sit beside it is gone</b> (STATUS
+ * F-31). The two were doing different jobs: four server statuses onto two reader-facing ones is a
+ * real decision this layer owns, while lower-casing was a workaround for a contract that had not
+ * been settled. It is settled — the wire is lower-case — so a comparison that still accepted
+ * `COMPLETE` would only ever hide a regression.
+ *
+ * An *absent* status is treated as complete rather than as partial. The field is required in the
+ * contract, so an omitted one means an older server, and labelling every reloaded user message
+ * "Interrupted" would be noise rather than caution.
  */
 function persistedStatus(status: string | null | undefined): PersistedMessageStatus {
   if (status === null || status === undefined) {
     return 'complete';
   }
-  return status.toLowerCase() === 'complete' ? 'complete' : 'interrupted';
+  return status === 'complete' ? 'complete' : 'interrupted';
 }
 
 function compareByCreatedAt(left: ChatHistoryMessage, right: ChatHistoryMessage): number {

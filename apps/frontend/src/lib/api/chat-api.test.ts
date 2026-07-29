@@ -121,25 +121,32 @@ describe('fetchChatHistory', () => {
     expect(history.items[0]?.status).toBe('complete');
   });
 
-  it('reads every non-complete backend status as a partial answer, whatever its case', async () => {
-    // The backend persists STREAMING / COMPLETE / INTERRUPTED / FAILED. A row still marked
-    // STREAMING when the page loads is a turn whose writer went away — not a finished answer.
+  it('reads every non-complete backend status as a partial answer', async () => {
+    // The backend persists streaming / complete / interrupted / failed. A row still marked
+    // `streaming` when the page loads is a turn whose writer went away — not a finished answer.
     stubHistory({
       page: 0,
       page_size: 30,
       total: 3,
       items: [
-        message({ message_id: 'm1', role: 'ASSISTANT', status: 'COMPLETE' }),
-        message({ message_id: 'm2', role: 'assistant', status: 'STREAMING', created_at: '2026-07-01T09:01:00Z' }),
-        message({ message_id: 'm3', role: 'assistant', status: 'FAILED', created_at: '2026-07-01T09:02:00Z' }),
+        message({ message_id: 'm1', role: 'assistant', status: 'complete' }),
+        message({ message_id: 'm2', role: 'assistant', status: 'streaming', created_at: '2026-07-01T09:01:00Z' }),
+        message({ message_id: 'm3', role: 'assistant', status: 'failed', created_at: '2026-07-01T09:02:00Z' }),
       ],
     });
 
     const history = await fetchChatHistory({ target: PLANNER_CHAT_TARGET });
 
     expect(history.items.map((item) => item.status)).toEqual(['complete', 'interrupted', 'interrupted']);
-    // An upper-case role must not cost the message: it is normalised, not rejected.
     expect(history.items[0]?.role).toBe('assistant');
+  });
+
+  it('rejects an upper-case role now that the contract publishes lower-case', async () => {
+    // STATUS F-31 is settled in the DTO layer, so this page can only be upper-case if the server
+    // regressed. Normalising it here would make chat the one surface where that went unnoticed.
+    stubHistory({ page: 0, page_size: 30, total: 1, items: [message({ role: 'ASSISTANT' })] });
+
+    await expect(fetchChatHistory({ target: PLANNER_CHAT_TARGET })).rejects.toThrow();
   });
 
   it('rejects a payload that does not match the shape rather than rendering it', async () => {

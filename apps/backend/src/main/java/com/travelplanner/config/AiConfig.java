@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.ai.client.LlmClientRouter;
 import com.travelplanner.ai.client.RouterSupport;
 import com.travelplanner.ai.client.RoutingTable;
+import com.travelplanner.ai.extraction.LlmTripBriefExtractor;
+import com.travelplanner.ai.extraction.TripBriefExtractionPrompt;
 import com.travelplanner.ai.langchain4j.LangChain4jProviderFactory;
 import com.travelplanner.ai.observability.AiCallRecorder;
 import com.travelplanner.ai.prompt.PromptTemplateStore;
@@ -17,6 +19,7 @@ import com.travelplanner.domain.ai.AiCallRecord;
 import com.travelplanner.domain.port.AiCallLogPort;
 import com.travelplanner.domain.port.EmbeddingPort;
 import com.travelplanner.domain.port.LlmPort;
+import com.travelplanner.domain.port.TripBriefExtractionPort;
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -142,15 +145,32 @@ public class AiConfig {
                 record.feature(), record.usage().totalTokens());
     }
 
+    /**
+     * The registry task 14 shipped empty and later tasks fill. Registration happens here, in the
+     * bean method, rather than in each feature's own {@code @PostConstruct}: a store that is fully
+     * populated the moment it is published cannot be observed half-built by a bean that was created
+     * earlier in the graph, and every prompt in the system is listed in one readable place.
+     */
     @Bean
     public PromptTemplateStore promptTemplateStore() {
-        // Ships empty: task 14 must not author TripBrief, research, itinerary, or chat prompts.
-        // Tasks 19, 21, 25, and 30 register into it.
-        return new PromptTemplateStore();
+        PromptTemplateStore store = new PromptTemplateStore();
+        TripBriefExtractionPrompt.register(store);
+        return store;
     }
 
     @Bean
     public StructuredOutputRunner structuredOutputRunner(LlmPort llmPort, ObjectMapper objectMapper) {
         return new StructuredOutputRunner(llmPort, objectMapper);
+    }
+
+    /**
+     * C1 extraction (task 19). Constructed here with the rest of the AI platform so
+     * {@code application/} depends on {@code TripBriefExtractionPort} and never on {@code ai/} —
+     * the boundary {@code LayerRulesTest.applicationDependsOnDomainOnly} enforces.
+     */
+    @Bean
+    public TripBriefExtractionPort tripBriefExtractionPort(StructuredOutputRunner runner,
+            PromptTemplateStore prompts) {
+        return new LlmTripBriefExtractor(runner, prompts, clock);
     }
 }

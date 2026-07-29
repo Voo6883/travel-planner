@@ -1,0 +1,20 @@
+{
+  "description": "A destination the knowledge base never curated. ADR 010 section 4 refuses to rank it.",
+  "locale": "en",
+  "user_text": "We want Osaka from 3 to 12 April 2026, two adults from Kuala Lumpur, RM4000, food, relaxed, fixed dates.",
+  "model_reply": {
+    "destinations": ["osaka"],
+    "surprise_me": false,
+    "start_date": "2026-04-03",
+    "end_date": "2026-04-12",
+    "date_flexibility": "FIXED",
+    "departure_city": "Kuala Lumpur",
+    "budget_amount": "4000.00",
+    "budget_currency": "MYR",
+    "adults": 2,
+    "children": 0,
+    "interests": ["FOOD"],
+    "pace": "RELAXED",
+    "ambiguous_fields": []
+  }
+}
