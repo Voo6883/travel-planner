@@ -1,9 +1,6 @@
 import type { components } from '@/generated/api/schema';
 import { apiRequest } from './client';
-import {
-  adminUserDetailSchema,
-  adminUserPageSchema,
-} from './schemas/admin.schema';
+import { adminUserDetailSchema, adminUserPageSchema } from './schemas/admin.schema';
 
 /**
  * Account administration (UC-A15, UC-A16, PLAN §4.0.6). Every type below is an alias of the
@@ -36,10 +33,7 @@ export interface AdminUserQuery {
  * parameter here: offering one the server rejects with `400 validation_failed` would be a control
  * that can only produce an error.
  */
-export async function fetchAdminUsers(
-  query: AdminUserQuery,
-  signal?: AbortSignal,
-): Promise<AdminUserPage> {
+export async function fetchAdminUsers(query: AdminUserQuery, signal?: AbortSignal): Promise<AdminUserPage> {
   const search = new URLSearchParams({
     page: String(query.page),
     page_size: String(query.pageSize ?? ADMIN_USERS_PAGE_SIZE),
@@ -54,10 +48,7 @@ export async function fetchAdminUsers(
 }
 
 /** UC-A15. `404 user_not_found` for an id that does not resolve. */
-export async function fetchAdminUser(
-  userId: string,
-  signal?: AbortSignal,
-): Promise<AdminUserDetail> {
+export async function fetchAdminUser(userId: string, signal?: AbortSignal): Promise<AdminUserDetail> {
   return apiRequest({
     path: `/admin/users/${userId}` as '/admin/users/{userId}',
     signal,
@@ -74,9 +65,7 @@ export interface SetAdminUserEnabledCommand {
  * PLAN §4.0.6. Disabling terminates every session the account holds (ADR 009 §1) — server-side,
  * before this resolves, so the returned detail is already the post-revocation state.
  */
-export async function setAdminUserEnabled(
-  command: SetAdminUserEnabledCommand,
-): Promise<AdminUserDetail> {
+export async function setAdminUserEnabled(command: SetAdminUserEnabledCommand): Promise<AdminUserDetail> {
   return apiRequest({
     path: `/admin/users/${command.userId}` as '/admin/users/{userId}',
     method: 'PUT',
@@ -95,12 +84,9 @@ export interface AdminResetPasswordCommand {
  * out of band, and echoing it back would put a working credential into a response, a browser
  * cache, and any proxy log between the two.
  */
-export async function resetAdminUserPassword(
-  command: AdminResetPasswordCommand,
-): Promise<void> {
+export async function resetAdminUserPassword(command: AdminResetPasswordCommand): Promise<void> {
   await apiRequest<void>({
-    path: `/admin/users/${command.userId}/reset-password` as
-      '/admin/users/{userId}/reset-password',
+    path: `/admin/users/${command.userId}/reset-password` as '/admin/users/{userId}/reset-password',
     method: 'PUT',
     body: { new_password: command.newPassword } satisfies AdminResetPasswordRequest,
   });

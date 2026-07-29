@@ -27,8 +27,7 @@ export function OfflineBanner() {
       aria-live="polite"
       className="w-full border-b border-border-subtle bg-surface-subtle px-4 py-2 text-body-sm text-foreground-muted"
     >
-      <span className="font-semibold text-foreground">{t('states.offline_title')}</span>{' '}
-      {t('states.offline_body')}
+      <span className="font-semibold text-foreground">{t('states.offline_title')}</span> {t('states.offline_body')}
     </div>
   );
 }

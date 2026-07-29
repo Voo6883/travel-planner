@@ -76,9 +76,7 @@ export function DangerZoneCard({ email }: DangerZoneCardProps) {
             />
           </label>
           {confirmation !== '' && !matches ? (
-            <p className="m-0 text-body-sm text-destructive">
-              {t('delete_account_confirm_mismatch')}
-            </p>
+            <p className="m-0 text-body-sm text-destructive">{t('delete_account_confirm_mismatch')}</p>
           ) : null}
         </div>
       </Modal>

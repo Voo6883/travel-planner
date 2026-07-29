@@ -19,12 +19,7 @@ import {
   type RuntimeCaching,
   type SerwistGlobalConfig,
 } from 'serwist';
-import {
-  cacheRules,
-  isOfflineFallbackEligible,
-  OFFLINE_FALLBACK_URL,
-  type CacheRule,
-} from '@/lib/pwa/cache-policy';
+import { cacheRules, isOfflineFallbackEligible, OFFLINE_FALLBACK_URL, type CacheRule } from '@/lib/pwa/cache-policy';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -109,7 +104,5 @@ function buildHandler(rule: CacheRule): RouteHandler {
     ],
   };
 
-  return rule.strategy === 'cache-first'
-    ? new CacheFirst(options)
-    : new StaleWhileRevalidate(options);
+  return rule.strategy === 'cache-first' ? new CacheFirst(options) : new StaleWhileRevalidate(options);
 }

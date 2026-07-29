@@ -14,8 +14,7 @@ export const healthResponseSchema: z.ZodType<components['schemas']['HealthRespon
   status: z.literal('UP'),
 });
 
-export const readinessResponseSchema: z.ZodType<components['schemas']['ReadinessResponse']> =
-  z.object({
-    status: z.union([z.literal('UP'), z.literal('DOWN')]),
-    components: z.record(z.string()),
-  });
+export const readinessResponseSchema: z.ZodType<components['schemas']['ReadinessResponse']> = z.object({
+  status: z.union([z.literal('UP'), z.literal('DOWN')]),
+  components: z.record(z.string()),
+});

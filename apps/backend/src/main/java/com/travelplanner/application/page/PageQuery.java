@@ -1,4 +1,4 @@
-package com.travelplanner.api.dto.page;
+package com.travelplanner.application.page;
 
 import com.travelplanner.domain.exception.ValidationFailedException;
 import java.util.regex.Pattern;
@@ -11,6 +11,12 @@ import java.util.regex.Pattern;
  * <p>Out-of-range values are <em>rejected</em>, not clamped. Silently serving 100 items when the
  * caller asked for 5000 makes a client's paging arithmetic wrong in a way it cannot detect;
  * {@code 400 validation_failed} makes the mistake obvious at the first call.
+ *
+ * <p><strong>Why this is not in {@code api/dto}.</strong> It used to be, and task 15's ArchUnit
+ * rule {@code applicationDependsOnDomainOnly} caught {@code AdminUserDirectory} — an application
+ * service — taking it as a parameter, which made the application layer depend on the web layer.
+ * The type has no web dependency of its own (a domain exception and a regex), so the package was
+ * the error, not the usage. Controllers may still import it: {@code api → application} is inward.
  */
 public record PageQuery(int page, int pageSize, String sort) {
 

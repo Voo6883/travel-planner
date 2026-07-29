@@ -1,7 +1,7 @@
 package com.travelplanner.api.dto.admin;
 
 import com.travelplanner.api.dto.page.PageMetadata;
-import com.travelplanner.api.dto.page.PageQuery;
+import com.travelplanner.application.page.PageQuery;
 import com.travelplanner.application.admin.AdminUserPage;
 import java.util.List;
 

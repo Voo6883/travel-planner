@@ -27,14 +27,9 @@ export function AuthCard({ title, description, children, footer }: AuthCardProps
           Travel Planner
         </Link>
 
-        <main
-          id="main-content"
-          className="rounded-lg border border-border-subtle bg-surface p-6 shadow-sm"
-        >
+        <main id="main-content" className="rounded-lg border border-border-subtle bg-surface p-6 shadow-sm">
           <h1 className="m-0 text-h1-mobile text-foreground sm:text-h1">{title}</h1>
-          {description ? (
-            <p className="mb-0 mt-2 text-body-sm text-foreground-muted">{description}</p>
-          ) : null}
+          {description ? <p className="mb-0 mt-2 text-body-sm text-foreground-muted">{description}</p> : null}
           <div className="mt-6">{children}</div>
         </main>
 

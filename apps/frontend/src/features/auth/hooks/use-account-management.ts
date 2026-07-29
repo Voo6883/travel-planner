@@ -3,12 +3,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
-import {
-  changePassword,
-  deleteCurrentUser,
-  unlinkProvider,
-  type IdentityProvider,
-} from '@/lib/api/auth-api';
+import { changePassword, deleteCurrentUser, unlinkProvider, type IdentityProvider } from '@/lib/api/auth-api';
 import { SIGN_IN_ROUTE } from './use-auth-session';
 import type { ChangePasswordFormValues } from '../types';
 

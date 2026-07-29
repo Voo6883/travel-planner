@@ -3,7 +3,7 @@
 > Deliverable of [Task 00](00-plan-baseline.md). Single source of truth for what is `done`.
 > Baseline and dependency rationale: [`EXECUTION-BASELINE.md`](EXECUTION-BASELINE.md).
 
-**Baseline commit:** `aa20043` · **Baseline branch:** `master` · **Last updated:** 2026-07-25
+**Baseline commit:** `aa20043` · **Working branch:** `dev` · **Last updated:** 2026-07-28
 
 ## Status values
 
@@ -45,13 +45,13 @@
 | 06 | [OpenAPI and error platform](06-openapi-error-platform.md) | 02, 03, 04, 05 | `done` | Commit `0e295fd`. Contract + error catalog + pagination + `expected_version` + request-id. 53 backend / 26 frontend tests. Drift gate verified in both directions against a committed tree. Open questions: **F-10**, **F-11**. |
 | 07 | [Database and domain foundation](07-database-domain-foundation.md) | 02, 04, 06 | `done` | Commit `717e077`. Migrations V1–V6, pure domain, MapStruct adapters, `@Version` per ADR 008, ADR 009 revocation columns. Unit build Docker-free; 22 Testcontainers tests pass. **Next free migration: `V7`.** Open: **F-13**, **F-14**, **F-15**. |
 | 08 | [Local identity and JWT session](08-local-identity-jwt.md) | 06, 07 | `done` | Commit `801759c`. ADR 009 in full: 30-min access + rotating 14-day refresh, reuse detection, composite-keyed lockout, `logout-all`. Migration **V7**. **F-13 and F-14 closed.** New: **F-17**, **F-18**. |
-| 09 | [Mailer and account lifecycle](09-mailer-account-lifecycle.md) | 08 | `not_started` | |
-| 10 | [Firebase and GitHub identity providers](10-external-identity-providers.md) | 08, 09 | `not_started` | No `Validation` section — universal evidence gate applies. |
-| 11 | [Frontend platform and auth UI](11-frontend-platform-auth-ui.md) | 03, 06, 08, 09, 10 | `not_started` | |
-| 12 | [Admin platform](12-admin-platform.md) | 07, 08, 09, 11 | `not_started` | No `Validation` section. DB/JWT role = `ADMIN`, Spring = `ROLE_ADMIN`. |
-| 13 | [PWA foundation](13-pwa-foundation.md) | 04, 11 | `not_started` | ADR 005 — Serwist required from Phase 0b. |
-| 14 | [AI provider platform](14-ai-provider-platform.md) | 06, 07, 09 | `not_started` | |
-| 15 | [Architecture and quality gates](15-quality-gates.md) | 02–14 | `not_started` | No `Validation` section. Sets coverage/arch thresholds — nothing before this may. |
+| 09 | [Mailer and account lifecycle](09-mailer-account-lifecycle.md) | 08 | `done` | Commit `0148e81`. Migrations V8–V10. Mail sends only `afterCommit`; tokens hashed and single-use via a conditional UPDATE. Revocation on password change/reset/delete. |
+| 10 | [Firebase and GitHub identity providers](10-external-identity-providers.md) | 08, 09 | `done` | Commit `2d6ef5f`. ADR 009 §4 pre-hijack takeover closed and proven by test. Firebase asserts `aud`+`sign_in_provider`; GitHub uses primary+verified only. No migration needed. |
+| 11 | [Frontend platform and auth UI](11-frontend-platform-auth-ui.md) | 03, 06, 08, 09, 10 | `done` | Commit `1c04f94`. **Closes F-18** — ADR 006 same-origin proxy; without it tasks 08–10's auth was unreachable from a browser. |
+| 12 | [Admin platform](12-admin-platform.md) | 07, 08, 09, 11 | `done` | Commit `3acc779`. Migration **V12**. Disable/reset terminate sessions, proven with a live cookie. Seed absent under `prod` (allow-list, not denylist). Review fixed a stale-write that silently undid revocation. |
+| 13 | [PWA foundation](13-pwa-foundation.md) | 04, 11 | `done` | Commit `6a18a37`. `/api/v1/**` network-only, enforced per-rule **and** by ordering. Declined PLAN §4.2.11's `defaultCache` row — see **F-21**. |
+| 14 | [AI provider platform](14-ai-provider-platform.md) | 06, 07, 09 | `done` | Commit `12b6b23`. Migration **V11**. `Flux<LlmEvent>` sealed union per ADR 007. Open: **F-22** (LLM stub not blocked in prod), **F-23** (Reactor in `domain/`). |
+| 15 | [Architecture and quality gates](15-quality-gates.md) | 02–14 | `in_progress` | Branch `agent/task-15-quality-gates`. Checkstyle 10.21.0, JaCoCo 0.8.12 (LINE 85 / BRANCH 70 over domain+application), 8 ArchUnit rules, ESLint import boundaries, Prettier, Vitest thresholds, Actuator. `./gradlew build` and the frontend chain both green locally — see [`docs/QUALITY-GATES.md`](../docs/QUALITY-GATES.md). **Not `done`: not committed, no PR, evidence gate not accepted.** New: **F-25**. |
 
 ## Phase 1 — knowledge, intake, chat, research, itinerary
 
@@ -105,32 +105,50 @@
 
 | Status | Count |
 |---|---|
-| `done` | 6 |
-| `in_progress` | 0 |
+| `done` | **15** |
+| `in_progress` | 1 |
 | `blocked` | 0 |
 | `review` | 0 |
-| `not_started` | 36 |
+| `not_started` | 27 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*
 
-## ✅ Phase 0A complete
+## Milestone — Phase 0B platform complete (2026-07-28)
 
-Tasks 00–05 are `done` and **proven in CI**, not just locally. Green on GitHub Actions:
+Tasks 00–14 are `done`. Tagged `v0.2.0-phase-0b`.
 
-| Job | Proves |
+Everything a feature needs now exists: contract, database, identity, mail,
+admin, frontend platform, PWA, and the AI runtime. Task 15 (quality gates) — the last of
+Phase 0B — is implemented on `agent/task-15-quality-gates` and awaiting commit, PR and the
+evidence gate. **Tasks 16 and 18 unblock once it is `done`.**
+
+F-23 is no longer only a note: `LayerRulesTest.domainIsFrameworkFree` now permits `reactor..`
+explicitly, so resolving F-23 means deleting one entry from that rule's allow-list.
+
+Proven against a running Compose stack, through the ADR 006 same-origin proxy exactly as a
+browser reaches it:
+
+| Flow | Result |
 |---|---|
-| `prereq` (ubuntu + windows) | The gate runs on Linux — closes **F-7** |
-| `backend` (Java 21) | Compiles and tests on a clean runner |
-| `frontend` (Node 22) | Lint, typecheck, test, build |
-| `docker build + smoke` | Same Dockerfiles as local; stack reaches `"database":"UP"` |
-| `security` | Nothing secret-shaped is tracked |
+| `register` | `202 PENDING_VERIFICATION` |
+| `login` before verifying | `403 email_not_verified` |
+| `verify-email/confirm` | `204` |
+| `login` after verifying | `200` + session cookie |
+| `/auth/me` | `200`, `roles ["USER"]`, `linked_providers ["LOCAL"]` |
+| Seeded dev admin | `ADMIN` / `123456` → `200`, `roles ["ADMIN"]` |
 
-**Next executable task: [06 — OpenAPI and error platform](06-openapi-error-platform.md)**, now
-reconciled with ADR 008 and ADR 007.
+**Open decisions carried into Phase 1** — none blocking, but **F-22 and F-23 should be settled
+before Task 15** writes the ArchUnit ruleset:
+
+| ID | Decision needed |
+|---|---|
+| **F-22** | The LLM stub is not blocked in production. ADR 010 §3 forbids a stub *knowledge* adapter in prod; nothing equivalent exists for the LLM, so a prod deploy with no key serves placeholder text |
+| **F-23** | Reactor `Flux` now appears in `domain/` via `LlmPort`. Both PLAN §5.1 and ADR 007 put it there, but it is a third-party type in the layer that is meant to have none |
+| **F-21** | `PLAN.md` §4.2.11's stack row names Serwist's `defaultCache`, which network-first caches same-origin `/api/`. Task 13 declined it; the row should be corrected |
+| **F-17** | `PLAN.md` §4.0.5's endpoint table still calls `/auth/refresh` "optional v1.1" and omits `/auth/logout-all` |
+| **F-19** | ADR 009 §6's "keyed on both" is ambiguous; task 08 used a composite key |
+| **F-24** | `AGENTS.md` "Cursor Cloud" section still claims the repo is planning-only with no `package.json` and no `apps/frontend` |
+| **F-25** | `components/layout/{app-shell,account-menu}.tsx` import `@/features/auth`. Shared chrome that renders identity — a real boundary violation, carved out in `eslint.config.mjs` rather than hidden. Fix by passing the user from a route-level provider, or move the shell into `features/auth` |
+| **F-26** | Commit `038221d` added `spring-boot-devtools` with no version and no BOM on `developmentOnly`, breaking `./gradlew build` (and therefore CI) on `dev` from that commit until task 15 fixed it. Three commits on `dev` — `038221d`, `48ab038`, `228da7f` — are tracked by no task; the ledger cannot show breakage it does not know about |
 
 **Active blockers:** none. **B-3** (`gh` unauthenticated) is informational only.
-
-Resolved: **B-1** (toolchain) — Node 22.23.1, Temurin JDK 21.0.11 LTS. **B-2** (trunk) —
-superseded 2026-07-26: work happens on `dev`. **Port 8080** — Oracle XE owns it on the dev
-machine; host ports are env-driven with committed defaults unchanged.
-Full detail in [`EXECUTION-BASELINE.md`](EXECUTION-BASELINE.md) §7.

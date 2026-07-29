@@ -70,12 +70,7 @@ export function SignInPanel() {
         onFinish={handleFinish}
       >
         <Form.Item name="login" label={t('login_label')} rules={loginRules(t)}>
-          <Input
-            size="large"
-            autoComplete="username"
-            inputMode="email"
-            placeholder={t('login_placeholder')}
-          />
+          <Input size="large" autoComplete="username" inputMode="email" placeholder={t('login_placeholder')} />
         </Form.Item>
 
         <Form.Item name="password" label={t('password_label')} rules={currentPasswordRules(t)}>

@@ -32,15 +32,9 @@ export function VerificationGate({ email }: VerificationGateProps) {
   return (
     <div className="mx-auto w-full max-w-form px-4 py-10 md:px-6">
       <main id="main-content" className="rounded-lg border border-border-subtle bg-surface p-6">
-        <h1 className="m-0 text-h1-mobile text-foreground sm:text-h1">
-          {t('verification_required_title')}
-        </h1>
-        <p className="mb-0 mt-2 text-body-sm text-foreground-muted">
-          {t('verification_required_body', { email })}
-        </p>
-        <p className="mb-0 mt-2 text-caption text-foreground-subtle">
-          {t('verification_required_hint')}
-        </p>
+        <h1 className="m-0 text-h1-mobile text-foreground sm:text-h1">{t('verification_required_title')}</h1>
+        <p className="mb-0 mt-2 text-body-sm text-foreground-muted">{t('verification_required_body', { email })}</p>
+        <p className="mb-0 mt-2 text-caption text-foreground-subtle">{t('verification_required_hint')}</p>
 
         <div className="mt-6 flex flex-col gap-3">
           {resend.isSuccess ? (

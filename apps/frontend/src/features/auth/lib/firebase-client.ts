@@ -43,8 +43,10 @@ export const FIREBASE_POPUP_BLOCKED = 'auth/popup-blocked';
  * Travel Planner accounts and no idea why their trips vanished.
  */
 export async function requestGoogleIdToken(): Promise<string> {
-  const [{ getApp, getApps, initializeApp }, { getAuth, GoogleAuthProvider, signInWithPopup }] =
-    await Promise.all([import('firebase/app'), import('firebase/auth')]);
+  const [{ getApp, getApps, initializeApp }, { getAuth, GoogleAuthProvider, signInWithPopup }] = await Promise.all([
+    import('firebase/app'),
+    import('firebase/auth'),
+  ]);
 
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   const provider = new GoogleAuthProvider();

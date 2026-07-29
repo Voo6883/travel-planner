@@ -53,9 +53,7 @@ export function csrfToken(): string | null {
   if (typeof document === 'undefined') {
     return null;
   }
-  const match = document.cookie
-    .split('; ')
-    .find((entry) => entry.startsWith(`${CSRF_COOKIE}=`));
+  const match = document.cookie.split('; ').find((entry) => entry.startsWith(`${CSRF_COOKIE}=`));
   return match ? decodeURIComponent(match.slice(CSRF_COOKIE.length + 1)) : null;
 }
 

@@ -45,10 +45,7 @@ export function VerifyEmailPanel() {
     return (
       <AuthCard title={t('verify_email_success_title')} description={t('verify_email_success_body')}>
         <Alert type="success" showIcon role="status" message={t('verify_email_success_title')} />
-        <Link
-          href="/sign-in"
-          className="mt-6 inline-flex min-h-control items-center text-action-primary-text"
-        >
+        <Link href="/sign-in" className="mt-6 inline-flex min-h-control items-center text-action-primary-text">
           {t('go_to_sign_in')}
         </Link>
       </AuthCard>
@@ -111,12 +108,7 @@ function ResendVerificationForm() {
         onFinish={(values: EmailFormValues) => resend.mutate(emailOnlySchema.parse(values))}
       >
         <Form.Item name="email" label={t('email_label')} rules={emailRules(t)}>
-          <Input
-            size="large"
-            autoComplete="email"
-            inputMode="email"
-            placeholder={t('email_placeholder')}
-          />
+          <Input size="large" autoComplete="email" inputMode="email" placeholder={t('email_placeholder')} />
         </Form.Item>
 
         <Button type="primary" size="large" block htmlType="submit" loading={resend.isPending}>

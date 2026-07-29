@@ -17,29 +17,23 @@ import type { components } from '@/generated/api/schema';
 
 const roleSchema = z.union([z.literal('USER'), z.literal('ADMIN')]);
 
-const providerSchema = z.union([
-  z.literal('LOCAL'),
-  z.literal('FIREBASE_GOOGLE'),
-  z.literal('GITHUB'),
-]);
+const providerSchema = z.union([z.literal('LOCAL'), z.literal('FIREBASE_GOOGLE'), z.literal('GITHUB')]);
 
 /**
  * `email` is a plain string, deliberately. A closed account carries the unroutable
  * `deleted-<id>@deleted.invalid` placeholder UC-A14 leaves behind, and `z.string().email()` would
  * reject the very row the list has to be able to show.
  */
-export const adminUserSummarySchema: z.ZodType<components['schemas']['AdminUserSummary']> = z.object(
-  {
-    user_id: z.string().uuid(),
-    email: z.string(),
-    username: z.string().nullish(),
-    roles: z.array(roleSchema),
-    email_verified: z.boolean(),
-    enabled: z.boolean(),
-    closed: z.boolean(),
-    created_at: z.string(),
-  },
-);
+export const adminUserSummarySchema: z.ZodType<components['schemas']['AdminUserSummary']> = z.object({
+  user_id: z.string().uuid(),
+  email: z.string(),
+  username: z.string().nullish(),
+  roles: z.array(roleSchema),
+  email_verified: z.boolean(),
+  enabled: z.boolean(),
+  closed: z.boolean(),
+  created_at: z.string(),
+});
 
 export const adminUserDetailSchema: z.ZodType<components['schemas']['AdminUserDetail']> = z.object({
   user_id: z.string().uuid(),

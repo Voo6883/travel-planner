@@ -40,9 +40,7 @@ export function ErrorAlert({ error, onRetry, className }: ErrorAlertProps) {
         <div className="flex flex-col gap-2">
           <p className="m-0 text-body-sm">{message}</p>
           {retryAfter === null ? null : (
-            <p className="m-0 text-caption text-foreground-muted">
-              {t('states.retry_after', { seconds: retryAfter })}
-            </p>
+            <p className="m-0 text-caption text-foreground-muted">{t('states.retry_after', { seconds: retryAfter })}</p>
           )}
           {apiError?.requestId ? (
             <p className="m-0 text-caption text-foreground-subtle">

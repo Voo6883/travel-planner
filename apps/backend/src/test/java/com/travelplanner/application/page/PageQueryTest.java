@@ -1,8 +1,9 @@
-package com.travelplanner.api.dto.page;
+package com.travelplanner.application.page;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.travelplanner.api.dto.page.PageMetadata;
 import com.travelplanner.domain.exception.ValidationFailedException;
 import org.junit.jupiter.api.Test;
 

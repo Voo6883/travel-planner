@@ -2,7 +2,6 @@ package com.travelplanner.api.security;
 
 import com.travelplanner.application.auth.AccessTokenClaims;
 import com.travelplanner.application.auth.JwtTokenService;
-import com.travelplanner.config.AuthSecurityProperties;
 import com.travelplanner.domain.model.User;
 import com.travelplanner.domain.port.UserRepositoryPort;
 import com.travelplanner.domain.valueobject.UserContext;

@@ -1,6 +1,6 @@
 package com.travelplanner.application.admin;
 
-import com.travelplanner.api.dto.page.PageQuery;
+import com.travelplanner.application.page.PageQuery;
 import com.travelplanner.config.RequiresDatabase;
 import com.travelplanner.domain.exception.UserNotFoundException;
 import com.travelplanner.domain.exception.ValidationFailedException;

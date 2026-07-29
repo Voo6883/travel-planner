@@ -1,10 +1,18 @@
 name: CI
 
-# Phase 0A CI skeleton (backlog S0-4, PLAN §15).
+# CI (backlog S0-4, PLAN §15).
 #
-# Deliberately excludes coverage, ArchUnit, and the AI eval harness — those gates depend on
-# foundations that do not exist yet and are owned by tasks/15-quality-gates.md.
-# Later tasks must EXTEND these jobs rather than add parallel ones.
+# Quality gates landed with tasks/15-quality-gates.md and are EXTENSIONS of the existing jobs, not
+# parallel ones — a second `backend` job would double the build time and let the two disagree
+# about which commit is green.
+#
+# Most gates are inside `./gradlew build` and `npm run lint` rather than separate steps, so the
+# command a developer runs locally is the command CI runs. Only the gates that need something the
+# default build must not require (Docker, a browser-less coverage provider, a git working tree)
+# appear as their own step. Thresholds, exclusions, and the architecture-exception process are
+# documented in docs/QUALITY-GATES.md.
+#
+# The AI eval harness remains out of scope — backlog S4-9 owns it.
 #
 # The OpenAPI drift gate landed with tasks/06-openapi-error-platform.md: spec validation runs
 # inside the `backend` job, and the codegen drift check inside the `frontend` job.
@@ -91,10 +99,28 @@ jobs:
           # Caches ~/.gradle dependencies only — never build output or credentials.
           cache: gradle
 
-      # Also validates api/openapi/openapi.yaml and asserts the error catalog matches
-      # ApiErrorCode (task 06) — OpenApiSpecTest and ErrorCatalogTest run inside `build`.
-      - name: Build and test
+      # One command, every backend gate. `build` -> `check` -> checkstyle{Main,Test,
+      # IntegrationTest} + test + jacocoTestCoverageVerification, so:
+      #   - a Checkstyle violation           (task 15)
+      #   - an ArchUnit layer violation      (task 15 — LayerRulesTest runs inside `test`)
+      #   - coverage below the threshold     (task 15)
+      #   - an OpenAPI spec or error-catalog mismatch (task 06)
+      # all fail here, with the same command and the same result a developer gets locally.
+      - name: Build, lint, architecture and coverage gates
         run: ./gradlew --no-daemon build
+
+      # Surfaces WHICH gate failed without making anyone open an HTML report. `--continue` so a
+      # Checkstyle failure does not hide a simultaneous ArchUnit failure; this step only runs when
+      # the step above already failed, so it never adds time to a green build.
+      - name: Explain gate failure
+        if: failure()
+        run: |
+          echo "::group::Checkstyle violations"
+          find build/reports/checkstyle -name '*.xml' -exec grep -h '<error' {} + || echo "none"
+          echo "::endgroup::"
+          echo "::group::Coverage"
+          cat build/reports/jacoco/test/html/index.html 2>/dev/null | grep -oE 'Total[^%]*%' | head -5 || echo "no report"
+          echo "::endgroup::"
 
       # Testcontainers suite from task 07: migrations against a real pgvector image, JPA <-> domain
       # mapping, transaction rollback, and optimistic-lock conflicts. Kept OUT of `build` on
@@ -156,14 +182,33 @@ jobs:
           fi
           echo "generated client matches the contract"
 
-      - name: Lint
+      # Strict TypeScript rules plus the app/features/shared/generated import boundaries
+      # (task 15). A cross-feature import or a reach into src/generated fails here.
+      - name: Lint and import boundaries
         run: npm run lint
+
+      # Formatting is checked, never applied. A CI job that rewrites source produces a green build
+      # for a tree nobody has: run `npm run format` locally to fix.
+      - name: Format check
+        run: npm run format:check
 
       - name: Type-check
         run: npm run typecheck
 
-      - name: Test
-        run: npm run test
+      # Replaces the bare `npm run test` step: same suite, plus the coverage thresholds in
+      # vitest.config.ts. Vitest exits non-zero when a threshold is missed, so no extra assertion
+      # is needed here.
+      - name: Test and coverage thresholds
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage
+          path: apps/frontend/coverage/
+          retention-days: 14
+          if-no-files-found: ignore
 
       - name: Build
         run: npm run build

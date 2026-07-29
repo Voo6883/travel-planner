@@ -73,8 +73,7 @@ const ONE_WEEK_SECONDS = 7 * ONE_DAY_SECONDS;
  */
 function cacheableAsset(pattern: RegExp | ((pathname: string) => boolean)) {
   const test = typeof pattern === 'function' ? pattern : (path: string) => pattern.test(path);
-  return (url: URL, sameOrigin: boolean): boolean =>
-    sameOrigin && !isApiPath(url.pathname) && test(url.pathname);
+  return (url: URL, sameOrigin: boolean): boolean => sameOrigin && !isApiPath(url.pathname) && test(url.pathname);
 }
 
 /**

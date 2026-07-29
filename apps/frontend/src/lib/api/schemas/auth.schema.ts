@@ -14,11 +14,7 @@ import type { components } from '@/generated/api/schema';
  * from this payload, and an unparsed `roles` or a missing `email_verified` would fail *open*.
  */
 
-const providerSchema = z.union([
-  z.literal('LOCAL'),
-  z.literal('FIREBASE_GOOGLE'),
-  z.literal('GITHUB'),
-]);
+const providerSchema = z.union([z.literal('LOCAL'), z.literal('FIREBASE_GOOGLE'), z.literal('GITHUB')]);
 
 export const currentUserSchema: z.ZodType<components['schemas']['CurrentUser']> = z.object({
   user_id: z.string().uuid(),
@@ -29,25 +25,21 @@ export const currentUserSchema: z.ZodType<components['schemas']['CurrentUser']> 
   linked_providers: z.array(providerSchema),
 });
 
-export const authSessionResponseSchema: z.ZodType<components['schemas']['AuthSessionResponse']> =
-  z.object({
-    user: currentUserSchema,
-    is_new_user: z.boolean(),
-    provider_linked: z.boolean(),
-  });
+export const authSessionResponseSchema: z.ZodType<components['schemas']['AuthSessionResponse']> = z.object({
+  user: currentUserSchema,
+  is_new_user: z.boolean(),
+  provider_linked: z.boolean(),
+});
 
 /**
  * Constant by design. The value carries no information about whether the account existed — that
  * is ADR 009 §6's enumeration defence, and parsing it strictly is what stops a future change from
  * quietly reintroducing a distinguishable response.
  */
-export const registrationResponseSchema: z.ZodType<components['schemas']['RegistrationResponse']> =
-  z.object({
-    status: z.literal('PENDING_VERIFICATION'),
-  });
+export const registrationResponseSchema: z.ZodType<components['schemas']['RegistrationResponse']> = z.object({
+  status: z.literal('PENDING_VERIFICATION'),
+});
 
-export const acceptedResponseSchema: z.ZodType<components['schemas']['AcceptedResponse']> = z.object(
-  {
-    status: z.literal('ACCEPTED'),
-  },
-);
+export const acceptedResponseSchema: z.ZodType<components['schemas']['AcceptedResponse']> = z.object({
+  status: z.literal('ACCEPTED'),
+});

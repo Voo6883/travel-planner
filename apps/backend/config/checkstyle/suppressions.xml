@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<!--
+  Travel Planner — Checkstyle suppressions (tasks/15-quality-gates.md).
+
+  Every entry needs a reason. A suppression with no rationale is indistinguishable from a rule
+  somebody switched off to get a build green, which is what task 15 forbids.
+-->
+<suppressions>
+
+  <!--
+    ArchUnit declares rules as `static final ArchRule someRuleName` fields, and the JUnit engine
+    uses the FIELD NAME as the test name in reports and failure output. Renaming them to
+    SCREAMING_SNAKE_CASE to satisfy ConstantName would turn every architecture failure message
+    into DOMAIN_DEPENDS_ON_NOTHING_OUTWARD, which is strictly harder to read at the moment someone
+    most needs to read it.
+
+    Narrow on purpose: only ConstantName, only in the architecture test package. Every other
+    constant in the codebase, including elsewhere in tests, still has to shout.
+  -->
+  <suppress checks="ConstantName" files="[\\/]com[\\/]travelplanner[\\/]architecture[\\/][^\\/]+\.java$"/>
+
+</suppressions>

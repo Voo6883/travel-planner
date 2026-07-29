@@ -112,6 +112,31 @@ travelplanner:
     # provider with no credential fails startup, exactly as the default provider does.
     routing: {}
 
+# Actuator and Micrometer (PLAN §4.0.9, task 15).
+#
+# The BASE profile is the permissive one, because it is what a developer runs locally and what CI
+# scrapes. application-prod.yml narrows it — the safe default is stated where it is enforced, not
+# assumed. `/api/v1/health` and `/api/v1/ready` remain the application's own endpoints (task 04);
+# these are the operator-facing ones and deliberately live on a different path.
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        # health, info, metrics, prometheus — not `*`. Exposing everything hands out `env` and
+        # `configprops`, which print resolved configuration including secret-shaped values.
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      # Component detail (database UP/DOWN) is useful locally and is not sensitive here.
+      # application-prod.yml turns it off.
+      show-details: always
+  metrics:
+    tags:
+      # Every series is tagged with the app name, so one Prometheus can scrape several services
+      # without their metrics colliding.
+      application: travel-planner-backend
+
 server:
   port: 8080
   error:

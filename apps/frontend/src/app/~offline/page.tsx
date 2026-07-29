@@ -33,20 +33,12 @@ export default async function OfflinePage() {
         {/* `role="status"` on a statically rendered page would announce nothing; the heading is
             the landmark here, and the banner role belongs to `OfflineBanner` inside the app. */}
         <h1 className="m-0 text-h1-mobile text-foreground sm:text-h1">{t('pwa.offline_page_title')}</h1>
-        <p className="mb-0 mt-3 max-w-prose text-body text-foreground-muted">
-          {t('pwa.offline_page_body')}
-        </p>
+        <p className="mb-0 mt-3 max-w-prose text-body text-foreground-muted">{t('pwa.offline_page_body')}</p>
       </div>
 
       <dl className="m-0 flex flex-col gap-4">
-        <Availability
-          term={t('pwa.offline_page_available_title')}
-          detail={t('pwa.offline_page_available_body')}
-        />
-        <Availability
-          term={t('pwa.offline_page_unavailable_title')}
-          detail={t('pwa.offline_page_unavailable_body')}
-        />
+        <Availability term={t('pwa.offline_page_available_title')} detail={t('pwa.offline_page_available_body')} />
+        <Availability term={t('pwa.offline_page_unavailable_title')} detail={t('pwa.offline_page_unavailable_body')} />
       </dl>
 
       <div>

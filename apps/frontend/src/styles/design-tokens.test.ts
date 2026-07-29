@@ -25,12 +25,9 @@ const blocks = {
 } as const;
 
 describe('design tokens', () => {
-  it.each(Object.keys(semanticTokens.light) as SemanticTokenName[])(
-    'light: --%s matches design-tokens.ts',
-    (name) => {
-      expect(blocks.light[`--${name}`]).toBe(normalise(semanticTokens.light[name]));
-    },
-  );
+  it.each(Object.keys(semanticTokens.light) as SemanticTokenName[])('light: --%s matches design-tokens.ts', (name) => {
+    expect(blocks.light[`--${name}`]).toBe(normalise(semanticTokens.light[name]));
+  });
 
   it.each(Object.keys(semanticTokens.dark) as SemanticTokenName[])(
     'dark: --%s matches design-tokens.ts in both dark selectors',
@@ -60,10 +57,7 @@ function extractBlock(selector: string): Record<string, string> {
   const body = css.slice(start + selector.length, css.indexOf('}', start));
 
   return Object.fromEntries(
-    [...body.matchAll(/(--[a-z-]+):\s*([^;]+);/g)].map((match) => [
-      match[1] ?? '',
-      normalise(match[2] ?? ''),
-    ]),
+    [...body.matchAll(/(--[a-z-]+):\s*([^;]+);/g)].map((match) => [match[1] ?? '', normalise(match[2] ?? '')]),
   );
 }
 

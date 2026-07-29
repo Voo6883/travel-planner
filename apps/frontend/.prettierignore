@@ -1,0 +1,13 @@
+# Build output and generated code — Prettier must not reformat what a tool rewrites.
+.next/
+coverage/
+node_modules/
+next-env.d.ts
+
+# Regenerated wholesale by `npm run codegen`; formatting it would show as drift on the next run
+# and fail the contract gate in CI.
+src/generated/
+
+# Serwist build output (PLAN §4.2.11: "build output; do not hand-edit").
+public/sw.js
+public/sw.js.map

@@ -1,11 +1,5 @@
 import type { Config } from 'tailwindcss';
-import {
-  fontFamily,
-  motionTokens,
-  radiusScale,
-  shadowScale,
-  typographyScale,
-} from './src/styles/design-tokens';
+import { fontFamily, motionTokens, radiusScale, shadowScale, typographyScale } from './src/styles/design-tokens';
 
 /**
  * Tailwind maps only to semantic CSS variables — never to raw hex. A component writes

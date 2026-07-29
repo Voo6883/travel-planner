@@ -66,9 +66,7 @@ function LoadedDetail({ account }: { account: AdminUserDetail }) {
           type="success"
           showIcon
           role="status"
-          message={
-            account.enabled ? t('status_action.enabled_success') : t('status_action.disabled_success')
-          }
+          message={account.enabled ? t('status_action.enabled_success') : t('status_action.disabled_success')}
         />
       ) : null}
 
@@ -87,15 +85,9 @@ function LoadedDetail({ account }: { account: AdminUserDetail }) {
             {account.email_verified ? t('field.verified_yes') : t('field.verified_no')}
           </Descriptions.Item>
           <Descriptions.Item label={t('field.roles')}>{account.roles.join(', ')}</Descriptions.Item>
-          <Descriptions.Item label={t('field.sign_in_methods')}>
-            {signInMethods(account, t)}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('field.created_at')}>
-            {formatIsoDate(account.created_at)}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('field.updated_at')}>
-            {formatIsoDate(account.updated_at)}
-          </Descriptions.Item>
+          <Descriptions.Item label={t('field.sign_in_methods')}>{signInMethods(account, t)}</Descriptions.Item>
+          <Descriptions.Item label={t('field.created_at')}>{formatIsoDate(account.created_at)}</Descriptions.Item>
+          <Descriptions.Item label={t('field.updated_at')}>{formatIsoDate(account.updated_at)}</Descriptions.Item>
         </Descriptions>
       </Card>
 
@@ -121,9 +113,7 @@ function LoadedDetail({ account }: { account: AdminUserDetail }) {
           </Button>
         </div>
         {account.has_local_password ? null : (
-          <p className="mb-0 mt-3 text-caption text-foreground-muted">
-            {t('reset.unavailable_provider_only')}
-          </p>
+          <p className="mb-0 mt-3 text-caption text-foreground-muted">{t('reset.unavailable_provider_only')}</p>
         )}
       </Card>
 
@@ -143,25 +133,16 @@ function LoadedDetail({ account }: { account: AdminUserDetail }) {
         onCancel={() => setConfirmingStatus(false)}
       >
         <p className="m-0 text-body-sm">
-          {account.enabled
-            ? t('status_action.disable_confirm_body')
-            : t('status_action.enable_confirm_body')}
+          {account.enabled ? t('status_action.disable_confirm_body') : t('status_action.enable_confirm_body')}
         </p>
       </Modal>
 
-      <ResetPasswordModal
-        account={account}
-        open={resetting}
-        onClose={() => setResetting(false)}
-      />
+      <ResetPasswordModal account={account} open={resetting} onClose={() => setResetting(false)} />
     </div>
   );
 }
 
-function signInMethods(
-  account: AdminUserDetail,
-  t: ReturnType<typeof useTranslations<'admin'>>,
-): string {
+function signInMethods(account: AdminUserDetail, t: ReturnType<typeof useTranslations<'admin'>>): string {
   const methods = [...account.linked_providers];
   // `password_hash IS NOT NULL` is what actually lets an account sign in locally; the bookkeeping
   // LOCAL identity row may be absent even when a password is set (ADR 009 §4).

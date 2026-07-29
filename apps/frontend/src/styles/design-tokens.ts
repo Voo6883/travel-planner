@@ -57,7 +57,9 @@ export const semanticTokens = {
     'destructive-surface': '#FEF2F2',
     info: '#0369A1',
     'info-surface': '#F0F9FF',
-    scrim: 'rgba(15,23,42,.56)',
+    // Leading zero is required: Prettier normalises `.56` to `0.56` in globals.css, and
+    // design-tokens.test.ts compares the two spellings literally.
+    scrim: 'rgba(15,23,42,0.56)',
     'action-primary-fill': '#0958D9',
     'action-primary-fill-hover': '#003EB3',
     'action-primary-fill-active': '#002C8C',
@@ -90,7 +92,7 @@ export const semanticTokens = {
     'destructive-surface': '#450A0A',
     info: '#7DD3FC',
     'info-surface': '#082F49',
-    scrim: 'rgba(0,0,0,.68)',
+    scrim: 'rgba(0,0,0,0.68)',
     'action-primary-fill': '#0958D9',
     'action-primary-fill-hover': '#003EB3',
     'action-primary-fill-active': '#002C8C',

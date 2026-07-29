@@ -24,10 +24,7 @@ describe('SystemStatusCard', () => {
   });
 
   it('reports ready when the backend answers UP', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ status: 'UP' }) }),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ status: 'UP' }) }));
 
     renderWithProviders(<SystemStatusCard />);
 

@@ -40,9 +40,7 @@ export function GoogleSignInButton({ mode }: AuthProviderButtonsProps) {
         {mode === 'sign_up' ? t('sign_up_with_google') : t('continue_with_google')}
       </Button>
 
-      {configured ? null : (
-        <p className="m-0 text-caption text-foreground-subtle">{t('google_unavailable')}</p>
-      )}
+      {configured ? null : <p className="m-0 text-caption text-foreground-subtle">{t('google_unavailable')}</p>}
 
       <GoogleAuthFailure error={error} />
     </div>

@@ -7,17 +7,11 @@ export async function LandingHero() {
   const t = await getTranslations('marketing');
 
   return (
-    <section
-      aria-labelledby="landing-hero-heading"
-      className="border-b border-border-subtle bg-surface"
-    >
+    <section aria-labelledby="landing-hero-heading" className="border-b border-border-subtle bg-surface">
       <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 md:grid-cols-2 md:items-center md:gap-12 md:px-6 md:py-16 xl:px-8">
         <div className="order-1 flex flex-col gap-6">
           <div className="flex flex-col gap-4">
-            <h1
-              id="landing-hero-heading"
-              className="m-0 text-h1-mobile text-foreground sm:text-display"
-            >
+            <h1 id="landing-hero-heading" className="m-0 text-h1-mobile text-foreground sm:text-display">
               {t('hero_title')}
             </h1>
             <p className="m-0 max-w-prose text-body text-foreground-muted">{t('hero_subtitle')}</p>

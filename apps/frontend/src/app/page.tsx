@@ -1,10 +1,4 @@
-import {
-  LandingFooter,
-  LandingHero,
-  LandingSteps,
-  LandingTrust,
-  MarketingHeader,
-} from '@/features/marketing';
+import { LandingFooter, LandingHero, LandingSteps, LandingTrust, MarketingHeader } from '@/features/marketing';
 
 /**
  * Marketing landing (§8.1) — the one route that needs no session.

@@ -34,10 +34,7 @@ export function SignUpPanel() {
     return (
       <AuthCard title={t('sign_up_pending_title')} description={t('sign_up_pending_body')}>
         <Alert type="success" showIcon role="status" message={t('sign_up_pending_title')} />
-        <Link
-          href="/sign-in"
-          className="mt-6 inline-flex min-h-control items-center text-action-primary-text"
-        >
+        <Link href="/sign-in" className="mt-6 inline-flex min-h-control items-center text-action-primary-text">
           {t('go_to_sign_in')}
         </Link>
       </AuthCard>
@@ -79,12 +76,7 @@ export function SignUpPanel() {
           <Input size="large" autoComplete="email" inputMode="email" placeholder={t('email_placeholder')} />
         </Form.Item>
 
-        <Form.Item
-          name="username"
-          label={t('username_label')}
-          extra={t('username_help')}
-          rules={usernameRules(t)}
-        >
+        <Form.Item name="username" label={t('username_label')} extra={t('username_help')} rules={usernameRules(t)}>
           <Input size="large" autoComplete="username" />
         </Form.Item>
 

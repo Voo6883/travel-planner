@@ -52,9 +52,7 @@ describe('locale message files', () => {
   });
 
   it.each(namespaces)('$name: ms defines every key that en defines, and no extras', (namespace) => {
-    expect(Object.keys(flatten(namespace.ms)).sort()).toEqual(
-      Object.keys(flatten(namespace.en)).sort(),
-    );
+    expect(Object.keys(flatten(namespace.ms)).sort()).toEqual(Object.keys(flatten(namespace.en)).sort());
   });
 
   it.each(namespaces)('$name: uses snake_case keys only, at every depth', (namespace) => {

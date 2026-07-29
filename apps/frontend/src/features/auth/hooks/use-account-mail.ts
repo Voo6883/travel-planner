@@ -1,11 +1,7 @@
 'use client';
 
 import { useMutation, type UseMutationResult } from '@tanstack/react-query';
-import {
-  requestPasswordReset,
-  resendEmailVerification,
-  type AcceptedResponse,
-} from '@/lib/api/auth-api';
+import { requestPasswordReset, resendEmailVerification, type AcceptedResponse } from '@/lib/api/auth-api';
 import type { EmailFormValues } from '../types';
 
 /**
@@ -26,13 +22,8 @@ export function useForgotPassword(): UseMutationResult<AcceptedResponse, unknown
   });
 }
 
-export function useResendVerification(): UseMutationResult<
-  AcceptedResponse,
-  unknown,
-  EmailFormValues
-> {
+export function useResendVerification(): UseMutationResult<AcceptedResponse, unknown, EmailFormValues> {
   return useMutation({
-    mutationFn: (values: EmailFormValues) =>
-      resendEmailVerification({ email: values.email.trim() }),
+    mutationFn: (values: EmailFormValues) => resendEmailVerification({ email: values.email.trim() }),
   });
 }

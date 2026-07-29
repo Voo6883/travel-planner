@@ -28,10 +28,7 @@ export function LoadingState({ label, rows = 3, className }: LoadingStateProps) 
         <div
           key={index}
           aria-hidden="true"
-          className={cn(
-            'h-4 animate-pulse rounded-md bg-surface-subtle',
-            index === 0 ? 'w-1/3' : 'w-full',
-          )}
+          className={cn('h-4 animate-pulse rounded-md bg-surface-subtle', index === 0 ? 'w-1/3' : 'w-full')}
         />
       ))}
     </div>
