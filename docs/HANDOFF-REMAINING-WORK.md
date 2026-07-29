@@ -17,7 +17,7 @@
 | Phase | Tasks | State |
 |---|---|---|
 | 0A/0B — foundation + platform | 00–15 | `done` |
-| Phase 1 — knowledge, intake, chat | 16 `done` · 17, 18, 19, 20 landing | in flight |
+| Phase 1 — knowledge, intake, chat | 16 `done` · 17, 18, 19, 20 `in_progress` | see §2.0 |
 | Phase 1 — research, itinerary | 21–31 | not started |
 | Phase 2 — booking, runtime | 32–37 | not started |
 | Knowledge ops | 40, 41 | not started |
@@ -29,6 +29,25 @@ open-question register (`F-nn`). Update it in the same commit as the work, never
 ---
 
 ## 2. Execution order
+
+### 2.0 Finish 17–20 first — none of them is `done`
+
+All four have substantial work landed and a named remainder. **Close these before starting 21**,
+because 21 depends on all of 18, 19 and 20, and building on an unfinished dependency is how the
+rework starts.
+
+| Task | What is left | Size |
+|---|---|---|
+| **17** | Seed validation command for CI, hybrid vector + `tsvector` fusion, shared adapter contract tests | medium |
+| **18** | Frontend brief editor + `locales/{en,ms}/trip_brief.json` (7 clarification keys) | medium |
+| **19** | `surprise_me` persistence — needs a migration **and** a `TripBriefDetails` field (F-42) | small |
+| **20** | `Last-Event-ID` resume, or amend ADR 007 to drop the per-frame id promise (F-39) | small–medium |
+
+Two of these are cheap and unblock disproportionately: **F-40** (widen the client `ChatRole` union
+to the 6 the contract publishes — the first `tool_call` history row will otherwise blank the whole
+page, and tasks 21/22 are what write those rows) and **F-42**.
+
+
 
 The dependency graph collapses to one long critical path with a few genuine forks. Do **not**
 invent parallelism the graph does not offer — every task below lists what it truly needs.
