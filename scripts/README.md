@@ -13,6 +13,8 @@ Contract defined by [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) §
 | `dev-backend.mjs` | Spring Boot hot reload (`npm run dev:backend`) |
 | `dev-frontend.mjs` | Next.js HMR dev server (`npm run dev:frontend`) |
 | `dev-apps.mjs` | Runs backend + frontend together (`npm run dev:apps`) |
+| `install-postgres-windows.ps1` | Native PostgreSQL 16 install to `D:\PostgreSQL\16` |
+| `install-pgvector-windows.ps1` | pgvector extension for native Windows Postgres |
 | `tests/test-check-prerequisites.sh` | Unit tests for the bash gate |
 | `tests/check-prerequisites.tests.ps1` | Unit tests for the PowerShell gate |
 | `tests/run-prereq-tests.mjs` | Cross-platform dispatcher behind `npm run prereq:test` |
