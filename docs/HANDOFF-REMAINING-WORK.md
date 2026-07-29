@@ -17,7 +17,7 @@
 | Phase | Tasks | State |
 |---|---|---|
 | 0A/0B — foundation + platform | 00–15 | `done` |
-| Phase 1 — knowledge, intake, chat | 16 `done` · 17, 18, 19, 20 `in_progress` | see §2.0 |
+| Phase 1 — knowledge, intake, chat | 16 `done` · 17 `review` · 18, 19, 20 `in_progress` | see §2.0 |
 | Phase 1 — research, itinerary | 21–31 | not started |
 | Phase 2 — booking, runtime | 32–37 | not started |
 | Knowledge ops | 40, 41 | not started |
