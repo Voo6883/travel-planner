@@ -57,11 +57,11 @@
 
 | ID | Task | Depends on | Status | Notes |
 |---|---|---|---|---|
-| 16 | [Knowledge domain and schema](16-knowledge-domain-schema.md) | 07, 14, 15 | `in_progress` | Commits `c68ff6f` (schema), `bbdc065` (domain). Migrations **V13–V18** applied against real Postgres 16.6 + pgvector 0.8.1: 12 tables, 6 partial HNSW indexes, and each guard proven to reject a bad write. Pure domain + `KnowledgePort` + typed `destination_not_covered` (registered end to end). 212 domain tests; coverage LINE 88.87% / BRANCH 81.73%. **Remaining: JPA entities + MapStruct adapters, Testcontainers migration/constraint/adapter tests, handoff doc.** New: **F-27**–**F-30**. |
-| 17 | [Knowledge seed and retrieval](17-knowledge-seed-retrieval.md) | 14, 16 | `not_started` | B-4 resolved (`020bd4a`) — knowledge stub is now the documented exception to §4.0.7; 3 curated destinations. |
-| 18 | [Trip and TripBrief core](18-trip-brief-core.md) | 06, 07, 11, 15, 17 | `not_started` | No `Validation` section. |
+| 16 | [Knowledge domain and schema](16-knowledge-domain-schema.md) | 07, 14, 15 | `done` | Commits `c68ff6f` (schema), `bbdc065` (domain). Migrations **V13–V18** applied against real Postgres 16.6 + pgvector 0.8.1: 12 tables, 6 partial HNSW indexes, and each guard proven to reject a bad write. Pure domain + `KnowledgePort` + typed `destination_not_covered` (registered end to end). 212 domain tests; coverage LINE 88.87% / BRANCH 81.73%. Persistence `8db9029`: 10 entities, 10 repositories, 10 mappers, adapter, native pgvector search. Handoff: [`docs/KNOWLEDGE-SCHEMA.md`](../docs/KNOWLEDGE-SCHEMA.md). **Testcontainers waived by the owner**; entity/schema alignment proven instead by `ddl-auto: validate` booting against Postgres 16.6 — see F-32. **Next free migration: `V21`.** New: **F-27**–**F-30**, **F-33**. |
+| 17 | [Knowledge seed and retrieval](17-knowledge-seed-retrieval.md) | 14, 16 | `in_progress` | Commit `50c2d68`. Seed format + idempotent loader + SAMPLE dataset (3 destinations, 142 rows, 39 embedding chunks) seeded **PARTIAL**; reader refuses a file declaring `FULL`. `GET /destinations/supported` public per ADR 010 §4. Prod refuses any `Stub*` knowledge bean. **Remaining: seed validation command for CI, hybrid vector+tsvector fusion, shared adapter contract tests.** Real curation is an open authoring task — see **F-34**. New: **F-33**. |
+| 18 | [Trip and TripBrief core](18-trip-brief-core.md) | 06, 07, 11, 15, 17 | `in_progress` | Commit `50c2d68`. Migration **V20** adds the brief columns V6 deferred. Trip + brief CRUD, derived clarification, `DRAFT`/`CLARIFICATION_NEEDED`/`BRIEF_COMPLETE` only, ADR 008 `expected_version` on every write with `409 version_conflict` + `details.current_version`. **Started while 17 was `in_progress`** — the interface it needed (`findSupportedDestinations`, `destination_not_covered`) already existed from 16. **Remaining: frontend brief editor + `locales/*/trip_brief.json`.** New: **F-35**. |
 | 19 | [LLM TripBrief extraction](19-llm-trip-brief-extraction.md) | 14, 18 | `not_started` | LLM output → schema/golden-file test required. |
-| 20 | [Conversation persistence and SSE](20-conversation-sse.md) | 06, 07, 11, 14, 15 | `not_started` | No `Validation` section. ADR 007 — `Flux<LlmEvent>`. |
+| 20 | [Conversation persistence and SSE](20-conversation-sse.md) | 06, 07, 11, 14, 15 | `in_progress` | Commit `50c2d68`. Migration **V19** (`planner_session`, `conversation`, `message`). Per-conversation `seq` allocated under `SELECT … FOR UPDATE`; `client_message_id` unique index for idempotency; partial messages marked, never discarded; no chain-of-thought storable. Frontend: hand-authored SSE union, stateful chunk decoder, pure reducer, optimistic de-dup, 329 tests green. **Remaining: the SSE endpoints themselves — no route streams yet.** New: **F-31**, **F-36**. |
 | 21 | [Planner chat and trip creation](21-planner-chat-trip-creation.md) | 18, 19, 20 | `not_started` | No `Validation` section. **First end-to-end product loop closes here.** |
 | 22 | [Trip chat intake tools](22-trip-chat-intake-tools.md) | 18, 19, 20, 21 | `not_started` | No `Validation` section. Tool args must be schema-validated. |
 | 23 | [Research job platform](23-research-job-platform.md) | 07, 18, 22 | `not_started` | |
@@ -105,11 +105,11 @@
 
 | Status | Count |
 |---|---|
-| `done` | **16** |
-| `in_progress` | 1 |
+| `done` | **17** |
+| `in_progress` | 3 |
 | `blocked` | 0 |
 | `review` | 0 |
-| `not_started` | 25 |
+| `not_started` | 22 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*
 
@@ -153,6 +153,15 @@ before Task 15** writes the ArchUnit ruleset:
 | **F-28** | `KnowledgeQuery.equals`/`hashCode` are identity-based on the `float[] embedding` component, so two queries built from identical inputs are never equal. Normal for records with array components, but this type is documented as a value object and takes care to be immutable, so the gap is surprising. Matters if a query is ever used as a cache key (task 37) |
 | **F-29** | `Destination` validates neither `name` nor `timezone` for blankness, while `DestinationArea`, `Poi`, `TransportMode` and `TravelApp` all reject a blank name. `timezone` is never checked as a valid IANA zone despite the javadoc requiring one before an itinerary can place an event on a clock (task 28 depends on this) |
 | **F-30** | `DestinationNotCoveredException.supportedSlugs` is `transient`, so it deserialises to `null` although `supportedSlugs()` documents no null contract. Mirrors `DomainException.details`, so it may be deliberate — decide and document, or drop `transient` |
+
+| **F-31** | Backend `ChatMessageStatus` is upper-case (`STREAMING`/`COMPLETE`/…) while ADR 007 and the wire contract use lower-case snake. The frontend parser normalises case defensively and collapses any non-`complete` status to `interrupted` — two components papering over an unsettled contract rather than one contract both obey. Settle it in the DTO layer and delete the client-side normalisation |
+| **F-32** | Task 16's Testcontainers suite was waived. Entity/schema alignment IS proven (`ddl-auto: validate` boots against Postgres 16.6 + pgvector 0.8.1), but three things remain unverified: adapter round-trip mapping, constraint behaviour under concurrent writes, and whether the partial HNSW indexes are actually chosen by the planner — on empty tables `EXPLAIN` reports a seq scan regardless. Re-check once task 17 seeds data |
+| **F-33** | `travel_app` cannot express that one app supersedes another in a market, so task 17's "China suppression of inactive global alternatives" is not representable. Needs a schema change — a gap in task 16's design, not something a seed can work around |
+| **F-34** | Real curation for Tokyo/Bangkok/Shanghai is still unstarted. The committed dataset is deliberately SAMPLE (`stub:sample`, `PARTIAL`, obviously-fake names/hours/prices) and is below ADR 010 §1's floor of 25 POIs. ADR 010 §1: "curation is a deliberate authoring task with a named owner" — that owner has not been named |
+| **F-35** | `PLAN.md` §4.1.3 and `BACKLOG.md` S3-1 still specify `PUT .../brief/clarification`; ADR 008 §3 supersedes it with a typed action endpoint, which is what task 18 implemented. The plan documents were not amended |
+| **F-36** | Task 20 has no SSE endpoint yet — persistence and the client transport exist, but nothing streams. The frontend assumed the history `GET`, the request body shape, and that `message_start` carries `client_message_id` (ADR 007 names the event, not its fields). All isolated behind one URL builder and a greppable cast; delete both when the contract publishes the paths |
+| **F-37** | `DevAdminSeeder.run()` calls `seed()` by self-invocation, so its `@Transactional` proxy is bypassed and the annotation never applies. Harmless today (one insert) but it does not do what it reads as doing. Pre-existing, from task 12 |
+| **F-38** | Neither `MailConfigValidator` nor `SupportedDestinationService` has a unit test. Both are startup/permission-shaped code where a silent regression is invisible — `MailConfigValidator` is the guard that stops a prod deploy accepting unverified email addresses |
 
 **Active blockers:** none. **B-3** (`gh` unauthenticated) is informational only.
 
