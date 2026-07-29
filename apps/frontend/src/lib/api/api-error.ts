@@ -20,6 +20,7 @@ export const REGISTERED_ERROR_CODES = [
   'ai_response_invalid',
   'ai_timeout',
   'ai_unavailable',
+  'destination_not_covered',
   'email_not_verified',
   'firebase_email_not_verified',
   'forbidden',

@@ -1135,6 +1135,9 @@ components:
     ProviderLinkRequiredDetails:
       $ref: './errors.yaml#/components/schemas/ProviderLinkRequiredDetails'
 
+    DestinationNotCoveredDetails:
+      $ref: './errors.yaml#/components/schemas/DestinationNotCoveredDetails'
+
     RegisterRequest:
       type: object
       description: Local sign-up (UC-A01). All three fields are required.

@@ -708,6 +708,7 @@ export interface components {
          *     | `ai_response_invalid` | 502 | The model answered, but the answer failed schema validation and a repair attempt did not fix it. A typed "no confident result", never a partially filled object (PLAN §4.1) |
          *     | `ai_timeout` | 504 | The AI provider did not answer within the configured budget. Not auto-retried — the call already spent its whole budget |
          *     | `ai_unavailable` | 503 | The AI provider is unreachable, failing, misconfigured, or the circuit breaker is open |
+         *     | `destination_not_covered` | 404 | No curated travel knowledge exists for the requested destination (ADR 010 §4). `details.requested` echoes the slug asked for and `details.supported` lists the ones that are covered |
          *     | `email_not_verified` | 403 | Credential accepted, but the address is unconfirmed (UC-A08) |
          *     | `firebase_email_not_verified` | 403 | The Google account behind a Firebase ID token has an unconfirmed address (PLAN §4.0.5) |
          *     | `forbidden` | 403 | Authenticated, but not allowed to act on this resource |
@@ -729,7 +730,7 @@ export interface components {
          *     | `version_conflict` | 409 | Optimistic-lock mismatch (ADR 008). `details.current_version` carries the server's version |
          * @enum {string}
          */
-        ErrorCode: "account_closed" | "account_disabled" | "account_locked" | "ai_rate_limited" | "ai_response_invalid" | "ai_timeout" | "ai_unavailable" | "email_not_verified" | "firebase_email_not_verified" | "forbidden" | "identity_already_linked" | "internal_error" | "invalid_credentials" | "invalid_firebase_token" | "invalid_oauth_state" | "invalid_token" | "last_sign_in_method" | "not_found" | "provider_email_unavailable" | "provider_link_required" | "provider_unavailable" | "rate_limited" | "unauthorized" | "user_not_found" | "validation_failed" | "version_conflict";
+        ErrorCode: "account_closed" | "account_disabled" | "account_locked" | "ai_rate_limited" | "ai_response_invalid" | "ai_timeout" | "ai_unavailable" | "destination_not_covered" | "email_not_verified" | "firebase_email_not_verified" | "forbidden" | "identity_already_linked" | "internal_error" | "invalid_credentials" | "invalid_firebase_token" | "invalid_oauth_state" | "invalid_token" | "last_sign_in_method" | "not_found" | "provider_email_unavailable" | "provider_link_required" | "provider_unavailable" | "rate_limited" | "unauthorized" | "user_not_found" | "validation_failed" | "version_conflict";
         /**
          * @description Shape of `ApiErrorResponse.details` when `code` is `validation_failed`. Documented
          *     separately because it is the only `details` payload with a fixed structure that
@@ -799,6 +800,29 @@ export interface components {
              * @enum {string}
              */
             provider: "FIREBASE_GOOGLE" | "GITHUB";
+        };
+        /**
+         * @description Shape of `ApiErrorResponse.details` when `code` is `destination_not_covered` (ADR 010 §4).
+         *
+         *     The supported list travels with the refusal because "we have nothing for that" is only
+         *     useful when paired with what we do have. A client that reads both can offer an
+         *     alternative in the same breath instead of making a second call to find one.
+         */
+        DestinationNotCoveredDetails: {
+            /**
+             * @description The destination slug the caller asked for, echoed back so a typo is visible.
+             * @example osaka
+             */
+            requested: string;
+            /**
+             * @description Every fully curated destination slug, in a stable order.
+             * @example [
+             *       "kuala-lumpur",
+             *       "penang",
+             *       "singapore"
+             *     ]
+             */
+            supported: string[];
         };
         /**
          * @description Local sign-up (UC-A01). All three fields are required.

@@ -78,6 +78,20 @@ public enum ApiErrorCode {
      */
     AI_UNAVAILABLE("ai_unavailable", HttpStatus.SERVICE_UNAVAILABLE),
 
+    /**
+     * No curated travel knowledge exists for the requested destination (ADR 010 §4, task 16).
+     *
+     * <p>{@code 404}: the destination exists as a concept, but the thing this API serves — curated
+     * knowledge about it — does not. That is a "we have nothing for that" answer about a resource,
+     * not a complaint about the request, so it is not {@link #VALIDATION_FAILED}: the caller sent a
+     * perfectly well-formed slug and there is nothing in it for them to correct.
+     *
+     * <p>Distinct from {@link #NOT_FOUND}, which hides whether a resource exists. Here the opposite
+     * is wanted: {@code details.supported} names every destination that <em>is</em> covered, because
+     * the honest answer to "can you plan Osaka?" is "no, but here is what we do know".
+     */
+    DESTINATION_NOT_COVERED("destination_not_covered", HttpStatus.NOT_FOUND),
+
     /** Credential accepted, but the address is unconfirmed (UC-A08). */
     EMAIL_NOT_VERIFIED("email_not_verified", HttpStatus.FORBIDDEN),
 

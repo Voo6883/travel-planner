@@ -46,6 +46,7 @@ components:
         | `ai_response_invalid` | 502 | The model answered, but the answer failed schema validation and a repair attempt did not fix it. A typed "no confident result", never a partially filled object (PLAN §4.1) |
         | `ai_timeout` | 504 | The AI provider did not answer within the configured budget. Not auto-retried — the call already spent its whole budget |
         | `ai_unavailable` | 503 | The AI provider is unreachable, failing, misconfigured, or the circuit breaker is open |
+        | `destination_not_covered` | 404 | No curated travel knowledge exists for the requested destination (ADR 010 §4). `details.requested` echoes the slug asked for and `details.supported` lists the ones that are covered |
         | `email_not_verified` | 403 | Credential accepted, but the address is unconfirmed (UC-A08) |
         | `firebase_email_not_verified` | 403 | The Google account behind a Firebase ID token has an unconfirmed address (PLAN §4.0.5) |
         | `forbidden` | 403 | Authenticated, but not allowed to act on this resource |
@@ -73,6 +74,7 @@ components:
         - ai_response_invalid
         - ai_timeout
         - ai_unavailable
+        - destination_not_covered
         - email_not_verified
         - firebase_email_not_verified
         - forbidden
@@ -205,3 +207,26 @@ components:
           minimum: 0
           description: The version the server currently holds for the aggregate.
           example: 9
+
+    DestinationNotCoveredDetails:
+      type: object
+      description: |
+        Shape of `ApiErrorResponse.details` when `code` is `destination_not_covered` (ADR 010 §4).
+
+        The supported list travels with the refusal because "we have nothing for that" is only
+        useful when paired with what we do have. A client that reads both can offer an
+        alternative in the same breath instead of making a second call to find one.
+      required:
+        - requested
+        - supported
+      properties:
+        requested:
+          type: string
+          description: The destination slug the caller asked for, echoed back so a typo is visible.
+          example: osaka
+        supported:
+          type: array
+          items:
+            type: string
+          description: Every fully curated destination slug, in a stable order.
+          example: [kuala-lumpur, penang, singapore]
