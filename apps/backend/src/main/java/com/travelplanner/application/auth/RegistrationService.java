@@ -1,6 +1,7 @@
 package com.travelplanner.application.auth;
 
 import com.travelplanner.application.support.TransactionalWrite;
+import com.travelplanner.config.MailProperties;
 import com.travelplanner.config.RequiresDatabase;
 import com.travelplanner.domain.enums.Role;
 import com.travelplanner.domain.model.User;
@@ -36,7 +37,9 @@ import org.springframework.stereotype.Service;
  * {@code afterCommit}, so a rolled-back or retried registration cannot mail a verification link for
  * an account that does not exist.
  *
- * <p>New accounts start {@code email_verified=false}, which UC-A08 turns into a login gate.
+ * <p>New accounts start {@code email_verified=false} when a real mail provider is configured, which
+ * UC-A08 turns into a login gate. With {@code MAILER_PROVIDER=stub} there is no mailbox to receive
+ * the link, so they start verified instead — see {@code autoVerify()}.
  */
 @Service
 @RequiresDatabase
@@ -47,12 +50,14 @@ public class RegistrationService {
     private final UserRepositoryPort users;
     private final PasswordPolicy passwords;
     private final RegistrationOutcomes outcomes;
+    private final MailProperties mail;
 
     public RegistrationService(UserRepositoryPort users, PasswordPolicy passwords,
-            RegistrationOutcomes outcomes) {
+            RegistrationOutcomes outcomes, MailProperties mail) {
         this.users = users;
         this.passwords = passwords;
         this.outcomes = outcomes;
+        this.mail = mail;
     }
 
     @TransactionalWrite
@@ -78,7 +83,7 @@ public class RegistrationService {
 
     private void create(RegisterCommand command, String passwordHash) {
         try {
-            User saved = users.save(newAccount(command, passwordHash));
+            User saved = users.save(newAccount(command, passwordHash, autoVerify()));
             outcomes.accountCreated(saved, command.username());
         } catch (DataIntegrityViolationException concurrentDuplicate) {
             // Two simultaneous sign-ups for the same address: the unique index is the real
@@ -93,9 +98,28 @@ public class RegistrationService {
         return command.username() != null && users.existsByUsernameIgnoreCase(command.username());
     }
 
-    private static User newAccount(RegisterCommand command, String passwordHash) {
+    /**
+     * Whether a new account starts already verified.
+     *
+     * <p>True only when no real mail provider is configured. With {@code MAILER_PROVIDER=stub}
+     * there is no mailbox for a verification link to arrive in, so holding the account at
+     * {@code email_verified=false} makes sign-up a dead end: UC-A08 then refuses the login with
+     * {@code 403 email_not_verified} and the only way through is to read the link out of the
+     * application log at {@code DEBUG}. Requiring that of every developer, and of anyone running
+     * this locally, buys no security — the stub proves nothing about who owns the address either
+     * way.
+     *
+     * <p>This cannot reach production. {@code MailConfigValidator} fails startup under the
+     * {@code prod} profile when the provider is still the stub, so a deployment that forgot
+     * {@code RESEND_API_KEY} stops at boot rather than silently accepting unverified addresses.
+     */
+    private boolean autoVerify() {
+        return mail.isStub();
+    }
+
+    private static User newAccount(RegisterCommand command, String passwordHash, boolean emailVerified) {
         Instant now = Instant.now();
         return new User(UUID.randomUUID(), command.username(), command.email(), passwordHash,
-                false, Role.USER, true, 0, null, null, now, now);
+                emailVerified, Role.USER, true, 0, null, null, now, now);
     }
 }

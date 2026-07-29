@@ -37,23 +37,16 @@ export function ResetPasswordPanel() {
 
   if (resetPassword.isSuccess) {
     return (
-      <AuthCard
-        title={t('reset_password_success_title')}
-        description={t('reset_password_success_body')}
-      >
+      <AuthCard title={t('reset_password_success_title')} description={t('reset_password_success_body')}>
         <Alert type="success" showIcon role="status" message={t('reset_password_success_title')} />
-        <Link
-          href="/sign-in"
-          className="mt-6 inline-flex min-h-control items-center text-action-primary-text"
-        >
+        <Link href="/sign-in" className="mt-6 inline-flex min-h-control items-center text-action-primary-text">
           {t('go_to_sign_in')}
         </Link>
       </AuthCard>
     );
   }
 
-  const isSpentToken =
-    resetPassword.error instanceof ApiError && resetPassword.error.code === 'invalid_token';
+  const isSpentToken = resetPassword.error instanceof ApiError && resetPassword.error.code === 'invalid_token';
 
   return (
     <AuthCard title={t('reset_password_title')} description={t('reset_password_body')}>
@@ -73,9 +66,7 @@ export function ResetPasswordPanel() {
         layout="vertical"
         requiredMark={false}
         disabled={resetPassword.isPending}
-        onFinish={(values: ResetPasswordFormValues) =>
-          resetPassword.mutate(newPasswordSchema.parse(values))
-        }
+        onFinish={(values: ResetPasswordFormValues) => resetPassword.mutate(newPasswordSchema.parse(values))}
       >
         <Form.Item
           name="new_password"
@@ -95,13 +86,7 @@ export function ResetPasswordPanel() {
           <Input.Password size="large" autoComplete="new-password" />
         </Form.Item>
 
-        <Button
-          type="primary"
-          size="large"
-          block
-          htmlType="submit"
-          loading={resetPassword.isPending}
-        >
+        <Button type="primary" size="large" block htmlType="submit" loading={resetPassword.isPending}>
           {t('reset_password_submit')}
         </Button>
       </Form>
@@ -115,10 +100,7 @@ function MissingTokenCard() {
 
   return (
     <AuthCard title={t('missing_token_title')} description={t('missing_token_body')}>
-      <Link
-        href="/forgot-password"
-        className="inline-flex min-h-control items-center text-action-primary-text"
-      >
+      <Link href="/forgot-password" className="inline-flex min-h-control items-center text-action-primary-text">
         {t('request_new_link')}
       </Link>
     </AuthCard>

@@ -38,9 +38,7 @@ vi.mock('next-intl/server', () => ({
 /** Walks a dotted key path, the way next-intl resolves nested messages. */
 function lookup(root: unknown, key: string): string | undefined {
   const value = key.split('.').reduce<unknown>((node, segment) => {
-    return typeof node === 'object' && node !== null
-      ? (node as Record<string, unknown>)[segment]
-      : undefined;
+    return typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[segment] : undefined;
   }, root);
   return typeof value === 'string' ? value : undefined;
 }
@@ -58,9 +56,7 @@ describe.each<TestLocale>(['en', 'ms'])('offline shell (%s)', (locale) => {
   it('renders the offline heading as the page title', async () => {
     renderWithProviders(await OfflinePage(), { locale });
 
-    expect(
-      screen.getByRole('heading', { level: 1, name: copy().offline_page_title }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: copy().offline_page_title })).toBeInTheDocument();
   });
 
   /**

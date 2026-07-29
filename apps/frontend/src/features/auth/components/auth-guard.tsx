@@ -40,8 +40,7 @@ export function AuthGuard({ children, require = 'authenticated' }: AuthGuardProp
   // narrowing that proves `query.data` exists once the pending and error branches are past.
   const query = useCurrentUser();
   const isSignedOut = query.error instanceof ApiError && query.error.status === 401;
-  const isForbidden =
-    require === 'admin' && query.data !== undefined && !query.data.roles.includes('ADMIN');
+  const isForbidden = require === 'admin' && query.data !== undefined && !query.data.roles.includes('ADMIN');
 
   useRedirectWhen(isSignedOut, SIGN_IN_ROUTE);
   useRedirectWhen(isForbidden, PLANNER_HOME_ROUTE);
@@ -71,9 +70,7 @@ export function AuthGuard({ children, require = 'authenticated' }: AuthGuardProp
 
 /** The §4.2 page padding, so a guard state is not flush against the viewport edge. */
 function GuardFrame({ children }: { children: ReactNode }) {
-  return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-6 md:py-8 xl:px-8">{children}</div>
-  );
+  return <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-6 md:py-8 xl:px-8">{children}</div>;
 }
 
 /**
@@ -89,8 +86,7 @@ function useRedirectWhen(active: boolean, target: string): void {
     if (!active) {
       return;
     }
-    const query =
-      target === SIGN_IN_ROUTE ? `?${REDIRECT_PARAM}=${encodeURIComponent(pathname)}` : '';
+    const query = target === SIGN_IN_ROUTE ? `?${REDIRECT_PARAM}=${encodeURIComponent(pathname)}` : '';
     router.replace(`${target}${query}`);
   }, [active, target, pathname, router]);
 }

@@ -97,16 +97,23 @@ function buildRevision(): string {
  *
  * `http://backend:8080` inside Compose, `http://localhost:8080` when the frontend runs on the host.
  */
-const backendInternalUrl = (process.env.BACKEND_INTERNAL_URL ?? 'http://localhost:8080').replace(
-  /\/+$/,
-  '',
-);
+const backendInternalUrl = (process.env.BACKEND_INTERNAL_URL ?? 'http://localhost:8080').replace(/\/+$/, '');
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Emits a self-contained server bundle so the runtime image needs no node_modules
   // (docker/frontend/Dockerfile).
   output: 'standalone',
+
+  /**
+   * The monorepo has two lockfiles — this app's, and the root one for the orchestration-only
+   * `package.json`. Next.js infers the workspace root by walking up to the nearest lockfile, finds
+   * the repo root, and warns that its guess may be wrong. It is wrong: no frontend dependency
+   * resolves from there, and a root-anchored trace would sweep apps/backend into the standalone
+   * output. Pinning it to this directory matches what the Docker build already sees, since
+   * docker/frontend/Dockerfile uses apps/frontend as its build context.
+   */
+  outputFileTracingRoot: import.meta.dirname,
   typescript: {
     // Never ship on a broken type-check; `npm run typecheck` must stay meaningful.
     ignoreBuildErrors: false,

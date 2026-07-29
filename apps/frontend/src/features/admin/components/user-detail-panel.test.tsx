@@ -59,9 +59,7 @@ describe('UserDetailPanel', () => {
 
     // §6.6 — a destructive confirmation names the affected item and states the consequence.
     expect(
-      await screen.findByText(
-        enAdmin.status_action.disable_confirm_title.replace('{email}', 'aisyah@example.com'),
-      ),
+      await screen.findByText(enAdmin.status_action.disable_confirm_title.replace('{email}', 'aisyah@example.com')),
     ).toBeInTheDocument();
     expect(screen.getByText(enAdmin.status_action.disable_confirm_body)).toBeInTheDocument();
     // Nothing was sent by opening the dialog — only the initial GET.
@@ -77,9 +75,7 @@ describe('UserDetailPanel', () => {
     renderWithProviders(<UserDetailPanel userId={USER_ID} />);
     await user.click(await screen.findByRole('button', { name: enAdmin.status_action.disable }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(
-      within(dialog).getByRole('button', { name: enAdmin.status_action.disable }),
-    );
+    await user.click(within(dialog).getByRole('button', { name: enAdmin.status_action.disable }));
 
     await waitFor(() => {
       const put = mock.calls.find((call) => call.method === 'PUT');
@@ -139,19 +135,16 @@ describe('UserDetailPanel', () => {
     expect(screen.getByRole('button', { name: enAdmin.reset.open_action })).toBeDisabled();
   });
 
-  it('warns before a reset that the password cannot be read back and ends every session',
-    async () => {
-      mockContract({ '/admin/users/{userId}': { body: detail() } });
-      const user = userEvent.setup();
+  it('warns before a reset that the password cannot be read back and ends every session', async () => {
+    mockContract({ '/admin/users/{userId}': { body: detail() } });
+    const user = userEvent.setup();
 
-      renderWithProviders(<UserDetailPanel userId={USER_ID} />);
-      await user.click(await screen.findByRole('button', { name: enAdmin.reset.open_action }));
+    renderWithProviders(<UserDetailPanel userId={USER_ID} />);
+    await user.click(await screen.findByRole('button', { name: enAdmin.reset.open_action }));
 
-      expect(await screen.findByText(enAdmin.reset.warning)).toBeInTheDocument();
-      expect(
-        screen.getByText(enAdmin.reset.title.replace('{email}', 'aisyah@example.com')),
-      ).toBeInTheDocument();
-    });
+    expect(await screen.findByText(enAdmin.reset.warning)).toBeInTheDocument();
+    expect(screen.getByText(enAdmin.reset.title.replace('{email}', 'aisyah@example.com'))).toBeInTheDocument();
+  });
 
   it('offers a retry rather than a blank screen when the account cannot be loaded', async () => {
     mockContract({

@@ -1,11 +1,5 @@
 import { theme, type ThemeConfig } from 'antd';
-import {
-  controlHeight,
-  fontFamily,
-  radiusScale,
-  semanticTokens,
-  shadowScale,
-} from './design-tokens';
+import { controlHeight, fontFamily, radiusScale, semanticTokens, shadowScale } from './design-tokens';
 
 export type ThemeMode = 'light' | 'dark';
 

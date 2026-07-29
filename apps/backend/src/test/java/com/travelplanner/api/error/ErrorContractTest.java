@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.travelplanner.api.dto.VersionedMutation;
 import com.travelplanner.api.dto.page.PageMetadata;
-import com.travelplanner.api.dto.page.PageQuery;
+import com.travelplanner.application.page.PageQuery;
 import com.travelplanner.domain.exception.DomainException;
 import com.travelplanner.domain.exception.VersionConflictException;
 import jakarta.validation.Valid;

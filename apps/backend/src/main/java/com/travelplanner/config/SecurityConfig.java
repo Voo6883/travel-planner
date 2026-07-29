@@ -7,9 +7,11 @@ import com.travelplanner.api.security.SessionCookieFactory;
 import com.travelplanner.application.auth.JwtTokenService;
 import com.travelplanner.domain.port.UserRepositoryPort;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -127,11 +129,58 @@ public class SecurityConfig {
     }
 
     /**
+     * Actuator (task 15, PLAN §4.0.9).
+     *
+     * <p>This chain exists because the API chain below is scoped to {@code /api/**}. Without it,
+     * {@code /actuator/**} would match <em>no</em> filter chain at all and be served with no
+     * security applied — open by accident rather than by decision. Spring Boot's fallback chain
+     * does not fill the gap: it is only registered when the application declares no
+     * {@link SecurityFilterChain} of its own, and this class declares one.
+     *
+     * <p>The exposed endpoints are readable without authentication, and the protection is layered
+     * elsewhere rather than here:
+     *
+     * <ol>
+     *   <li><strong>Exposure list.</strong> {@code application.yml} publishes health, info,
+     *       metrics and prometheus — never {@code *}. An unexposed endpoint is not registered, so
+     *       it 404s regardless of this chain. That is what keeps {@code /actuator/env} and
+     *       {@code /actuator/configprops}, which print resolved configuration including
+     *       secret-shaped values, off the wire entirely.
+     *   <li><strong>A separate port in production.</strong> {@code application-prod.yml} moves
+     *       management to 9090 and narrows exposure to health and prometheus. The public ingress
+     *       fronts 8080, so the operator endpoints are not routable from outside the network —
+     *       which is the control that actually matters, since a scrape has no credential to
+     *       present anyway.
+     * </ol>
+     *
+     * <p>{@code anyRequest().permitAll()} therefore applies only to endpoints that are both
+     * deliberately exposed and, in production, unreachable from the internet. Adding an endpoint
+     * to the exposure list is the security decision; this chain is not.
+     *
+     * <p>CSRF is disabled here and only here: these are machine-called GETs with no cookie
+     * authentication, so there is no session for a cross-site request to ride on.
+     */
+    @Bean
+    @Order(1)
+    public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
+        return http
+                .securityMatcher(EndpointRequest.toAnyEndpoint())
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .httpBasic(basic -> basic.disable())
+                .formLogin(form -> form.disable())
+                .authorizeHttpRequests(requests -> requests.anyRequest().permitAll())
+                .build();
+    }
+
+    /**
      * @param users absent in a database-less context — see {@link RequiresDatabase}. The chain is
      *        still built, and still denies everything that is not public, because a context with no
      *        user table has nobody to authenticate rather than nothing to protect.
      */
     @Bean
+    @Order(2)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http,
             ObjectProvider<UserRepositoryPort> users, JwtTokenService accessTokens)
             throws Exception {

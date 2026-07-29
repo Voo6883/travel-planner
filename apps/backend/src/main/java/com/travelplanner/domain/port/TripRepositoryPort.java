@@ -16,9 +16,10 @@ import java.util.UUID;
  * indistinguishable to the caller — both are {@link Optional#empty()}, so a 404 cannot be used to
  * probe for the existence of another user's trip.
  *
- * <p>Paging is not here yet. {@code api/dto/page/PageQuery} lives in the API layer and the domain
- * may not import outward (PLAN §4.0.1); task 18, which owns the trip list, decides how the page
- * request crosses that boundary.
+ * <p>Paging is not here yet. {@code application/page/PageQuery} now lives in the application layer
+ * — task 15 moved it out of {@code api/dto/page}, where an ArchUnit rule caught the admin service
+ * importing a web DTO. The domain still may not import it (PLAN §4.0.1: no outward imports), so
+ * task 18, which owns the trip list, still decides how a page request reaches this port.
  */
 public interface TripRepositoryPort {
 

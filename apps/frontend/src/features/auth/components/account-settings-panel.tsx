@@ -67,9 +67,7 @@ function ProfileCard({ user }: { user: CurrentUser }) {
         <Descriptions.Item label={t('profile_username_label')}>
           {user.username ?? t('profile_username_empty')}
         </Descriptions.Item>
-        <Descriptions.Item label={t('profile_roles_label')}>
-          {user.roles.join(', ')}
-        </Descriptions.Item>
+        <Descriptions.Item label={t('profile_roles_label')}>{user.roles.join(', ')}</Descriptions.Item>
         <Descriptions.Item label={t('profile_verified_label')}>
           {/* Icon + text + colour, never colour alone (§10.1). */}
           <Tag color={user.email_verified ? 'success' : 'warning'}>

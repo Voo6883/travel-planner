@@ -74,9 +74,7 @@ describe('auth-api', () => {
       },
     });
 
-    const error = (await requestPasswordReset({ email: 'a@example.com' }).catch(
-      (thrown) => thrown,
-    )) as ApiError;
+    const error = (await requestPasswordReset({ email: 'a@example.com' }).catch((thrown) => thrown)) as ApiError;
 
     expect(error).toBeInstanceOf(ApiError);
     expect(error.code).toBe('rate_limited');
@@ -95,9 +93,7 @@ describe('auth-api', () => {
       },
     });
 
-    const error = (await authenticateWithFirebase({ id_token: 'x'.repeat(24) }).catch(
-      (thrown) => thrown,
-    )) as ApiError;
+    const error = (await authenticateWithFirebase({ id_token: 'x'.repeat(24) }).catch((thrown) => thrown)) as ApiError;
 
     expect(error.code).toBe('provider_link_required');
     // Without this the recovery is a riddle: "connect which provider?"

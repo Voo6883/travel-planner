@@ -25,10 +25,7 @@ export async function LandingSteps() {
 
       <ol className="m-0 grid list-none gap-6 p-0 sm:grid-cols-3">
         {steps.map(({ key, icon: Icon }, index) => (
-          <li
-            key={key}
-            className="flex flex-col gap-4 rounded-lg border border-border-subtle bg-surface p-6 shadow-sm"
-          >
+          <li key={key} className="flex flex-col gap-4 rounded-lg border border-border-subtle bg-surface p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <span
                 aria-hidden
@@ -41,12 +38,8 @@ export async function LandingSteps() {
               </span>
             </div>
             <div>
-              <h3 className="m-0 text-h3 text-foreground">
-                {t(`step_${key}_title`)}
-              </h3>
-              <p className="mb-0 mt-2 text-body-sm text-foreground-muted">
-                {t(`step_${key}_body`)}
-              </p>
+              <h3 className="m-0 text-h3 text-foreground">{t(`step_${key}_title`)}</h3>
+              <p className="mb-0 mt-2 text-body-sm text-foreground-muted">{t(`step_${key}_body`)}</p>
             </div>
           </li>
         ))}

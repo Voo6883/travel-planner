@@ -157,9 +157,7 @@ describe('cache policy: what may be cached', () => {
 
   it('ends with a catch-all so no request escapes the policy', () => {
     expect(cacheRules[cacheRules.length - 1]?.id).toBe('catch-all-network-only');
-    expect(resolveCacheRule(new URL('/anything/at/all', ORIGIN), true).strategy).toBe(
-      'network-only',
-    );
+    expect(resolveCacheRule(new URL('/anything/at/all', ORIGIN), true).strategy).toBe('network-only');
   });
 });
 
@@ -185,16 +183,14 @@ describe('offline fallback: serves the shell for navigations only', () => {
    * the offline page here would hand `apiRequest()` a `200` whose body is markup, turning a clean
    * network error into a JSON parse error the UI cannot map to a message.
    */
-  it.each([
-    '/api/v1/auth/me',
-    '/api/v1/trips',
-    '/api/v1/trips/42/itinerary',
-    '/api/v1/admin/users',
-  ])('lets %s fail normally instead of returning the shell', (pathname) => {
-    expect(isOfflineFallbackEligible('', `${ORIGIN}${pathname}`)).toBe(false);
-    // Even if a browser ever labelled an API fetch a document navigation, the path check holds.
-    expect(isOfflineFallbackEligible('document', `${ORIGIN}${pathname}`)).toBe(false);
-  });
+  it.each(['/api/v1/auth/me', '/api/v1/trips', '/api/v1/trips/42/itinerary', '/api/v1/admin/users'])(
+    'lets %s fail normally instead of returning the shell',
+    (pathname) => {
+      expect(isOfflineFallbackEligible('', `${ORIGIN}${pathname}`)).toBe(false);
+      // Even if a browser ever labelled an API fetch a document navigation, the path check holds.
+      expect(isOfflineFallbackEligible('document', `${ORIGIN}${pathname}`)).toBe(false);
+    },
+  );
 
   it.each(['image', 'script', 'style', 'font', 'fetch', ''])(
     'does not substitute the shell for a failed %s request',

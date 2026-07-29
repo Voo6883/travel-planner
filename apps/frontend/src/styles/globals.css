@@ -33,7 +33,7 @@
   --destructive-surface: #fef2f2;
   --info: #0369a1;
   --info-surface: #f0f9ff;
-  --scrim: rgba(15,23,42,.56);
+  --scrim: rgba(15, 23, 42, 0.56);
   --action-primary-fill: #0958d9;
   --action-primary-fill-hover: #003eb3;
   --action-primary-fill-active: #002c8c;
@@ -69,7 +69,7 @@
     --destructive-surface: #450a0a;
     --info: #7dd3fc;
     --info-surface: #082f49;
-    --scrim: rgba(0,0,0,.68);
+    --scrim: rgba(0, 0, 0, 0.68);
     --action-primary-fill: #0958d9;
     --action-primary-fill-hover: #003eb3;
     --action-primary-fill-active: #002c8c;
@@ -105,7 +105,7 @@
   --destructive-surface: #450a0a;
   --info: #7dd3fc;
   --info-surface: #082f49;
-  --scrim: rgba(0,0,0,.68);
+  --scrim: rgba(0, 0, 0, 0.68);
   --action-primary-fill: #0958d9;
   --action-primary-fill-hover: #003eb3;
   --action-primary-fill-active: #002c8c;

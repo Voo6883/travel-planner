@@ -26,6 +26,36 @@ travelplanner:
       # HmacJwtTokenService fails startup rather than signing with a key nobody chose.
       secure: true
 
+# Actuator in production (PLAN §4.0.9, task 15 "secure production defaults").
+#
+# Two independent narrowings, because either one alone is insufficient:
+#
+#  1. Exposure drops to health + prometheus. `metrics` and `info` are removed — `/actuator/metrics`
+#     enumerates every meter name, which describes the system's internals to anyone who can reach
+#     it, and `info` carries build and version detail that only helps an attacker fingerprint.
+#  2. The endpoints move to their own PORT. This is the part that actually protects them: on 9090
+#     they are not routable from the public ingress that fronts 8080 at all, so reaching them
+#     requires being inside the network rather than merely guessing a path.
+#
+# `show-details: never` means /actuator/health answers UP or DOWN and nothing else. The component
+# breakdown names the database and its failure reason — a useful probe for someone deciding what
+# to attack next.
+management:
+  server:
+    port: 9090
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        # Kubernetes-style liveness/readiness split. Liveness failing means restart me; readiness
+        # failing means stop sending traffic. Conflating them restarts a pod that is merely
+        # waiting on a slow dependency.
+        enabled: true
+
 logging:
   level:
     root: WARN

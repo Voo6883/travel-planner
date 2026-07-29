@@ -58,9 +58,7 @@ describe('AuthGuard', () => {
       </AuthGuard>,
     );
 
-    await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith('/sign-in?redirect=%2Ftrips%2Fabc%2Fresearch'),
-    );
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/sign-in?redirect=%2Ftrips%2Fabc%2Fresearch'));
     // The protected content must never render, not even for a frame.
     expect(screen.queryByText('planner')).not.toBeInTheDocument();
   });
@@ -76,9 +74,7 @@ describe('AuthGuard', () => {
       </AuthGuard>,
     );
 
-    expect(
-      await screen.findByRole('heading', { name: enAuth.verification_required_title }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: enAuth.verification_required_title })).toBeInTheDocument();
     expect(screen.getByText(/aisyah@example\.com/)).toBeInTheDocument();
     expect(screen.queryByText('planner')).not.toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();

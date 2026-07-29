@@ -130,10 +130,7 @@ function columns(t: Translate): ColumnsType<AdminUserSummary> {
       title: t('field.actions'),
       key: 'actions',
       render: (_, account) => (
-        <Link
-          href={adminUserRoute(account.user_id)}
-          className="inline-flex min-h-control items-center text-body-sm"
-        >
+        <Link href={adminUserRoute(account.user_id)} className="inline-flex min-h-control items-center text-body-sm">
           {t('list.manage_action')}
         </Link>
       ),

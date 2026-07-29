@@ -1,5 +1,7 @@
 package com.travelplanner.api.dto.page;
 
+import com.travelplanner.application.page.PageQuery;
+
 /**
  * Pagination envelope fields returned by every list endpoint (PLAN §6.1). Serialised as
  * {@code page}, {@code page_size}, {@code total} by the global snake_case naming strategy.

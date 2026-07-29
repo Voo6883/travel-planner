@@ -10,10 +10,7 @@ export async function MarketingHeader() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border-subtle bg-surface/95 backdrop-blur-sm">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6 xl:px-8">
-        <Link
-          href="/"
-          className="text-title text-foreground no-underline hover:text-action-primary-text"
-        >
+        <Link href="/" className="text-title text-foreground no-underline hover:text-action-primary-text">
           {t('app_name')}
         </Link>
 

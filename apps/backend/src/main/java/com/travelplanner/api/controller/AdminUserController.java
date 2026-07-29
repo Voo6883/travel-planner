@@ -4,7 +4,7 @@ import com.travelplanner.api.dto.admin.AdminResetPasswordRequest;
 import com.travelplanner.api.dto.admin.AdminUserDetailResponse;
 import com.travelplanner.api.dto.admin.AdminUserPageResponse;
 import com.travelplanner.api.dto.admin.UpdateAdminUserRequest;
-import com.travelplanner.api.dto.page.PageQuery;
+import com.travelplanner.application.page.PageQuery;
 import com.travelplanner.application.admin.AdminResetPasswordCommand;
 import com.travelplanner.application.admin.AdminUserDirectory;
 import com.travelplanner.application.admin.AdminUserService;

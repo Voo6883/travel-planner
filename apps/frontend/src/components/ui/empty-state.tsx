@@ -25,9 +25,7 @@ export function EmptyState({ title, description, action, className }: EmptyState
       )}
     >
       <h2 className="m-0 text-title text-foreground">{title}</h2>
-      {description ? (
-        <p className="m-0 max-w-prose text-body-sm text-foreground-muted">{description}</p>
-      ) : null}
+      {description ? <p className="m-0 max-w-prose text-body-sm text-foreground-muted">{description}</p> : null}
       {action}
     </div>
   );

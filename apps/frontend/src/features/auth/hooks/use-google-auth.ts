@@ -2,11 +2,7 @@
 
 import { useMutation, type UseMutationResult } from '@tanstack/react-query';
 import { authenticateWithFirebase, type AuthSessionResponse } from '@/lib/api/auth-api';
-import {
-  FIREBASE_POPUP_BLOCKED,
-  FIREBASE_POPUP_CANCELLED,
-  requestGoogleIdToken,
-} from '../lib/firebase-client';
+import { FIREBASE_POPUP_BLOCKED, FIREBASE_POPUP_CANCELLED, requestGoogleIdToken } from '../lib/firebase-client';
 import { useEstablishSession } from './use-auth-session';
 
 /** Raised when the user closed the Google window — a decision, not a failure to report. */

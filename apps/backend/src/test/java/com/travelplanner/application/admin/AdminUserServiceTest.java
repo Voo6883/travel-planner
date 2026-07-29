@@ -5,7 +5,7 @@ import static com.travelplanner.application.admin.AdminTestFakes.actorFor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.travelplanner.api.dto.page.PageQuery;
+import com.travelplanner.application.page.PageQuery;
 import com.travelplanner.application.account.AccountStore;
 import com.travelplanner.application.account.AccountTestFakes;
 import com.travelplanner.application.admin.AdminTestFakes.FakeAdminAudit;

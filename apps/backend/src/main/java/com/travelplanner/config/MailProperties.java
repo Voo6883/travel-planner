@@ -43,6 +43,20 @@ public class MailProperties {
         return provider;
     }
 
+    /**
+     * True when no real mail provider is configured.
+     *
+     * <p>Read by {@code RegistrationService} to decide whether a new account starts verified. With
+     * the stub there is no mailbox to receive a link, so requiring verification would make sign-up
+     * a dead end for anyone not reading the application log at {@code DEBUG}.
+     *
+     * <p>{@code MailConfigValidator} refuses to start under the {@code prod} profile in this state,
+     * so the relaxation cannot reach production.
+     */
+    public boolean isStub() {
+        return STUB_PROVIDER.equals(provider);
+    }
+
     public void setProvider(String provider) {
         this.provider = provider == null || provider.isBlank() ? STUB_PROVIDER : provider.trim();
     }

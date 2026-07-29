@@ -49,11 +49,7 @@ export function useAdminUser(userId: string): UseQueryResult<AdminUserDetail, un
   });
 }
 
-export function useSetAdminUserEnabled(): UseMutationResult<
-  AdminUserDetail,
-  unknown,
-  SetAdminUserEnabledCommand
-> {
+export function useSetAdminUserEnabled(): UseMutationResult<AdminUserDetail, unknown, SetAdminUserEnabledCommand> {
   const invalidate = useAdminUsersInvalidation();
 
   return useMutation({
@@ -62,11 +58,7 @@ export function useSetAdminUserEnabled(): UseMutationResult<
   });
 }
 
-export function useResetAdminUserPassword(): UseMutationResult<
-  void,
-  unknown,
-  AdminResetPasswordCommand
-> {
+export function useResetAdminUserPassword(): UseMutationResult<void, unknown, AdminResetPasswordCommand> {
   const invalidate = useAdminUsersInvalidation();
 
   return useMutation({

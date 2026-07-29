@@ -1,8 +1,9 @@
 // Travel Planner backend — Spring Boot API.
 // Contract: plans/superpower/PLAN.md §4.0 (Java 21, Gradle Kotlin DSL, wrapper committed).
 //
-// Lint/coverage/ArchUnit gates are deliberately absent here — tasks/15-quality-gates.md owns
-// those thresholds. Adding them now would pre-empt a later task's scope.
+// Lint/coverage/ArchUnit gates land here with tasks/15-quality-gates.md. Thresholds, exclusions,
+// and the architecture-exception process are documented in docs/QUALITY-GATES.md — change them
+// there and here together, never only here.
 
 // The Flyway Gradle plugin loads database dialects from its OWN classloader, not from a project
 // configuration, so `flyway-database-postgresql` has to be a buildscript dependency. Without it
@@ -18,6 +19,10 @@ buildscript {
 
 plugins {
     java
+    // Task 15 gates. Both are Gradle built-ins, so neither adds a plugin-resolution dependency
+    // that could take CI down when a plugin portal is unavailable.
+    checkstyle
+    jacoco
     id("org.springframework.boot") version "3.5.3"
     // Supplies `flywayValidate` / `flywayMigrate` against a REAL database, which is the command
     // tasks/07-database-domain-foundation.md names under Validation. It is deliberately not part
@@ -136,14 +141,33 @@ dependencies {
     implementation("dev.langchain4j:langchain4j-anthropic")
     implementation("dev.langchain4j:langchain4j-open-ai")
 
+    // Task 15 — Actuator and Prometheus (PLAN §4.0.9). Exposure is locked down per profile in
+    // application.yml / application-prod.yml, not here: the dependency only makes the endpoints
+    // available, the configuration decides which of them the network can reach.
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
+
     testImplementation(platform("org.springframework.boot:spring-boot-dependencies:3.5.3"))
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+
+    // Task 15 — layer rules as tests (PLAN §4.0.9). ArchUnit runs in the ordinary `test` task so a
+    // violation fails `./gradlew build` on a developer machine, with no Docker and no database,
+    // rather than only in CI.
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     // Hot reload during host dev (`npm run dev:backend`). Restarts on classpath changes when
     // paired with `bootRun --continuous`; excluded from production images automatically.
+    //
+    // The BOM is repeated here because `developmentOnly` does not extend `implementation`, so it
+    // inherits none of that configuration's dependency management. Without this line the
+    // coordinate below has no version, and `bootJar` — which resolves `developmentOnly` in order
+    // to EXCLUDE it from the fat jar — fails with "Could not find spring-boot-devtools:".
+    // `bootRun` never resolves it, which is why the gap survived commit 038221d: hot reload
+    // worked while `./gradlew build` was broken.
+    developmentOnly(platform("org.springframework.boot:spring-boot-dependencies:3.5.3"))
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
     // Validates api/openapi/openapi.yaml in the backend build (task 06). Test-only on purpose:
@@ -202,4 +226,105 @@ tasks.register<Test>("integrationTest") {
     testClassesDirs = integrationTestSourceSet.output.classesDirs
     classpath = integrationTestSourceSet.runtimeClasspath
     shouldRunAfter(tasks.named("test"))
+}
+
+// -----------------------------------------------------------------------------------------
+// Task 15 — Checkstyle (PLAN §4.0.9, §13).
+//
+// Scoped to `main` and the two test source sets, and deliberately narrow: line length, naming,
+// and import hygiene. Task 15 explicitly forbids enforcing subjective method/file size heuristics,
+// so no such module appears in the ruleset.
+//
+// `maxWarnings = 0` with every rule at severity=error means a violation fails the build rather
+// than printing into a report nobody opens.
+// -----------------------------------------------------------------------------------------
+checkstyle {
+    toolVersion = "10.21.0"
+    configFile = rootProject.file("config/checkstyle/checkstyle.xml")
+    maxWarnings = 0
+    maxErrors = 0
+}
+
+// Generated MapStruct implementations are written into build/generated and compiled as part of
+// `main`. They are machine output — holding them to a hand-written style rule fails the build for
+// formatting the project does not control.
+tasks.withType<Checkstyle>().configureEach {
+    exclude("**/generated/**", "**/*MapperImpl.java")
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+// -----------------------------------------------------------------------------------------
+// Task 15 — JaCoCo (PLAN §4.0.9).
+//
+// The threshold applies to `domain/` and `application/` ONLY. That is the whole point: those two
+// layers hold the business rules, they are pure enough to unit-test without infrastructure, and a
+// project-wide percentage would let thin, well-covered adapters subsidise an untested domain.
+//
+// Everything else is excluded because covering it proves nothing about correctness:
+//   config/         — Spring wiring; exercised by context load, asserts no behaviour
+//   api/            — controllers; covered by slice tests that JaCoCo attributes to the servlet
+//   infrastructure/ — adapters; the real proof is the Testcontainers suite, which runs separately
+//                     in `integrationTest` and so contributes no data to this report
+//   *MapperImpl     — MapStruct output
+// -----------------------------------------------------------------------------------------
+private val coveredPackages = listOf("com/travelplanner/domain/**", "com/travelplanner/application/**")
+private val coverageExclusions = listOf("**/*MapperImpl.class", "**/config/**")
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    classDirectories.setFrom(
+        files(
+            sourceSets.main.get().output.classesDirs.map { dir ->
+                fileTree(dir) {
+                    include(coveredPackages)
+                    exclude(coverageExclusions)
+                }
+            },
+        ),
+    )
+}
+
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.jacocoTestReport)
+    classDirectories.setFrom(tasks.jacocoTestReport.get().classDirectories)
+    violationRules {
+        rule {
+            // Measured when task 15 landed: LINE 86.3% (1179/1366), BRANCH 75.4% (344/456).
+            // Thresholds sit just below those figures, so a change that meaningfully reduces
+            // coverage fails rather than eroding it silently. This is a ratchet — raise it as
+            // coverage improves, never lower it to make a change pass (task 15: "Do not weaken
+            // gates merely to make generated code pass"). docs/QUALITY-GATES.md records the
+            // measurement and the process for changing these numbers.
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.85".toBigDecimal()
+            }
+            // Branch gets a wider margin than line on purpose. A single added conditional moves
+            // branch coverage several points while barely touching lines, so a tight branch gate
+            // fails honest work and teaches people to lower it — which is how a gate dies.
+            limit {
+                counter = "BRANCH"
+                value = "COVEREDRATIO"
+                minimum = "0.70".toBigDecimal()
+            }
+        }
+    }
+}
+
+// The gates run as part of `check`, which `build` depends on — so `./gradlew build` is the single
+// command that proves the foundation locally and in CI (task 15 Definition of Done).
+tasks.check {
+    dependsOn(tasks.jacocoTestCoverageVerification)
 }

@@ -53,10 +53,7 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(THEME_STORAGE_KEY, next);
   }, []);
 
-  const value = useMemo(
-    () => ({ preference, mode, setPreference }),
-    [preference, mode, setPreference],
-  );
+  const value = useMemo(() => ({ preference, mode, setPreference }), [preference, mode, setPreference]);
 
   return <ThemeModeContext.Provider value={value}>{children}</ThemeModeContext.Provider>;
 }

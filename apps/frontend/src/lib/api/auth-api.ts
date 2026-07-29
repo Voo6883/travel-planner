@@ -17,8 +17,7 @@ import {
 export type RegisterRequest = components['schemas']['RegisterRequest'];
 export type LoginRequest = components['schemas']['LoginRequest'];
 export type EmailOnlyRequest = components['schemas']['EmailOnlyRequest'];
-export type ConfirmEmailVerificationRequest =
-  components['schemas']['ConfirmEmailVerificationRequest'];
+export type ConfirmEmailVerificationRequest = components['schemas']['ConfirmEmailVerificationRequest'];
 export type ResetPasswordRequest = components['schemas']['ResetPasswordRequest'];
 export type ChangePasswordRequest = components['schemas']['ChangePasswordRequest'];
 export type FirebaseAuthRequest = components['schemas']['FirebaseAuthRequest'];
@@ -51,9 +50,7 @@ export async function login(body: LoginRequest): Promise<AuthSessionResponse> {
 }
 
 /** UC-A02 / UC-A05. One endpoint for Google sign-up and sign-in; `is_new_user` says which. */
-export async function authenticateWithFirebase(
-  body: FirebaseAuthRequest,
-): Promise<AuthSessionResponse> {
+export async function authenticateWithFirebase(body: FirebaseAuthRequest): Promise<AuthSessionResponse> {
   return apiRequest({
     path: '/auth/firebase',
     method: 'POST',
@@ -102,9 +99,7 @@ export async function changePassword(body: ChangePasswordRequest): Promise<void>
 }
 
 /** UC-A08. Public — the whole point is that the account cannot sign in yet. */
-export async function confirmEmailVerification(
-  body: ConfirmEmailVerificationRequest,
-): Promise<void> {
+export async function confirmEmailVerification(body: ConfirmEmailVerificationRequest): Promise<void> {
   await apiRequest<void>({ path: '/auth/verify-email/confirm', method: 'POST', body });
 }
 

@@ -46,11 +46,7 @@ export function ChangePasswordCard() {
         disabled={changePassword.isPending}
         onFinish={(values: ChangePasswordFormValues) => submit(values)}
       >
-        <Form.Item
-          name="current_password"
-          label={t('current_password_label')}
-          rules={currentPasswordRules(t)}
-        >
+        <Form.Item name="current_password" label={t('current_password_label')} rules={currentPasswordRules(t)}>
           <Input.Password size="large" autoComplete="current-password" />
         </Form.Item>
 

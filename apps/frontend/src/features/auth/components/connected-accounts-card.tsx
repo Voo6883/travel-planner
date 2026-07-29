@@ -55,11 +55,7 @@ export function ConnectedAccountsCard({ user }: ConnectedAccountsCardProps) {
               <span className="text-label text-foreground">{t(providerLabelKey(provider))}</span>
               <ProviderStatusTag isConnected={user.linked_providers.includes(provider)} />
             </div>
-            <ProviderAction
-              provider={provider}
-              user={user}
-              onDisconnect={() => setPendingUnlink(provider)}
-            />
+            <ProviderAction provider={provider} user={user} onDisconnect={() => setPendingUnlink(provider)} />
           </li>
         ))}
       </ul>
