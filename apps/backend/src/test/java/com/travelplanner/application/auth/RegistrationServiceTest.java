@@ -10,6 +10,7 @@ import com.travelplanner.application.account.AccountTestFakes.FakeAccountTokens;
 import com.travelplanner.application.account.AccountTestFakes.FakeMailRateLimits;
 import com.travelplanner.application.auth.AuthTestFakes.FakeIdentities;
 import com.travelplanner.application.auth.AuthTestFakes.FakeUsers;
+import com.travelplanner.config.MailProperties;
 import com.travelplanner.domain.enums.AuthProvider;
 import com.travelplanner.domain.enums.Role;
 import com.travelplanner.domain.exception.ValidationFailedException;
@@ -37,11 +38,22 @@ class RegistrationServiceTest {
     private final FakeAccountTokens tokens = new FakeAccountTokens();
     private final CapturingMailer mailer = new CapturingMailer();
 
-    private final RegistrationService registration = new RegistrationService(
-            users,
-            AccountTestFakes.passwordPolicy(),
-            new RegistrationOutcomes(identities, AccountTestFakes.tokenService(tokens),
-                    AccountTestFakes.lifecycleMailer(mailer, new FakeMailRateLimits(), identities)));
+    /**
+     * The default subject under test sends real mail, so registration behaves as UC-A01 describes:
+     * the account starts unverified and the link is what proves the address.
+     */
+    private final RegistrationService registration = registrationWith(MailProperties.RESEND_PROVIDER);
+
+    private RegistrationService registrationWith(String mailProvider) {
+        MailProperties mail = new MailProperties();
+        mail.setProvider(mailProvider);
+        return new RegistrationService(
+                users,
+                AccountTestFakes.passwordPolicy(),
+                new RegistrationOutcomes(identities, AccountTestFakes.tokenService(tokens),
+                        AccountTestFakes.lifecycleMailer(mailer, new FakeMailRateLimits(), identities)),
+                mail);
+    }
 
     @Test
     void createsAnUnverifiedUserAccountWithTheDefaultRole() {
@@ -57,6 +69,24 @@ class RegistrationServiceTest {
         assertThat(created.emailVerified()).isFalse();
         assertThat(created.tokenVersion()).isZero();
         assertThat(created.isDeleted()).isFalse();
+    }
+
+    /**
+     * With the stub mailer there is no mailbox for the verification link to reach, so holding the
+     * account unverified would make sign-up impossible to complete: UC-A08 refuses the login and
+     * the only way through is reading the link out of the log at DEBUG.
+     *
+     * <p>This relaxation is confined to a stub mailer and cannot reach production —
+     * {@code MailConfig} fails startup when the provider is still the stub under {@code prod}.
+     */
+    @Test
+    void createsAnAlreadyVerifiedAccountWhenNoRealMailerIsConfigured() {
+        RegistrationService stubMailerRegistration = registrationWith(MailProperties.STUB_PROVIDER);
+
+        stubMailerRegistration.register(new RegisterCommand("nomail@example.com", "nomail", "long-enough-pw"));
+
+        User created = users.byId.values().iterator().next();
+        assertThat(created.emailVerified()).isTrue();
     }
 
     @Test
