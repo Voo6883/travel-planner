@@ -57,7 +57,7 @@
 
 | ID | Task | Depends on | Status | Notes |
 |---|---|---|---|---|
-| 16 | [Knowledge domain and schema](16-knowledge-domain-schema.md) | 07, 14, 15 | `not_started` | B-4 resolved (`cdbb698`) — coverage model, licence register, embedding lifecycle, HNSW now in scope. |
+| 16 | [Knowledge domain and schema](16-knowledge-domain-schema.md) | 07, 14, 15 | `in_progress` | Commits `c68ff6f` (schema), `bbdc065` (domain). Migrations **V13–V18** applied against real Postgres 16.6 + pgvector 0.8.1: 12 tables, 6 partial HNSW indexes, and each guard proven to reject a bad write. Pure domain + `KnowledgePort` + typed `destination_not_covered` (registered end to end). 212 domain tests; coverage LINE 88.87% / BRANCH 81.73%. **Remaining: JPA entities + MapStruct adapters, Testcontainers migration/constraint/adapter tests, handoff doc.** New: **F-27**–**F-30**. |
 | 17 | [Knowledge seed and retrieval](17-knowledge-seed-retrieval.md) | 14, 16 | `not_started` | B-4 resolved (`020bd4a`) — knowledge stub is now the documented exception to §4.0.7; 3 curated destinations. |
 | 18 | [Trip and TripBrief core](18-trip-brief-core.md) | 06, 07, 11, 15, 17 | `not_started` | No `Validation` section. |
 | 19 | [LLM TripBrief extraction](19-llm-trip-brief-extraction.md) | 14, 18 | `not_started` | LLM output → schema/golden-file test required. |
@@ -106,10 +106,10 @@
 | Status | Count |
 |---|---|
 | `done` | **16** |
-| `in_progress` | 0 |
+| `in_progress` | 1 |
 | `blocked` | 0 |
 | `review` | 0 |
-| `not_started` | 26 |
+| `not_started` | 25 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*
 
@@ -118,9 +118,8 @@
 Tasks 00–14 are `done`. Tagged `v0.2.0-phase-0b`.
 
 Everything a feature needs now exists: contract, database, identity, mail,
-admin, frontend platform, PWA, and the AI runtime. Task 15 (quality gates) — the last of
-Phase 0B — is implemented on `agent/task-15-quality-gates` and awaiting commit, PR and the
-evidence gate. **Tasks 16 and 18 unblock once it is `done`.**
+admin, frontend platform, PWA, and the AI runtime. Task 15 (quality gates) closed Phase 0B and
+merged as `95970f5`, which unblocked tasks 16 and 20.
 
 F-23 is no longer only a note: `LayerRulesTest.domainIsFrameworkFree` now permits `reactor..`
 explicitly, so resolving F-23 means deleting one entry from that rule's allow-list.
@@ -150,5 +149,40 @@ before Task 15** writes the ArchUnit ruleset:
 | **F-24** | `AGENTS.md` "Cursor Cloud" section still claims the repo is planning-only with no `package.json` and no `apps/frontend` |
 | **F-25** | `components/layout/{app-shell,account-menu}.tsx` import `@/features/auth`. Shared chrome that renders identity — a real boundary violation, carved out in `eslint.config.mjs` rather than hidden. Fix by passing the user from a route-level provider, or move the shell into `features/auth` |
 | **F-26** | Commit `038221d` added `spring-boot-devtools` with no version and no BOM on `developmentOnly`, breaking `./gradlew build` (and therefore CI) on `dev` from that commit until task 15 fixed it. Three commits on `dev` — `038221d`, `48ab038`, `228da7f` — are tracked by no task; the ledger cannot show breakage it does not know about |
+| **F-27** | `DestinationArea` enforces the lat/long pairing rule but does **not** range-check coordinates, unlike `Destination` and `Poi`. Matches V14, which also has only the pairing constraint. Areas are what C3 schedules against geographically, so a nonsense coordinate is least likely to be noticed here — fix the record and V14 together |
+| **F-28** | `KnowledgeQuery.equals`/`hashCode` are identity-based on the `float[] embedding` component, so two queries built from identical inputs are never equal. Normal for records with array components, but this type is documented as a value object and takes care to be immutable, so the gap is surprising. Matters if a query is ever used as a cache key (task 37) |
+| **F-29** | `Destination` validates neither `name` nor `timezone` for blankness, while `DestinationArea`, `Poi`, `TransportMode` and `TravelApp` all reject a blank name. `timezone` is never checked as a valid IANA zone despite the javadoc requiring one before an itinerary can place an event on a clock (task 28 depends on this) |
+| **F-30** | `DestinationNotCoveredException.supportedSlugs` is `transient`, so it deserialises to `null` although `supportedSlugs()` documents no null contract. Mirrors `DomainException.details`, so it may be deliberate — decide and document, or drop `transient` |
 
 **Active blockers:** none. **B-3** (`gh` unauthenticated) is informational only.
+
+## Milestone — Phase 1 started: TKB schema and domain (2026-07-29)
+
+Task 15 merged (`95970f5`), closing Phase 0B. Task 16 is underway on `dev` — schema and domain
+landed, persistence and its Testcontainers suite still to come.
+
+| Slice | Commit | Evidence |
+|---|---|---|
+| Migrations V13–V18 | `c68ff6f` | 12 tables and 6 partial HNSW indexes created on Postgres 16.6 + pgvector 0.8.1 |
+| Domain, ports, typed refusal | `bbdc065` | 212 tests; LINE 88.87% / BRANCH 81.73% against gates of 85 / 70 |
+
+Three ADR 010 rules are now structural rather than conventional, each because it fails **silently**
+when it fails at all:
+
+| Rule | Enforced by | What silence would look like |
+|---|---|---|
+| One embedding model per index (§5) | `vector(1536)` type + model CHECK + partial index on the model name | Two models' vectors in one index; retrieval degrades with no error |
+| Destination filtered pre-ANN (§5) | One partial HNSW index per destination; `KnowledgeQuery.destinationId` non-null | Post-filtering discards the global top-k; a small destination returns nothing |
+| Coverage is a typed outcome (§4) | `Destination.requireRankable` → `destination_not_covered`, registered end to end | An uncovered city ranks last and reads as "considered and rejected" |
+
+Adding a fourth destination needs a migration, because a partial-index predicate must be a
+constant. ADR 010 already anticipates this: *"Adding a destination is a documented, repeatable
+authoring procedure."*
+
+**Remaining for task 16:** JPA entities and MapStruct adapters, the Testcontainers migration /
+constraint / adapter suite, and the handoff doc naming the seed format for task 17 and the columns
+tasks 40 and 41 write. Task 20 is independently unblocked and needs nothing from task 16.
+
+Four inconsistencies found in this code were left unfixed rather than silently patched — **F-27**
+to **F-30**. F-29 is the one with a downstream dependency: `Destination.timezone` is never
+validated as an IANA zone, and task 28 needs it to place an itinerary event on a clock.
