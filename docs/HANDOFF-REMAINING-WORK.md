@@ -12,7 +12,7 @@
 
 ## 1. Where the project is
 
-`dev` is the working branch. **Next free migration: `V21`.**
+`dev` is the working branch. **Next free migration: `V22`.**
 
 | Phase | Tasks | State |
 |---|---|---|
@@ -30,15 +30,15 @@ open-question register (`F-nn`). Update it in the same commit as the work, never
 
 ## 2. Execution order
 
-### 2.0 Finish 17–20 first — none of them is `done`
+### 2.0 Finish 17–20 first — 17 is `done`; 18–20 still have named remainders
 
-All four have substantial work landed and a named remainder. **Close these before starting 21**,
+Task 17's remainder is closed. **Close 18–20 before starting 21**,
 because 21 depends on all of 18, 19 and 20, and building on an unfinished dependency is how the
 rework starts.
 
 | Task | What is left | Size |
 |---|---|---|
-| **17** | Seed validation command for CI, hybrid vector + `tsvector` fusion, shared adapter contract tests | medium |
+| **17** | `done` — seed validation CI command, hybrid fusion, shared adapter contracts closed on remainder branch | — |
 | **18** | Frontend brief editor + `locales/{en,ms}/trip_brief.json` (7 clarification keys) | medium |
 | **19** | `surprise_me` persistence — needs a migration **and** a `TripBriefDetails` field (F-42) | small |
 | **20** | `Last-Event-ID` resume, or amend ADR 007 to drop the per-frame id promise (F-39) | small–medium |
