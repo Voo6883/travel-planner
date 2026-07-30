@@ -217,6 +217,14 @@ tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     testLogging {
         events("passed", "skipped", "failed")
+        // A failure without its message is a line number and a class name — enough to know something
+        // broke, not enough to know what. The default (SHORT) prints `java.lang.AssertionError at
+        // Foo.java:79` and drops the message, which is where the whole diagnosis lives: the seed
+        // validator, for one, reports every bad row in that message. FULL puts it on the console so a
+        // failure is actionable without opening the HTML report.
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        // Frames from JUnit, Gradle and the JDK's reflection plumbing, which are never the cause.
+        showStackTraces = false
     }
 }
 

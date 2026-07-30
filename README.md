@@ -113,6 +113,9 @@ npm run verify:full            # what CI runs, Testcontainers included (needs Do
 
 npm run test:integration       # the Testcontainers suite against a LOCAL Postgres — no Docker.
                                # Creates a throwaway database per run and drops it afterwards.
+
+npm run seed:validate          # the knowledge seed against the domain records it becomes.
+                               # `-- --help` lists what is checked. Also runs inside verify:fast.
 ```
 
 ### Working on a task

@@ -18,6 +18,7 @@
     "verify:task": "node scripts/verify.mjs task",
     "verify:full": "node scripts/verify.mjs full",
     "test:integration": "node scripts/integration-db.mjs",
+    "seed:validate": "node scripts/seed-validate.mjs",
     "task:context": "node scripts/task-context.mjs",
     "task:report": "node scripts/task-report.mjs",
     "code-map": "node scripts/code-map.mjs",

@@ -100,11 +100,39 @@ public final class SampleKnowledgeReader {
         return requireReservedSampleSource(resolved);
     }
 
-    /** Reads one destination file and validates every {@code source_ref} in it. */
+    /**
+     * Reads one destination file and validates it two ways.
+     *
+     * <p>{@link #requireSampleContent} checks what ADR 010 §3 says about the seed <em>as a seed</em> —
+     * the citations, the coverage level. {@link SampleSeedDomainCheck} then builds the domain objects the
+     * file will become, which runs every invariant the records carry.
+     *
+     * <p><strong>Both run here, on the only path that reads a destination file.</strong> Deliberately not
+     * a separate "validate" entry point somebody has to remember to call: the reason F-44 existed is that
+     * a bad seed loaded green and failed on read, and an opt-in validator would have reproduced exactly
+     * that. Re-reading {@code sources.json} per destination is three extra classpath reads during a seed
+     * run, which is a price worth paying to make the check unbypassable.
+     */
     public SampleKnowledgeDocument readDestination(String slug) {
         String file = slug + ".json";
         SampleKnowledgeDocument document = read(file, SampleKnowledgeDocument.class);
-        return requireSampleContent(document, file, slug);
+        requireSampleContent(document, file, slug);
+        SampleSeedDomainCheck.requireDomainValid(document, file, sampleProvenance());
+        return document;
+    }
+
+    /**
+     * The provenance every row in a sample file will carry, built from {@code sources.json}.
+     *
+     * <p>{@code retrievedAt} is resolved against {@link Instant#EPOCH} rather than the seed run's clock,
+     * because this instance is only ever handed to the domain check and no record validates freshness —
+     * ADR 010 §6's TTLs are evaluated later, against the real value the writer stores. Passing a fixed
+     * instant keeps validation independent of when it runs.
+     */
+    private KnowledgeProvenance sampleProvenance() {
+        SourceNode source = readSampleSource(Instant.EPOCH);
+        return new KnowledgeProvenance(source.sourceRef(), source.name(), source.licence(),
+                source.attributionText(), source.sourceUrl(), source.trustTier(), source.retrievedAt());
     }
 
     /**

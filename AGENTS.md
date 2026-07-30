@@ -135,6 +135,7 @@ npm run verify:fast                              # the edit loop — scoped to w
 npm run verify:task -- 18                        # before claiming a task is done
 npm run verify:full                              # what CI runs (needs Docker)
 npm run test:integration                         # the container suite on a LOCAL Postgres instead
+npm run seed:validate                            # the knowledge seed, against the domain it becomes
 ```
 
 Frontend on `:3000`, backend API on `:8080/api/v1` inside Docker (`:8081` on the host by default —

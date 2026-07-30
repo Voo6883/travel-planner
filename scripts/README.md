@@ -27,6 +27,7 @@ Contract defined by [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) §
 | `lib/generators/*.mjs` | One generator each: error codes, migrations, backend slices, frontend features |
 | `tests/generate.test.mjs` | `node:test` suite for the generators (`npm run scripts:test`) |
 | `integration-db.mjs` | Runs the Testcontainers suite against a locally-installed Postgres (`npm run test:integration`) |
+| `seed-validate.mjs` | Validates the knowledge seed against the domain records it becomes (`npm run seed:validate`) |
 | `tests/test-check-prerequisites.sh` | Unit tests for the bash gate |
 | `tests/check-prerequisites.tests.ps1` | Unit tests for the PowerShell gate |
 | `tests/run-prereq-tests.mjs` | Cross-platform dispatcher behind `npm run prereq:test` |
@@ -317,3 +318,36 @@ database problem rather than a missing prerequisite.
 precisely so it cannot be committed — a checked-in override pointing at one developer's machine would
 silently disable the container for everybody. This is the local fallback, not a replacement: an unrun
 test is worth less than one run against a database somebody prepared deliberately.
+
+---
+
+## Validating the knowledge seed
+
+```bash
+npm run seed:validate           # every file in apps/backend/src/main/resources/knowledge/sample/
+npm run seed:validate -- --help # what is checked, and why each rule exists
+```
+
+Runs `SampleSeedValidationTest`, which drives the real `SampleKnowledgeReader` over the real committed
+files. No database, no Docker, no Spring context — seconds.
+
+**It is a convenience, not a second source of truth.** The check lives inside
+`SampleKnowledgeReader.readDestination()`, the only path that reads a destination file, so it also runs
+during a real seed and in `./gradlew test` — which `verify:fast` and CI already execute. Nothing here
+can pass while that fails. What it adds is the curation loop tasks 40 and 41 are made of: an answer
+about the seed in seconds rather than the whole backend unit suite, and a failure that reads as "your
+file is wrong".
+
+**How it validates.** By constructing the domain objects each node becomes, rather than by restating
+their rules. `Money` decides what a valid amount is for a currency, `Destination` decides what a
+timezone is, `TravelAppReplacement` decides what a suppression key is — so an invariant added to a
+record in future is enforced here the day it is written, and a hand-copied checklist cannot drift from
+the records. Cross-node facts no single record can see (an `area_slug` naming an area the file never
+defines, a duplicate slug, twelve distinct seasonality months) are checked alongside.
+
+This closed **F-44**: `price_history.amount` is one `numeric(12,2)` column for every currency while
+`Money` enforces the currency's own minor units, so `4000.10 JPY` inserted cleanly and then threw on
+*every read* of Tokyo's price history. A seed that loads green and breaks later is the worst shape a
+data defect can have, and every rule the domain knows had exactly that shape before this existed.
+
+Every problem in a file is reported in one pass, so fixing a bad seed is one round rather than N.

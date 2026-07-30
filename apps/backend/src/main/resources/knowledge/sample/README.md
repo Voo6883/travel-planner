@@ -237,7 +237,7 @@ estimate, never invented by the model. One row per `(from, to, mode)`.
 ```jsonc
 {
   "category": "HOTEL_NIGHT",      // free text; e.g. HOTEL_NIGHT MEAL_MID_RANGE TRANSIT_DAY_PASS
-  "amount": 111.0,                // numeric(12,2), > 0
+  "amount": 111.0,                // > 0, and scaled to the CURRENCY — see below, this one bites
   "currency": "JPY",              // ISO 4217, uppercase
   "observed_on": "2026-01-01",    // must be the FIRST of the month (V17 CHECK)
   "source_ref": "stub:sample"
@@ -246,6 +246,15 @@ estimate, never invented by the model. One row per `(from, to, mode)`.
 
 The only place in the TKB holding actual money. One observation per
 `(destination, category, month)` — a second is a correction, not a second truth.
+
+**`amount` is scaled to the currency, not to the column.** The column is `numeric(12,2)` for every
+currency, but `Money` enforces the currency's own minor units: JPY has none, so `4000.10 JPY` is not a
+yen amount and is refused. `4000` is fine, and `4000.10 USD` is fine. Refusing beats truncating — a
+price that quietly disagrees with its source is the invented fact PLAN §4.1.0 forbids — but the column
+cannot express the rule, so nothing stops you writing it. `npm run seed:validate` does.
+
+This was **F-44**: a yen price with fractional digits inserted cleanly and then threw on *every read*
+of Tokyo's price history.
 
 ### `travel_apps[]`
 
@@ -274,7 +283,30 @@ A country appearing in two destination files would need identical app rows in bo
 
 ---
 
-## 5. Running the seeder
+## 5. Validating a file you just edited
+
+```bash
+npm run seed:validate           # all three files, seconds, no database
+npm run seed:validate -- --help # every rule, and why it exists
+```
+
+**What it checks is the domain, not a checklist.** Each node is used to construct the record it becomes
+— `Money`, `Destination`, `Poi`, `TravelAppReplacement` — so the rules are whatever those records
+enforce, and this document cannot fall out of step with them. Plus the cross-node facts no single
+record can see: an `area_slug` naming an area the file never defines, a duplicate slug, seasonality that
+is not twelve distinct months.
+
+**Why bother, when the seeder would fail anyway.** Some of these rules are enforced on *read*, not on
+write, so a bad file loads green and breaks later — see the `price_history` note above. Others are
+enforced by a constraint, which fails two hundred rows in and names a table rather than your file. The
+validator reports every problem in one pass, each naming the file, the node and the offending value.
+
+The same check runs inside `SampleKnowledgeReader.readDestination()`, so it also runs during a real
+seed and in `./gradlew test`. There is no way to load a file without it.
+
+---
+
+## 6. Running the seeder
 
 Two gates, both of which must be open:
 
@@ -301,7 +333,7 @@ re-embed trigger). Deleting the embedding tables and re-seeding therefore rebuil
 
 ---
 
-## 6. Notes for tasks 40 and 41
+## 7. Notes for tasks 40 and 41
 
 - **Every sample row needs re-embedding on the first task-40 run against a real provider.** Sample
   vectors are written by whichever `EmbeddingPort` bean is active, which in a default checkout is
@@ -318,7 +350,7 @@ re-embed trigger). Deleting the embedding tables and re-seeding therefore rebuil
   `travel_app` (store URLs, the 180-day TTL). Editing any of the first two must invalidate the
   matching embedding rows.
 
-## 7. Known gaps in this dataset
+## 8. Known gaps in this dataset
 
 - **App-pack suppression is not representable.** Task 17 asks for "China suppression of inactive
   global alternatives", but V16's `travel_app` has no column expressing that one app replaces or
