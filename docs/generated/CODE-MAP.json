@@ -364,7 +364,7 @@
     }
   },
   "migrations": {
-    "nextFreeVersion": "V22",
+    "nextFreeVersion": "V23",
     "gaps": [],
     "applied": [
       {
@@ -539,6 +539,12 @@
         "createsTables": [
           "travel_app_replacement"
         ],
+        "altersTables": []
+      },
+      {
+        "version": 22,
+        "file": "apps/backend/src/main/resources/db/migration/V22__poi_fulltext_english_config.sql",
+        "createsTables": [],
         "altersTables": []
       }
     ]
@@ -742,6 +748,8 @@
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/AiCallLogRepositoryAdapter.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/AuditEventRepositoryAdapter.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/ConversationRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeFullTextSearch.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeHybridSearch.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeRepositoryAdapter.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeVectorSearch.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/LoginAttemptRepositoryAdapter.java",

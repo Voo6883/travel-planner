@@ -20,6 +20,7 @@
 | `V19` | `planner_session`, `conversation`, `message` (task 20 — not TKB, listed for numbering) |
 | `V20` | `trip_brief` brief columns (task 18 — not TKB, listed for numbering) |
 | `V21` | `travel_app_replacement` |
+| `V22` | rebuilds `ix_poi_fulltext` with the `english` text-search configuration |
 
 **Next free migration: run `npm run code-map` — it derives the number from the filenames.** A figure
 written here goes stale the moment two branches read it on different days, which is exactly how two
@@ -133,11 +134,70 @@ with no error. A strict `^[a-z0-9-]{1,120}$` pattern makes the interpolation saf
 > **Adding a fourth destination requires a migration** — a partial-index predicate must be a constant.
 > ADR 010 anticipates this: *"Adding a destination is a documented, repeatable authoring procedure."*
 
-> **Unverified until seeding.** On empty tables `EXPLAIN` reports a sequential scan whatever the query
-> says. First check after Task 17 seeds: `EXPLAIN ANALYZE` must name `ix_poi_embedding_hnsw_<destination>`.
-
 **Model migration is additive** — new column + backfill, old index still serving. Never an in-place
 rebuild; the `UNIQUE` keys include `embedding_model` so both models can coexist while the new index builds.
+
+### 5.2 Hybrid retrieval — how the two arms are fused (gate 17B)
+
+ADR 010 §5 mandates fusion rather than offering it, and gives the reason: the plan's own worked examples,
+**street food** and **temples**, are lexical. An embedding places "street food" near *food street*, *night
+market* and *casual dining*, so a row that says the words competes with everything that means roughly the
+same. Cosine similarity has no way to express "this row literally contains what you asked for".
+
+| Arm | Class | Reads | Index |
+|---|---|---|---|
+| Vector | `KnowledgeVectorSearch` | `poi_embedding`, `destination_guide_embedding` | partial HNSW per destination (V18) |
+| Lexical | `KnowledgeFullTextSearch` | `poi` | `ix_poi_fulltext`, GIN (V15, rebuilt by V22) |
+
+`KnowledgeHybridSearch` runs both and fuses them; `KnowledgeRepositoryAdapter.search` calls it.
+
+**The lexical arm is POI-only, deliberately.** Lexical retrieval wins on short name-like text where an
+embedding has too few tokens to disambiguate. A guide is long-form narrative — the case embeddings are
+good at, and where a keyword hit says little, since "street food" appears in every guide's food section.
+There is a structural reason too: guides are embedded per `field_group`, so a vector match is per section
+while a lexical match would be per row, and fusing them would collide two snippets on one key.
+
+**Fusion is on rank, not on score.** Cosine similarity is bounded and roughly calibrated across queries;
+`ts_rank` is unbounded and is not. A weighted sum needs a per-query normaliser, and every normaliser
+derived from the returned rows (divide-by-max, min-max, z-score) makes a document's score depend on which
+*other* documents came back — adding one irrelevant row reorders rows that did not move. Reciprocal rank
+fusion discards both scores and keeps only each arm's ordering:
+
+```
+fused(d) = Σ over arms  1 / (K + rank_arm(d))        K = 60, rank is 1-based
+```
+
+Normalised by the best a document could score — first in every arm *consulted*, not every arm that
+answered — which makes `relevance` readable:
+
+| Where the document ranked | `relevance` |
+|---|---|
+| 1st in both arms | 1.00 |
+| 10th in both arms | 0.87 |
+| 1st in one arm, absent from the other | 0.50 |
+| 20th in one arm only | 0.38 |
+
+Ties break toward the **vector arm**, because ranking is built on semantic retrieval and the lexical arm is
+the corrective.
+
+**The similarity floor stays inside the vector arm.** It is a cosine floor. Applied to a fused relevance it
+would drop every single-arm match — and a single-arm match is the only kind fusion can add over pure
+vector, so the filter would silently undo the fusion. `KnowledgeMatch.relevance` was renamed from `score`
+for exactly this reason.
+
+**V22: `english`, not `simple`.** V15 built `ix_poi_fulltext` with the `simple` configuration, which does
+no stemming — so `websearch_to_tsquery('simple','temples')` does not match a POI named "Sample Old Town
+Temple", and `markets` does not match "Market". One of the ADR's two named example queries did not work.
+It was invisible because the sample seed's temple POI happens to carry the plural in its description as
+well as the singular in its name, so a test written against seeded data passes either way; only a fixture
+that deliberately omits the plural distinguishes the two. On non-English content `english` passes unknown
+tokens through unchanged, so there is nothing to lose, and ADR 010 §5 makes `en` the authoritative locale
+for embedded text anyway.
+
+**Measured claim (task 17 DoD).** `KnowledgeHybridSearchIT` constructs a POI whose text answers the query
+and whose embedding sits at 0.30 — below the 0.50 floor, so pure vector does not return it *at all*. Fusion
+does. What fusion buys there is **recall, not ranking**: the two rows come back tied at 0.50, each being
+first in one arm and absent from the other.
 
 ### Are the partial HNSW indexes actually used? (F-32, measured 2026-07-30)
 
@@ -184,7 +244,7 @@ anyone's trip. No mutators — Task 40 owns re-embedding writes, Task 41 owns cu
 | `findTravelApps(countryCode)` | per country |
 | `findSeasonality(destinationId)` | 12 rows, Jan→Dec |
 | `findPriceHistory(destinationId, category)` | newest first |
-| `search(KnowledgeQuery)` | `List<KnowledgeMatch>`, most similar first, floor already applied |
+| `search(KnowledgeQuery)` | `List<KnowledgeMatch>`, most relevant first — **hybrid**, see §5.2 |
 
 **Absence is typed.** A missing guide is `Optional.empty()`; an uncovered destination is
 `destination_not_covered`. Those are different facts — "no narrative for this locale" versus "we have never
@@ -192,7 +252,11 @@ looked at this city" — and collapsing them into an empty list is what ADR 010 
 
 `KnowledgeQuery.destinationId` is **non-null by design**: it makes the unscoped query — the one that
 silently destroys HNSW recall — impossible to express. Defaults are `topK = 20`, `similarityFloor = 0.5`.
-`score` is cosine **similarity** (`1 - distance`), so higher is better.
+
+`KnowledgeMatch.relevance` is **not** a cosine similarity — it is a fused rank, and the field was renamed
+from `score` when fusion landed so that the change of meaning could not pass unnoticed. Do not compare it
+with `similarityFloor`: that floor is a cosine floor applied inside the vector arm, and applying it to a
+fused relevance drops every single-arm match, which is the only kind fusion can add. See §5.2.
 
 Every returned model carries `KnowledgeProvenance`, so a caller displaying a fact always holds the citation
 it must display and the age it must reason about.

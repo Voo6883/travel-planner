@@ -57,10 +57,11 @@ import org.springframework.transaction.annotation.Transactional;
  * which is what the {@code join fetch} in each repository query is there to make cheap.
  *
  * <p><strong>Search is not JPA.</strong> {@link #search(KnowledgeQuery)} delegates to
- * {@link KnowledgeVectorSearch}, which issues native SQL because pgvector's {@code <=>} operator
- * has no JPQL equivalent. The translation this class performs is
- * {@code destinationId -> destinationSlug}: the query object is keyed by id, while V18's partial
- * HNSW indexes are predicated on the slug, and only a slug lets the planner pick the right index.
+ * {@link KnowledgeHybridSearch}, which fuses a pgvector arm with a Postgres full-text arm. Both issue
+ * native SQL: pgvector's {@code <=>} operator has no JPQL equivalent, and neither does {@code @@}.
+ * The translation this class performs is {@code destinationId -> destinationSlug}: the query object is
+ * keyed by id, while V18's partial HNSW indexes are predicated on the slug, and only a slug lets the
+ * planner pick the right index.
  */
 @Component
 @RequiresDatabase
@@ -89,7 +90,7 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
     private final SeasonalityMonthPersistenceMapper seasonalityMapper;
     private final PriceObservationPersistenceMapper priceObservationMapper;
 
-    private final KnowledgeVectorSearch vectorSearch;
+    private final KnowledgeHybridSearch hybridSearch;
 
     @SuppressWarnings("checkstyle:ParameterNumber")
     public KnowledgeRepositoryAdapter(
@@ -113,7 +114,7 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
             TravelAppReplacementPersistenceMapper travelAppReplacementMapper,
             SeasonalityMonthPersistenceMapper seasonalityMapper,
             PriceObservationPersistenceMapper priceObservationMapper,
-            KnowledgeVectorSearch vectorSearch) {
+            KnowledgeHybridSearch hybridSearch) {
         this.destinations = destinations;
         this.guides = guides;
         this.areas = areas;
@@ -134,7 +135,7 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
         this.travelAppReplacementMapper = travelAppReplacementMapper;
         this.seasonalityMapper = seasonalityMapper;
         this.priceObservationMapper = priceObservationMapper;
-        this.vectorSearch = vectorSearch;
+        this.hybridSearch = hybridSearch;
     }
 
     @Override
@@ -230,7 +231,7 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
     @Override
     public List<KnowledgeMatch> search(KnowledgeQuery query) {
         return destinations.findById(query.destinationId())
-                .map(destination -> vectorSearch.search(query, destination.getSlug()))
+                .map(destination -> hybridSearch.search(query, destination.getSlug()))
                 .orElseGet(List::of);
     }
 }

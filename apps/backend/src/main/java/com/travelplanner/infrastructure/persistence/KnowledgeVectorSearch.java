@@ -19,7 +19,13 @@ import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 /**
- * Hybrid semantic retrieval over the TKB (ADR 010 §5).
+ * The <strong>vector arm</strong> of hybrid retrieval over the TKB (ADR 010 §5).
+ *
+ * <p>One of two arms, not the whole of retrieval: {@link KnowledgeHybridSearch} fuses this with
+ * {@link KnowledgeFullTextSearch} and is what {@link KnowledgeRepositoryAdapter} calls. Calling this
+ * class directly gives pure vector search, which ADR 010 §5 explicitly rejects as the product's
+ * retrieval strategy — it is available on its own only because the tests that prove fusion helps have
+ * to be able to measure the thing fusion is being compared against.
  *
  * <h2>Why this is native SQL</h2>
  *
@@ -46,10 +52,12 @@ import org.springframework.stereotype.Component;
  * alphanumerics and hyphens; anything else is rejected outright rather than escaped. The embedding
  * model name is a compile-time constant for the same planner reason.
  *
- * <p><strong>Unverified until seeding.</strong> With the tables empty, {@code EXPLAIN} reports a
- * sequential scan whatever the query looks like, so index usage cannot be confirmed yet. Task 17
- * seeds the corpus; the first thing to check afterwards is that {@code EXPLAIN ANALYZE} on this
- * query names {@code ix_poi_embedding_hnsw_<destination>}.
+ * <p><strong>Measured, and not currently engaged.</strong> Closing F-32 established that the planner
+ * chooses {@code ix_poi_embedding_hnsw_<destination>} above roughly 1–2k embedding rows and correctly
+ * refuses it below — a 1536-dimension vector is TOASTed, so a small embedding table is a couple of heap
+ * pages and reading all of it beats descending a graph. At ADR 010 §1's curation floor the six indexes
+ * are insurance for a corpus that does not exist yet. The numbers are in
+ * {@code KnowledgeVectorSearchContractTest}'s javadoc and {@code docs/KNOWLEDGE-SCHEMA.md} §5.
  */
 @Component
 @RequiresDatabase
@@ -78,6 +86,11 @@ public class KnowledgeVectorSearch {
      * distance alone; merging in memory keeps the two queries readable and each one able to use its
      * own partial index. Both sides are already bounded by {@code topK}, so this sorts at most
      * {@code 2 * topK} rows.
+     *
+     * <p>The {@code relevance} on each returned match is a <em>cosine similarity</em> here, because
+     * this is one arm and there is nothing to fuse. {@link KnowledgeHybridSearch} replaces it with a
+     * fused rank, which is what a caller of the port sees — the two are not the same quantity, and
+     * {@link KnowledgeMatch}'s own javadoc is where that is spelled out.
      */
     public List<KnowledgeMatch> search(KnowledgeQuery query, String destinationSlug) {
         requireSafeSlug(destinationSlug);
@@ -91,15 +104,15 @@ public class KnowledgeVectorSearch {
         }
 
         return matches.stream()
-                .sorted(Comparator.comparingDouble(KnowledgeMatch::score).reversed())
+                .sorted(Comparator.comparingDouble(KnowledgeMatch::relevance).reversed())
                 .limit(query.topK())
                 .toList();
     }
 
     private List<KnowledgeMatch> runPoiSearch(KnowledgeQuery query, String slug) {
         // `1 - (embedding <=> v)` converts cosine DISTANCE to cosine SIMILARITY, which is what the
-        // similarity floor and KnowledgeMatch.score are expressed in. Getting the direction wrong
-        // would invert the ranking while still returning plausible-looking rows.
+        // similarity floor is expressed in and what this arm reports as relevance. Getting the
+        // direction wrong would invert the ranking while still returning plausible-looking rows.
         String sql = """
                 SELECT pe.poi_id, p.destination_id,
                        p.name || CASE WHEN p.description IS NULL THEN '' ELSE ' — ' || p.description END,

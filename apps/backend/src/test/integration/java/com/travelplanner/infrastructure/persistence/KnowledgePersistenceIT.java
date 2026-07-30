@@ -466,29 +466,31 @@ class KnowledgePersistenceIT extends AbstractPostgresIntegrationTest {
      * the only read path in the adapter with no mapper behind it — the projection is assembled by hand.
      * Nothing tested it.
      *
-     * <p>Two properties matter and both are asserted: results come back most-similar first, and the
-     * similarity floor removes rather than reorders. The floor is what stops an empty corpus from
-     * returning twenty confident-looking rows.
+     * <p>What is asserted here is the projection: ordering, the match type, the destination, and the
+     * ROW's fetch time rather than the source's. The query text is deliberately one no POI name or
+     * description contains, so the lexical arm returns nothing and the ranking is the vector arm's own.
+     *
+     * <p><strong>The similarity floor is no longer assertable from this method's return value</strong>,
+     * and that is not an omission. Gate 17B made {@code search} hybrid, so {@code relevance} is a fused
+     * rank rather than a cosine similarity — deriving a floor from it and feeding it back in, as this
+     * test used to, compares two different quantities that happen to share a range. The floor is a
+     * property of the vector arm and is proven against the vector arm in
+     * {@code KnowledgeHybridSearchIT.theFloorRemovesWeakSemanticMatchesFromTheVectorArm}.
      */
     @Test
-    void searchReturnsTheMostSimilarFirstAndDropsAnythingBelowTheFloor() {
+    void searchReturnsTheMostSimilarFirstWithTheRowsOwnProvenance() {
         UUID near = insertEmbeddedPoi("near-match", 0.9f);
         UUID far = insertEmbeddedPoi("far-match", 0.1f);
 
-        List<KnowledgeMatch> generous = knowledge.search(new KnowledgeQuery(destinationId, "ramen",
-                uniformVector(0.9f), 20, 0.0, Set.of(KnowledgeMatchType.POI)));
+        List<KnowledgeMatch> matches = knowledge.search(new KnowledgeQuery(destinationId,
+                "zzzz-no-lexical-match", uniformVector(0.9f), 20, 0.0,
+                Set.of(KnowledgeMatchType.POI)));
 
-        assertThat(generous).extracting(KnowledgeMatch::id).containsExactly(near, far);
-        assertThat(generous.get(0).score()).isGreaterThan(generous.get(1).score());
-        assertThat(generous.get(0).sourceType()).isEqualTo(KnowledgeMatchType.POI);
-        assertThat(generous.get(0).destinationId()).isEqualTo(destinationId);
-        assertThat(generous.get(0).provenance().retrievedAt()).isEqualTo(ROW_FETCHED_AT);
-
-        double floor = (generous.get(0).score() + generous.get(1).score()) / 2;
-        assertThat(knowledge.search(new KnowledgeQuery(destinationId, "ramen", uniformVector(0.9f), 20,
-                floor, Set.of(KnowledgeMatchType.POI))))
-                .extracting(KnowledgeMatch::id)
-                .containsExactly(near);
+        assertThat(matches).extracting(KnowledgeMatch::id).containsExactly(near, far);
+        assertThat(matches.get(0).relevance()).isGreaterThan(matches.get(1).relevance());
+        assertThat(matches.get(0).sourceType()).isEqualTo(KnowledgeMatchType.POI);
+        assertThat(matches.get(0).destinationId()).isEqualTo(destinationId);
+        assertThat(matches.get(0).provenance().retrievedAt()).isEqualTo(ROW_FETCHED_AT);
     }
 
     /**

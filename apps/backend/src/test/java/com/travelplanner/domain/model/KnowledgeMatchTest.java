@@ -18,7 +18,7 @@ class KnowledgeMatchTest {
     private static final KnowledgeProvenance PROVENANCE = KnowledgeFixtures.provenance();
 
     @Test
-    void carriesTheScoreAndTheCitationSoNeitherNeedsARejoin() {
+    void carriesTheRelevanceAndTheCitationSoNeitherNeedsARejoin() {
         // The step that gets skipped is always the citation, so provenance travels with the hit
         // rather than being fetched from the row it came from.
         UUID id = UUID.randomUUID();
@@ -30,7 +30,7 @@ class KnowledgeMatchTest {
         assertThat(match.id()).isEqualTo(id);
         assertThat(match.destinationId()).isEqualTo(destinationId);
         assertThat(match.snippet()).isEqualTo("Stalls and knife shops.");
-        assertThat(match.score()).isEqualTo(0.82);
+        assertThat(match.relevance()).isEqualTo(0.82);
         assertThat(match.provenance()).isEqualTo(PROVENANCE);
     }
 
@@ -41,27 +41,28 @@ class KnowledgeMatchTest {
     }
 
     @Test
-    void rejectsANaNScoreOnItsOwnBecauseARangeCheckWouldWaveItThrough() {
-        // Every comparison against NaN is false, so `score < 0.0 || score > 1.0` returns false for
-        // NaN and it would reach the reranker, where it sorts unpredictably against real scores.
+    void rejectsANaNRelevanceOnItsOwnBecauseARangeCheckWouldWaveItThrough() {
+        // Every comparison against NaN is false, so `relevance < 0.0 || relevance > 1.0` returns false
+        // for NaN and it would reach the reranker, where it sorts unpredictably against real values.
         assertThatThrownBy(() -> match(KnowledgeMatchType.POI, "a snippet", Double.NaN))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("score must be a number");
+                .hasMessageContaining("relevance must be a number");
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {-0.0001, -1.0, 1.0001, 2.0,
         Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
-    void rejectsAScoreOutsideTheCosineSimilarityRange(double score) {
-        assertThatThrownBy(() -> match(KnowledgeMatchType.GUIDE, "a snippet", score))
+    void rejectsARelevanceOutsideTheUnitInterval(double relevance) {
+        assertThatThrownBy(() -> match(KnowledgeMatchType.GUIDE, "a snippet", relevance))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("score must be 0.0..1.0");
+                .hasMessageContaining("relevance must be 0.0..1.0");
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {0.0, 0.5, 1.0})
-    void acceptsBothEndsOfTheCosineSimilarityRange(double score) {
-        assertThat(match(KnowledgeMatchType.GUIDE, "a snippet", score).score()).isEqualTo(score);
+    void acceptsBothEndsOfTheUnitInterval(double relevance) {
+        assertThat(match(KnowledgeMatchType.GUIDE, "a snippet", relevance).relevance())
+                .isEqualTo(relevance);
     }
 
     @ParameterizedTest
@@ -88,8 +89,9 @@ class KnowledgeMatchTest {
                 0.5, null)).isInstanceOf(NullPointerException.class);
     }
 
-    private static KnowledgeMatch match(KnowledgeMatchType sourceType, String snippet, double score) {
+    private static KnowledgeMatch match(KnowledgeMatchType sourceType, String snippet,
+            double relevance) {
         return new KnowledgeMatch(sourceType, UUID.randomUUID(), UUID.randomUUID(), snippet,
-                score, PROVENANCE);
+                relevance, PROVENANCE);
     }
 }
