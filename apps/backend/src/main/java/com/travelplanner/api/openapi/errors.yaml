@@ -3,7 +3,16 @@
 #
 # THIS FILE IS THE REGISTRATION POINT FOR EVERY `code` THE API CAN RETURN.
 #
-# Registration procedure (all five steps, in one change):
+# DO NOT FOLLOW THIS BY HAND. Run:
+#
+#   npm run generate:error-code -- <snake_case_code> <HTTP_STATUS> "<one-line meaning>"
+#
+# It performs steps 1-5 below and prints what is left. The procedure stays written out because a
+# generator should be readable as the thing it automates — not because anybody should be doing it
+# manually. Two of the six steps fail silently, and step 5 was missing from this list entirely until
+# the generator tripped over it.
+#
+# Registration procedure (all six steps, in one change):
 #   1. Add the value to `ErrorCode.enum` below, in alphabetical order.
 #   2. Add a row to the catalog table in the `description` of `ErrorCode`.
 #   3. Add the matching constant to
@@ -11,11 +20,15 @@
 #      with its HTTP status.
 #   4. Add the i18n string under `errors.<code>` in BOTH
 #      apps/frontend/src/locales/en/common.json and .../ms/common.json.
-#   5. Run `npm run codegen` from the repo root and commit the regenerated client.
+#   5. Add the value to `REGISTERED_ERROR_CODES` in
+#      apps/frontend/src/lib/api/api-error.ts — the runtime list TypeScript needs in order to narrow
+#      an arbitrary server string. THIS STEP WAS UNDOCUMENTED: an author who followed the five steps
+#      this header used to list got a type error in a file they had never opened.
+#   6. Run `npm run codegen` from the repo root and commit the regenerated client.
 #
-# OpenApiSpecTest fails the backend build when steps 1 and 3 disagree, and
-# common.errors.test.ts fails the frontend build when step 4 is missed. The procedure is
-# therefore enforced, not merely documented.
+# OpenApiSpecTest fails the backend build when steps 1 and 3 disagree, locales.test.ts fails the
+# frontend build when step 4 is missed, and ERROR_CODE_LIST_IS_EXHAUSTIVE fails `npm run typecheck`
+# when step 5 is. Step 2 is the one nothing catches — the registry simply stops describing itself.
 #
 # Scope note: only platform-level codes are registered here. Feature codes
 # (`trip_not_found`, `booking_declined`, …) are registered by the task that introduces the

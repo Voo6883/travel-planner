@@ -50,6 +50,7 @@ const scope = {
   backend: stage !== 'fast' || changed.some((file) => file.startsWith('apps/backend/')),
   frontend: stage !== 'fast' || changed.some((file) => file.startsWith('apps/frontend/')),
   contract: stage !== 'fast' || changed.some((file) => file.endsWith('openapi.yaml') || file.endsWith('errors.yaml')),
+  scripts: stage !== 'fast' || changed.some((file) => file.startsWith('scripts/')),
   docs: true,
 };
 
@@ -98,6 +99,9 @@ function fastPlan() {
   if (scope.contract) {
     steps.push(contractDriftStep());
   }
+  if (scope.scripts) {
+    steps.push(scriptTestsStep());
+  }
   steps.push(staleDocsStep());
   return steps;
 }
@@ -118,6 +122,7 @@ function taskPlan() {
     frontendStep('tests and coverage thresholds', ['run', 'test:coverage']),
     contractDriftStep(),
     codeMapDriftStep(),
+    scriptTestsStep(),
     staleDocsStep(),
   ];
 }
@@ -186,17 +191,45 @@ function staleDocsStep() {
 }
 
 /**
+ * The generators' own tests.
+ *
+ * They write files, which is exactly the kind of tool that has to be tested rather than trusted: a
+ * broken generator does not fail loudly, it produces a slice with a subtly wrong registry entry that
+ * somebody then debugs as an application bug. `node:test` ships with Node 22, so this costs no
+ * dependency.
+ */
+function scriptTestsStep() {
+  return {
+    label: 'scripts: generator tests',
+    command: process.execPath,
+    args: ['--test', repoPath('scripts', 'tests', 'generate.test.mjs')],
+    cwd: repoPath(),
+  };
+}
+
+/**
  * A generated tree that changed is a drift failure, not a diff to commit.
  *
  * The message names the command that produced the change, because the fix is always "run it and
  * commit the result" and an agent that has to infer that will sometimes revert the file instead.
+ *
+ * <b>`git diff --quiet`, not `git status --porcelain`.</b> The first version used status, and it
+ * reported drift on every Windows run: `.gitattributes` declares `* text=auto`, the committed blob is
+ * LF, `npm run codegen` writes LF, and `status` flags the stat mismatch as a modification while
+ * `git diff` correctly shows nothing. A gate that cries wolf on one platform is a gate that gets
+ * ignored on both, which is worse than not having it.
+ *
+ * Untracked files are checked separately, because `diff` cannot see them — a generator that emits a
+ * brand-new file would otherwise pass silently.
  */
 function assertClean(path, command) {
-  const status = spawnSync('git', ['status', '--porcelain', '--', path], {
+  const tracked = spawnSync('git', ['diff', '--quiet', '--', path], { cwd: repoPath(), encoding: 'utf8' });
+  const untracked = spawnSync('git', ['ls-files', '--others', '--exclude-standard', '--', path], {
     cwd: repoPath(),
     encoding: 'utf8',
   });
-  if ((status.stdout ?? '').trim() === '') {
+  const changed = (tracked.status ?? 0) !== 0 || (untracked.stdout ?? '').trim() !== '';
+  if (!changed) {
     return null;
   }
   return `${path} changed after \`${command}\`. The committed output is stale — run it and commit the result.`;
@@ -279,7 +312,8 @@ function printHeader() {
   console.log(`verify:${stage}`);
   if (stage === 'fast') {
     console.log(`  ${changed.length} changed file(s) against the merge base with dev`);
-    console.log(`  scope: backend=${scope.backend} frontend=${scope.frontend} contract=${scope.contract}`);
+    console.log(`  scope: backend=${scope.backend} frontend=${scope.frontend} `
+      + `contract=${scope.contract} scripts=${scope.scripts}`);
   }
 }
 

@@ -12,6 +12,7 @@
   "scripts": {
     "prereq": "node scripts/prereq.mjs",
     "prereq:test": "node scripts/tests/run-prereq-tests.mjs",
+    "scripts:test": "node --test scripts/tests/generate.test.mjs",
     "codegen": "npm --prefix apps/frontend run codegen",
     "verify:fast": "node scripts/verify.mjs fast",
     "verify:task": "node scripts/verify.mjs task",
@@ -21,6 +22,10 @@
     "code-map": "node scripts/code-map.mjs",
     "code-map:check": "node scripts/code-map.mjs --check",
     "docs:stale": "node scripts/stale-docs.mjs",
+    "generate:error-code": "node scripts/generate.mjs error-code",
+    "generate:migration": "node scripts/generate.mjs migration",
+    "generate:backend-slice": "node scripts/generate.mjs backend-slice",
+    "generate:frontend-feature": "node scripts/generate.mjs frontend-feature",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down",
     "docker:reset": "docker compose down -v",

@@ -22,6 +22,10 @@ Contract defined by [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) §
 | `verify.mjs` | The three-stage gate ladder (`npm run verify:fast` / `verify:task` / `verify:full`) |
 | `task-report.mjs` | Runs the real gates and writes `artifacts/task-NN-evidence.md` (`npm run task:report -- 18`) |
 | `stale-docs.mjs` | Fails when agent-facing docs contradict the tree (`npm run docs:stale`) |
+| `generate.mjs` | Vertical-slice generators (`npm run generate:*`) — dispatcher |
+| `lib/generate-support.mjs` | Shared plumbing: never-overwrite change sets, sorted registry inserts, naming |
+| `lib/generators/*.mjs` | One generator each: error codes, migrations, backend slices, frontend features |
+| `tests/generate.test.mjs` | `node:test` suite for the generators (`npm run scripts:test`) |
 | `tests/test-check-prerequisites.sh` | Unit tests for the bash gate |
 | `tests/check-prerequisites.tests.ps1` | Unit tests for the PowerShell gate |
 | `tests/run-prereq-tests.mjs` | Cross-platform dispatcher behind `npm run prereq:test` |
@@ -219,6 +223,31 @@ npm run verify:full            # what CI runs, Testcontainers included. Needs Do
 npm run task:report -- 18      # runs the real gates, writes artifacts/task-18-evidence.md
 ```
 
+### Generators (§6.D)
+
+```bash
+npm run generate:error-code       -- itinerary_locked CONFLICT "The itinerary is being regenerated"
+npm run generate:migration        -- create_itinerary_tables
+npm run generate:backend-slice    -- research-job
+npm run generate:frontend-feature -- itinerary
+
+# any of them, with --dry-run, prints the plan and writes nothing
+npm run scripts:test              # the generators' own tests
+```
+
+Skeletons only, as the review requires — business logic stays with the agent. What they remove is the
+*mechanical* error, and specifically the ones with non-mechanical symptoms:
+
+| Generator | The silent failure it prevents |
+|---|---|
+| `error-code` | A code registered in the enum but missing from a locale file reaches the user as `version_conflict`. It is a **six**-step procedure; step 5 (`REGISTERED_ERROR_CODES`) was undocumented until this generator tripped over it. |
+| `migration` | Two branches read "next free migration: V21" from a note on different days, both write V21, and Flyway refuses to start whichever environment merged second. The version is derived from the filenames instead. |
+| `backend-slice` | A write method with no `@TransactionalWrite` — a partial write **nothing** in the build reports. The template has it on. |
+| `frontend-feature` | A query key written inline creates a second cache entry that never invalidates; the user sees stale data on one screen, later. |
+
+Every generator **refuses to overwrite**, checks all paths before writing the first byte, and prints
+its plan first. A collision aborts the whole set and names every conflict, not just the first.
+
 ### What each one is for
 
 | Command | The waste it removes |
@@ -238,6 +267,12 @@ npm run task:report -- 18      # runs the real gates, writes artifacts/task-18-e
   CI provider can assert, and a local script that wrote `done` on the strength of a local run would be
   manufacturing the evidence the gate exists to demand. It prints the ledger line to paste, and the
   conditions under which pasting it is honest.
+- **The generators are tested.** `npm run scripts:test` — a tool that writes files has to be verified
+  rather than trusted, because a broken generator produces a slice with a subtly wrong registry entry
+  that somebody then debugs as an application bug. Two of those tests are regressions from this
+  generator's own first run: the query-key insert landed *inside* `queryKeys.auth`, and the error-code
+  enum insert has to negotiate a list whose last entry carries the `;`. Neither produced a syntax
+  error.
 - **`stale-docs` only checks claims a machine can decide.** Each assertion pairs a claim pattern with a
   contradicting condition and fires only when both hold. "Is this paragraph still accurate" is not
   checkable, and a gate with false positives is a gate that gets switched off.
