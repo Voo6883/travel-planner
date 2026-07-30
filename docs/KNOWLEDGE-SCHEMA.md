@@ -139,6 +139,36 @@ with no error. A strict `^[a-z0-9-]{1,120}$` pattern makes the interpolation saf
 **Model migration is additive** — new column + backfill, old index still serving. Never an in-place
 rebuild; the `UNIQUE` keys include `embedding_model` so both models can coexist while the new index builds.
 
+### Are the partial HNSW indexes actually used? (F-32, measured 2026-07-30)
+
+V18 builds one HNSW index per covered destination, predicated on
+`destination_slug = '…' AND embedding_model = '…'`. Whether the planner ever chooses one was waived by
+task 16 and recorded as **F-32**. Measured on PostgreSQL 16.6 + pgvector 0.8.1, against a schema
+migrated from empty, using the production query shape:
+
+| `poi_embedding` rows | heap pages | plan |
+|---|---|---|
+| 100 | 2 | `Seq Scan` |
+| 600 | ~30 | `Seq Scan` |
+| 2,000 | 25–53 | `Index Scan using ix_poi_embedding_hnsw_tokyo` |
+| 20,000 | 247 | `Index Scan using ix_poi_embedding_hnsw_tokyo` |
+
+**The mechanism works. It is not currently engaged.** §1's curation floor is ≥25 POIs per destination —
+about 75 embeddings across the three covered cities, two orders of magnitude below the crossover. A
+1536-dimension vector is TOASTed, so a small embedding table is a couple of heap pages and reading all
+of it genuinely beats descending a graph; the planner is right to refuse the index today. The six
+indexes are insurance for a corpus that does not exist yet, and they cost write and build time now.
+That is the number to weigh if anyone proposes dropping them until 17C lands real curation.
+
+**Two things this did not establish.** First, that binding the slug *always* loses the index: the same
+query at the same row count was observed choosing both plans in different databases, because it turns
+on custom-versus-generic plan selection and on statistics. The literal interpolation stays — it is the
+shape reliably observed to reach the index — but the converse is not a claim this repository makes.
+Second, anything about a plan as a *test*: `KnowledgeVectorSearchContractTest` asserts the query
+**shape** these measurements were taken against, and deliberately runs no `EXPLAIN`. A plan is a
+property of the SQL plus the whole database's state, and in a suite sharing one database that is not
+controllable without dictating the answer.
+
 ## 6. Query contracts — `KnowledgePort`
 
 Read-only, and the **only** repository port not scoped by `userId`: the TKB describes the world, not
