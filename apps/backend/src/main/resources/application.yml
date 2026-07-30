@@ -120,6 +120,24 @@ travelplanner:
     # Optional per-feature routing, e.g. `research: anthropic` (PLAN §5.4). An entry naming a
     # provider with no credential fails startup, exactly as the default provider does.
     routing: {}
+    # Provider replay (review §6.I). Two independent switches, because they are opposite operations:
+    #
+    #   AI_PROVIDER_DEFAULT=replay   READS fixtures — real recorded provider output, offline. Tests
+    #                                then exercise real protocol shapes (tool-call delta sequences,
+    #                                prose wrapped around JSON, a usage frame in an odd position)
+    #                                which the stub by design never produces.
+    #   record=true                  WRITES them, by wrapping whichever REAL provider is selected.
+    #
+    # Combining them would make "record against Anthropic" unexpressible, which is the only way to
+    # create a fixture. Both are refused under the `prod` profile: replayed output is
+    # indistinguishable from a live answer, so a production deployment serving it would look healthy,
+    # and recording writes provider responses to disk — a model can echo a prompt back.
+    #
+    # An unrecorded prompt is an ERROR, never a fallback to the stub. A silent fallback would keep a
+    # test green against stub output that asserts nothing about the provider.
+    replay:
+      directory: ${AI_REPLAY_DIR:apps/backend/src/test/resources/ai/replay}
+      record: ${AI_REPLAY_RECORD:false}
 
 # Actuator and Micrometer (PLAN §4.0.9, task 15).
 #

@@ -27,6 +27,11 @@ travelplanner:
   #   traveller with placeholder text and stub embeddings rank retrieval on deterministic noise;
   #   both are outages that look like a healthy deployment. Set a real provider and its key.
   #
+  #   `replay` is refused here too, and for a stronger reason: stub output announces itself, while
+  #   replayed output is indistinguishable from a live answer because it WAS one — for a different
+  #   traveller, at some point in the past. AI_REPLAY_RECORD=true is likewise refused; a model can
+  #   echo a prompt back, so recording against real traffic writes traveller content to disk.
+  #
   # Same shape as the mail and identity stand-ins, which also refuse to be constructed here.
   security:
     session:

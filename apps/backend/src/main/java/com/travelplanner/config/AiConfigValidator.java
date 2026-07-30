@@ -39,6 +39,15 @@ final class AiConfigValidator {
      */
     static void validate(AiProperties properties, String[] activeProfiles) {
         boolean production = isProduction(activeProfiles);
+        if (production && properties.getReplay().isRecord()) {
+            // Recording writes fixtures from live traffic. The prompt is only hashed, but model output
+            // can echo a prompt back, so a recording made against real travellers can contain their
+            // words. Refused outright rather than documented as unwise.
+            throw new IllegalStateException("travelplanner.ai.replay.record=true under the '"
+                    + PROD_PROFILE + "' profile. Recording captures provider responses to disk, and a "
+                    + "response can echo a traveller's message back — so this writes user content into "
+                    + "files. Record in development, against prompts written for the purpose.");
+        }
         Set<String> selected = selectedChatProviders(properties);
         for (String provider : selected) {
             requireKnownProvider(provider);
@@ -67,6 +76,17 @@ final class AiConfigValidator {
                     + AiProperties.OPENAI_PROVIDER + " credentials would serve every traveller a "
                     + "visible stub instead of failing at boot. Configure a real provider and its "
                     + "API key; the stub is for test, dev, docker, and local only.");
+        }
+        // Refused for a stronger reason than the stub, not a weaker one. Stub output announces itself
+        // — every reply carries "[stub]" — so a misconfigured deployment is visibly broken. Replayed
+        // output is indistinguishable from a live answer, because it WAS one: for a different
+        // traveller, at some point in the past. A production deployment serving recordings would look
+        // entirely healthy while answering everybody with somebody else's conversation.
+        if (AiProperties.REPLAY_PROVIDER.equals(provider)) {
+            throw new IllegalStateException("The replay adapter is selected as " + role + " under the '"
+                    + PROD_PROFILE + "' profile. It serves recorded provider output, which is "
+                    + "indistinguishable from a live answer — so this would not look like an outage. "
+                    + "Replay is for test, dev, docker, and local only (review §6.I).");
         }
     }
 
@@ -104,12 +124,13 @@ final class AiConfigValidator {
 
     private static void requireKnownProvider(String provider) {
         boolean known = AiProperties.STUB_PROVIDER.equals(provider)
+                || AiProperties.REPLAY_PROVIDER.equals(provider)
                 || AiProperties.ANTHROPIC_PROVIDER.equals(provider)
                 || AiProperties.OPENAI_PROVIDER.equals(provider);
         if (!known) {
             throw new IllegalStateException("Unknown AI provider '" + provider + "'. Supported: "
-                    + AiProperties.STUB_PROVIDER + ", " + AiProperties.ANTHROPIC_PROVIDER + ", "
-                    + AiProperties.OPENAI_PROVIDER + ".");
+                    + AiProperties.STUB_PROVIDER + ", " + AiProperties.REPLAY_PROVIDER + ", "
+                    + AiProperties.ANTHROPIC_PROVIDER + ", " + AiProperties.OPENAI_PROVIDER + ".");
         }
     }
 

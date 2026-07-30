@@ -120,6 +120,62 @@ class AiConfigValidatorTest {
         assertThatCode(() -> AiConfigValidator.validate(properties, PROD)).doesNotThrowAnyException();
     }
 
+    /**
+     * Replay is refused for a stronger reason than the stub, not a weaker one.
+     *
+     * <p>Stub output announces itself — every reply carries {@code [stub]} — so a misconfigured
+     * deployment is visibly broken. Replayed output is indistinguishable from a live answer, because it
+     * <em>was</em> one: for a different traveller, at some point in the past. A production deployment
+     * serving recordings would look entirely healthy while answering everybody with somebody else's
+     * conversation.
+     */
+    @Test
+    void refusesToStartInProductionOnTheReplayAdapter() {
+        AiProperties properties = new AiProperties();
+        properties.getProvider().setDefaultProvider("replay");
+
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, PROD))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("replay adapter")
+                .hasMessageContaining("indistinguishable from a live answer");
+    }
+
+    @Test
+    void acceptsTheReplayAdapterOutsideProduction() {
+        AiProperties properties = new AiProperties();
+        properties.getProvider().setDefaultProvider("replay");
+
+        assertThatCode(() -> AiConfigValidator.validate(properties, DEV)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void refusesToRecordProviderResponsesInProduction() {
+        // The prompt is only hashed, but a model can echo it back — so recording against real traffic
+        // writes traveller content into files somebody may then commit.
+        AiProperties properties = new AiProperties();
+        properties.getProvider().setDefaultProvider("anthropic");
+        properties.getAnthropic().setApiKey("sk-ant-test");
+        properties.getEmbeddings().setProvider("openai");
+        properties.getOpenai().setApiKey("sk-test");
+        properties.getReplay().setRecord(true);
+
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, PROD))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("replay.record=true")
+                .hasMessageContaining("echo a traveller's message back");
+    }
+
+    @Test
+    void namesReplayAmongTheSupportedProvidersWhenOneIsMisspelt() {
+        AiProperties properties = new AiProperties();
+        properties.setRouting(Map.of("research", "replya"));
+
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, DEV))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Unknown AI provider 'replya'")
+                .hasMessageContaining("replay");
+    }
+
     /** The remedy in a missing-key message must not be "turn the model off". */
     @Test
     void doesNotAdvertiseTheStubAsTheProductionDefaultWhenAKeyIsMissing() {

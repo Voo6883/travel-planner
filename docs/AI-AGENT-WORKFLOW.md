@@ -535,3 +535,56 @@ repository on every task, so what the repository says has to be worth reading.
    wrong answer delivered with authority, and it costs a whole task cycle before anyone notices. The
    check cannot tell a quotation from a claim, so this paragraph deliberately describes the pattern
    instead of reproducing it; erring that way keeps false negatives at zero, which matters more.
+
+---
+
+## 10. Deterministic AI tests — record once, replay for free
+
+From the review's §6.I. The everyday suite must not call a provider: it costs money, it varies in
+latency, and it fails for reasons that have nothing to do with the change under test. But the stub
+does not solve this on its own, and the reason is worth being precise about.
+
+`StubLlmAdapter` answers everything with `[stub] no model configured. Received: …`. That is the right
+default — deterministic, credential-free, and *visibly* not a model answer, which is what stops a
+fabricated travel fact from ever looking real. It is also, by construction, useless as a **protocol**
+fixture. No test that runs against it has ever seen an Anthropic tool-call delta sequence, an OpenAI
+reply with prose wrapped around its JSON, or a stream whose usage frame arrives in an odd position.
+The first time the system meets any of those is in production.
+
+So: record real output once, replay it offline forever.
+
+```bash
+# Record — against a REAL provider, with prompts you wrote for the purpose.
+AI_PROVIDER_DEFAULT=anthropic ANTHROPIC_API_KEY=… AI_REPLAY_RECORD=true ./gradlew test --tests '…'
+
+# Replay — no keys, no cost, no variance. This is what a normal run should use.
+AI_PROVIDER_DEFAULT=replay ./gradlew test
+```
+
+Fixtures land in `apps/backend/src/test/resources/ai/replay/<promptHash>.json`, one file per
+exchange, and they are committed.
+
+### The five decisions that make it trustworthy
+
+1. **Keyed by prompt hash, not call order.** Order-based replay breaks the moment a test adds a call,
+   and breaks *silently* — every later assertion then compares against the wrong recording. A hash
+   matches the prompt it was recorded for, or matches nothing.
+2. **A prompt change invalidates its fixture, loudly.** That is correct: a recording that predates a
+   prompt version is not a valid test input. `TripBriefExtractionPrompt` gates on the SHA of the
+   rendered block for the same reason.
+3. **An unrecorded prompt is an error, never a fallback to the stub.** This is the important one. A
+   silent fallback keeps the suite green against stub output that asserts nothing about the provider,
+   and the fixture it was meant to exercise is quietly dead. Green, and testing nothing.
+4. **Only the prompt hash is stored — never the prompt.** A fixture containing a traveller's message
+   is a file that must not be committed, and a fixture that cannot be committed is not a fixture: it
+   passes on one machine and fails everywhere else.
+5. **Neither replay nor recording may run under `prod`.** Replayed output is indistinguishable from a
+   live answer — it *was* one, for someone else — so a production deployment serving it would look
+   entirely healthy. And recording writes provider responses to disk, which can echo a prompt back.
+   `AiConfigValidator` refuses both.
+
+### Reviewing a fixture before you commit it
+
+The prompt is hashed; the **response is verbatim**. A model can quote its input back, so a recording
+made against a real message can contain that message inside the completion text. Read the fixture
+before committing it. This is a development tool pointed at prompts you chose — never at real traffic.

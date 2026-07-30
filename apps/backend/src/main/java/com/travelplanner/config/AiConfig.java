@@ -10,6 +10,9 @@ import com.travelplanner.ai.extraction.TripBriefExtractionPrompt;
 import com.travelplanner.ai.langchain4j.LangChain4jProviderFactory;
 import com.travelplanner.ai.observability.AiCallRecorder;
 import com.travelplanner.ai.prompt.PromptTemplateStore;
+import com.travelplanner.ai.replay.ProviderRecorder;
+import com.travelplanner.ai.replay.RecordedExchangeStore;
+import com.travelplanner.ai.replay.ReplayLlmAdapter;
 import com.travelplanner.ai.resilience.AiRetryPolicy;
 import com.travelplanner.ai.resilience.CircuitBreakerGate;
 import com.travelplanner.ai.resilience.CountingCircuitBreakerGate;
@@ -63,6 +66,9 @@ public class AiConfig {
      */
     private final Clock clock = Clock.systemUTC();
 
+    /** Lazily built, then shared — see {@link #replayStore}. Single-threaded context startup. */
+    private RecordedExchangeStore replayStore;
+
     public AiConfig(AiProperties properties, Environment environment) {
         AiConfigValidator.validate(properties, environment.getActiveProfiles());
         this.properties = properties;
@@ -86,8 +92,9 @@ public class AiConfig {
      * state they are each supposed to be the single owner of.
      */
     @Bean
-    public LlmProvider llmProvider(AiCallRecorder recorder, CircuitBreakerGate breaker) {
-        return new LlmClientRouter(routingTable(),
+    public LlmProvider llmProvider(AiCallRecorder recorder, CircuitBreakerGate breaker,
+            ObjectMapper objectMapper) {
+        return new LlmClientRouter(routingTable(objectMapper),
                 new RouterSupport(AiRetryPolicy.of(properties.getResilience()), breaker, recorder));
     }
 
@@ -95,20 +102,59 @@ public class AiConfig {
      * Only the selected providers are built. {@code stub} is always registered so a routing entry
      * can name it explicitly, and so the map is never empty.
      */
-    private RoutingTable routingTable() {
+    private RoutingTable routingTable(ObjectMapper objectMapper) {
         Map<String, LlmProvider> providers = new LinkedHashMap<>();
         providers.put(AiProperties.STUB_PROVIDER, new StubLlmAdapter());
         for (String name : selectedProviders()) {
             if (AiProperties.ANTHROPIC_PROVIDER.equals(name)) {
-                providers.put(name, LangChain4jProviderFactory.anthropic(
-                        properties.getAnthropic(), properties.getResilience().getTimeout()));
+                providers.put(name, recordIfAsked(LangChain4jProviderFactory.anthropic(
+                        properties.getAnthropic(), properties.getResilience().getTimeout()), objectMapper));
             } else if (AiProperties.OPENAI_PROVIDER.equals(name)) {
-                providers.put(name, LangChain4jProviderFactory.openAi(
-                        properties.getOpenai(), properties.getResilience().getTimeout()));
+                providers.put(name, recordIfAsked(LangChain4jProviderFactory.openAi(
+                        properties.getOpenai(), properties.getResilience().getTimeout()), objectMapper));
+            } else if (AiProperties.REPLAY_PROVIDER.equals(name)) {
+                providers.put(name, new ReplayLlmAdapter(replayStore(objectMapper)));
             }
         }
         return new RoutingTable(providers, properties.getRouting(),
                 properties.getProvider().getDefaultProvider());
+    }
+
+    /**
+     * Wraps a real provider in {@link ProviderRecorder} when {@code travelplanner.ai.replay.record} is
+     * on (review §6.I).
+     *
+     * <p>Only the live adapters are wrapped, and that is not an oversight: recording the stub would
+     * write fixtures of {@code [stub] no model configured}, which replay would then serve as though it
+     * were provider output — the exact confusion this whole mechanism exists to prevent. Recording the
+     * replay adapter would be a loop.
+     *
+     * <p>{@code AiConfigValidator} refuses the flag under {@code prod}, so this cannot be on in an
+     * environment with real traffic.
+     */
+    private LlmProvider recordIfAsked(LlmProvider provider, ObjectMapper objectMapper) {
+        if (!properties.getReplay().isRecord()) {
+            return provider;
+        }
+        log.warn("AI replay: RECORDING {} responses to {}. Review a fixture before committing it — a "
+                + "model can echo a prompt back, so the response half is not automatically redacted.",
+                provider.providerName(), properties.getReplay().getDirectory());
+        return new ProviderRecorder(provider, replayStore(objectMapper));
+    }
+
+    /**
+     * One store, shared by the replay adapter and the recorder.
+     *
+     * <p>Shared deliberately: recording and replaying in the same process — record once, then assert on
+     * the replay — only works if the writer's output is visible to the reader without a restart, and
+     * {@code RecordedExchangeStore.save} updates its own index for exactly that reason.
+     */
+    private RecordedExchangeStore replayStore(ObjectMapper objectMapper) {
+        if (replayStore == null) {
+            replayStore = new RecordedExchangeStore(
+                    java.nio.file.Path.of(properties.getReplay().getDirectory()), objectMapper);
+        }
+        return replayStore;
     }
 
     private java.util.Set<String> selectedProviders() {

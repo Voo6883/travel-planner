@@ -26,11 +26,21 @@ public class AiProperties {
     public static final String ANTHROPIC_PROVIDER = "anthropic";
     public static final String OPENAI_PROVIDER = "openai";
 
+    /**
+     * Serves recorded provider output instead of calling one (review §6.I).
+     *
+     * <p>A sibling of {@link #STUB_PROVIDER} rather than a flag on the real providers: it is a distinct
+     * adapter with distinct failure behaviour — an unmatched prompt is an error, deliberately, where the
+     * stub answers everything. Both are refused under the {@code prod} profile.
+     */
+    public static final String REPLAY_PROVIDER = "replay";
+
     private final Provider provider = new Provider();
     private final Anthropic anthropic = new Anthropic();
     private final OpenAi openai = new OpenAi();
     private final Embeddings embeddings = new Embeddings();
     private final Resilience resilience = new Resilience();
+    private final Replay replay = new Replay();
 
     /**
      * Optional per-feature overrides, e.g. {@code research: anthropic} (PLAN §5.4). A feature with
@@ -279,6 +289,53 @@ public class AiProperties {
 
         public void setCircuitBreakerOpenDuration(Duration value) {
             this.circuitBreakerOpenDuration = value;
+        }
+    }
+
+    public Replay getReplay() {
+        return replay;
+    }
+
+    /**
+     * Provider replay (review §6.I).
+     *
+     * <p>Two independent switches, because they are opposite operations. Selecting
+     * {@link AiProperties#REPLAY_PROVIDER} as a provider <em>reads</em> fixtures; {@code record=true}
+     * <em>writes</em> them by wrapping whichever real provider is selected. Combining them into one
+     * "replay mode" would make "record against Anthropic" unexpressible, which is the only way to
+     * create a fixture in the first place.
+     */
+    public static class Replay {
+
+        /**
+         * Where fixtures live. Defaults under {@code src/test/resources} because that is what a
+         * committed, shareable fixture is — test data, not runtime configuration.
+         */
+        private String directory = "apps/backend/src/test/resources/ai/replay";
+
+        /**
+         * Wrap the selected provider and write what it returns.
+         *
+         * <p>Off by default and refused under {@code prod}. Recording is a development action: model
+         * output can echo a prompt back, so a recording made against real traffic can contain a
+         * traveller's words inside the completion text even though the prompt itself is only hashed.
+         */
+        private boolean record;
+
+        public String getDirectory() {
+            return directory;
+        }
+
+        public void setDirectory(String value) {
+            this.directory = normalise(value, "apps/backend/src/test/resources/ai/replay");
+        }
+
+        public boolean isRecord() {
+            return record;
+        }
+
+        public void setRecord(boolean value) {
+            this.record = value;
         }
     }
 
