@@ -1,41 +1,37 @@
 package com.travelplanner.domain.port;
 
 import com.travelplanner.domain.ai.LlmCompletion;
-import com.travelplanner.domain.ai.LlmEvent;
 import com.travelplanner.domain.ai.LlmOptions;
 import com.travelplanner.domain.ai.Prompt;
 import com.travelplanner.domain.ai.ToolSpec;
 import java.util.List;
-import reactor.core.publisher.Flux;
 
 /**
- * The project's LLM interface (PLAN §5.1, amended by ADR 007). Features depend on this and never on
- * a vendor SDK, so a provider swap costs one adapter package.
+ * The project's blocking LLM interface (PLAN §5.1, amended by ADR 007). Features depend on this and
+ * never on a vendor SDK, so a provider swap costs one adapter package.
  *
  * <p>Naming: ADR 007 calls this {@code LlmPort}, PLAN §5.1 calls it {@code LlmClient}. The
  * {@code *Port} name is used because it is what ADR 007 (the amending document) says and what every
  * other port in {@code domain/port/} is called. The router in front of it keeps the name PLAN §5.4
  * gives it, {@code LlmClientRouter}.
  *
- * <h2>{@link #stream} returns {@code Flux<LlmEvent>}, not {@code Flux<String>}</h2>
+ * <h2>Streaming is not here</h2>
  *
- * <p>ADR 007 supersedes PLAN §5.1's {@code Flux<String> stream(...)}. The reason is structural, not
- * stylistic: a token stream cannot carry a tool-use delta, a stop reason, usage, or a mid-stream
- * error, which makes the locked {@code trip_created} behaviour (PLAN §3.2) impossible to build on
- * it. Both providers stream events natively; the string form threw away the parts the product needs
- * and would have forced every consumer to parse them back out of text.
+ * <p>The streaming turn lives on {@code application.ai.LlmStreamPort}, not on this interface, and
+ * that is the whole reason this file has no third-party import. ADR 007 types the stream as
+ * {@code Flux<LlmEvent>} — Reactor, a framework — and a framework type on a domain port makes the
+ * domain unconstructible without it, which is the one property this layer exists to have. The events
+ * themselves stay in {@code domain/ai} as plain value types; only the publisher moved out.
+ *
+ * <p>The split is not merely bookkeeping. {@code ChatTurnService} streams and never completes;
+ * {@code StructuredOutputRunner} completes and never streams. Neither had a use for the other's
+ * methods, so segregating them costs nothing and each caller now declares what it actually needs.
  *
  * <h2>Rules for implementations</h2>
  *
  * <ul>
  *   <li>Every failure surfaces as {@link com.travelplanner.domain.exception.AiProviderException} —
  *       never a vendor exception, never a raw {@code IOException}.</li>
- *   <li>A stream that fails after emitting terminates with {@link LlmEvent.StreamError} and then
- *       completes. Once the HTTP response is a {@code 200}, an error can no longer be a status.</li>
- *   <li>Cancelling the {@code Flux} must cancel the provider call. A subscriber that walked away is
- *       still being billed until the adapter stops.</li>
- *   <li>Adapters never emit {@link LlmEvent.DomainEvent}; the orchestrator emits it after a tool
- *       commits (ADR 007).</li>
  * </ul>
  *
  * <h2>Rules for callers</h2>
@@ -84,9 +80,4 @@ public interface LlmPort {
      */
     LlmCompletion completeWithTools(Prompt prompt, List<ToolSpec> tools, LlmOptions options);
 
-    /** The streaming turn (ADR 007). Cold: nothing is sent until a subscriber arrives. */
-    Flux<LlmEvent> stream(Prompt prompt, LlmOptions options);
-
-    /** The streaming turn, with tools offered. */
-    Flux<LlmEvent> stream(Prompt prompt, List<ToolSpec> tools, LlmOptions options);
 }

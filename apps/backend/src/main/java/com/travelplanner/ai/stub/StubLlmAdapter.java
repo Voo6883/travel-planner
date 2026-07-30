@@ -1,5 +1,6 @@
 package com.travelplanner.ai.stub;
 
+import com.travelplanner.ai.client.LlmProvider;
 import com.travelplanner.domain.ai.LlmCompletion;
 import com.travelplanner.domain.ai.LlmEvent;
 import com.travelplanner.domain.ai.LlmOptions;
@@ -8,7 +9,6 @@ import com.travelplanner.domain.ai.Prompt;
 import com.travelplanner.domain.ai.PromptMessage;
 import com.travelplanner.domain.ai.StopReason;
 import com.travelplanner.domain.ai.ToolSpec;
-import com.travelplanner.domain.port.LlmPort;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -38,7 +38,7 @@ import reactor.core.publisher.Flux;
  * <p>It never requests a tool. Tool selection is model behaviour that a stub cannot fake usefully,
  * and a stub that invented tool calls would let an orchestrator bug pass its tests.
  */
-public final class StubLlmAdapter implements LlmPort {
+public final class StubLlmAdapter implements LlmProvider {
 
     /** The marker every stub reply carries, so stub output is never mistaken for a model answer. */
     public static final String STUB_MARKER = "[stub]";

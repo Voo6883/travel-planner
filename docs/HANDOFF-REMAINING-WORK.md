@@ -216,8 +216,10 @@ Non-negotiables:
 
 - **Records, immutable, validating compact constructors.** Defensive copies for arrays/collections
   in *and* out — a record's generated accessor hands back internal state otherwise.
-- **Domain is framework-free.** Only `java.*` and `com.travelplanner.domain.*` (plus `reactor..`,
-  which is a knowing exception — see F-23).
+- **Domain is framework-free.** Only `java.*` and `com.travelplanner.domain.*`, with no exceptions —
+  `domainIsFrameworkFree` forbids Spring, JPA, Jackson, LangChain4j, Hibernate **and Reactor**. If a
+  domain type looks like it needs a framework, it is in the wrong package: the streaming LLM turn was
+  the one case, and it lives in `application/ai/LlmStreamPort` for exactly that reason (F-23).
 - **Entities never leave `infrastructure.persistence`.** Every port returns a domain type.
 - **Every new error code goes in BOTH `errors.yaml` and `ApiErrorCode`**, or it is silently
   downgraded to `internal_error`.
@@ -245,7 +247,7 @@ them late costs more than closing them on time.
 | **F-33** | `travel_app` cannot express one app superseding another in a market | **40/41**, needs a migration |
 | **F-32** | Adapter round-trips, concurrent constraint behaviour and actual HNSW index selection unverified | When data exists — check `EXPLAIN ANALYZE` names `ix_poi_embedding_hnsw_<destination>` |
 | **F-22** | LLM stub not blocked in production (knowledge stub is) | **39** at the latest |
-| **F-23** | Reactor in `domain/` — delete the allow-list entry if resolved | **36/37** |
+| **F-23** | ✅ closed 2026-07-30 — streaming moved to `application/ai/LlmStreamPort`; `reactor..` is forbidden in the domain and the rule passes | — |
 | **F-27** | `DestinationArea` coordinates unchecked — record and V14 must move together | Any migration touching V14 |
 | **F-31** | Chat enum casing disagreement; client normalises defensively | **20**, then delete the client-side normalisation |
 | **F-36** | Frontend assumed three chat contract details | **20** — publish them |

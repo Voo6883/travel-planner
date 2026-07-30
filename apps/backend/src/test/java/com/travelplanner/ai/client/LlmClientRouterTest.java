@@ -18,7 +18,6 @@ import com.travelplanner.domain.ai.StopReason;
 import com.travelplanner.domain.ai.ToolSpec;
 import com.travelplanner.domain.exception.AiProviderException;
 import com.travelplanner.domain.port.AiCallLogPort;
-import com.travelplanner.domain.port.LlmPort;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -310,7 +309,7 @@ class LlmClientRouterTest {
     }
 
     /** A port double: no network, no LangChain4j, and a failure script the test controls. */
-    private static final class FakeLlm implements LlmPort {
+    private static final class FakeLlm implements LlmProvider {
 
         private final String name;
         private final AtomicInteger completeCalls = new AtomicInteger();

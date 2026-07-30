@@ -1,6 +1,5 @@
 package com.travelplanner.application.chat;
 
-import com.travelplanner.domain.ai.LlmCompletion;
 import com.travelplanner.domain.ai.LlmEvent;
 import com.travelplanner.domain.ai.LlmOptions;
 import com.travelplanner.domain.ai.Prompt;
@@ -12,7 +11,7 @@ import com.travelplanner.domain.model.Message;
 import com.travelplanner.domain.model.PlannerSession;
 import com.travelplanner.domain.model.Trip;
 import com.travelplanner.domain.port.ConversationRepositoryPort;
-import com.travelplanner.domain.port.LlmPort;
+import com.travelplanner.application.ai.LlmStreamPort;
 import com.travelplanner.domain.port.TripRepositoryPort;
 import com.travelplanner.domain.valueobject.UserContext;
 import java.time.Instant;
@@ -244,7 +243,7 @@ final class ChatTestFakes {
      * over a flux that never completes — which is how disconnect and heartbeat behaviour is
      * exercised without a real provider or a real socket.
      */
-    static final class ScriptedLlm implements LlmPort {
+    static final class ScriptedLlm implements LlmStreamPort {
 
         private final Supplier<Flux<LlmEvent>> script;
         private final List<Prompt> prompts = new ArrayList<>();
@@ -261,26 +260,10 @@ final class ChatTestFakes {
             return List.copyOf(prompts);
         }
 
-        @Override
-        public String providerName() {
-            return "scripted";
-        }
-
-        @Override
-        public String modelName() {
-            return "scripted-model";
-        }
-
-        @Override
-        public String complete(Prompt prompt, LlmOptions options) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public LlmCompletion completeWithTools(Prompt prompt, List<ToolSpec> tools, LlmOptions options) {
-            throw new UnsupportedOperationException();
-        }
-
+        // No providerName, modelName, complete or completeWithTools. They used to be here as four
+        // `throw new UnsupportedOperationException()` bodies, which is what a fake looks like when the
+        // interface is wider than any caller needs. LlmStreamPort is exactly the streaming half, so
+        // the fake is now the whole contract rather than a quarter of it.
         @Override
         public Flux<LlmEvent> stream(Prompt prompt, LlmOptions options) {
             return stream(prompt, List.of(), options);

@@ -85,7 +85,7 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 | 11 | [Frontend platform and auth UI](11-frontend-platform-auth-ui.md) | 03, 06, 08, 09, 10 | `done` | Commit `1c04f94`. **Closes F-18** — ADR 006 same-origin proxy; without it tasks 08–10's auth was unreachable from a browser. |
 | 12 | [Admin platform](12-admin-platform.md) | 07, 08, 09, 11 | `done` | Commit `3acc779`. Migration **V12**. Disable/reset terminate sessions, proven with a live cookie. Seed absent under `prod` (allow-list, not denylist). Review fixed a stale-write that silently undid revocation. |
 | 13 | [PWA foundation](13-pwa-foundation.md) | 04, 11 | `done` | Commit `6a18a37`. `/api/v1/**` network-only, enforced per-rule **and** by ordering. Declined PLAN §4.2.11's `defaultCache` row — see **F-21**. |
-| 14 | [AI provider platform](14-ai-provider-platform.md) | 06, 07, 09 | `done` | Commit `12b6b23`. Migration **V11**. `Flux<LlmEvent>` sealed union per ADR 007. **F-22 closed** 2026-07-30 — `AiConfigValidator` refuses `stub` as chat *and* embedding provider under `prod`, and the missing-key message no longer offers the stub as the remedy. Also closed on this pass: token usage was recorded as zero for every non-streaming call (the router read usage off a `String`), and `ai_call_log.model` fell back to `""` so every cost estimate was zero. Open: **F-23** (Reactor in `domain/`). |
+| 14 | [AI provider platform](14-ai-provider-platform.md) | 06, 07, 09 | `done` | Commit `12b6b23`. Migration **V11**. `Flux<LlmEvent>` sealed union per ADR 007. **F-22 and F-23 both closed** 2026-07-30 — F-23 by moving the streaming turn to `application/ai/LlmStreamPort`, leaving `domain/port/LlmPort` framework-free. **F-22 closed** 2026-07-30 — `AiConfigValidator` refuses `stub` as chat *and* embedding provider under `prod`, and the missing-key message no longer offers the stub as the remedy. Also closed on this pass: token usage was recorded as zero for every non-streaming call (the router read usage off a `String`), and `ai_call_log.model` fell back to `""` so every cost estimate was zero. |
 | 15 | [Architecture and quality gates](15-quality-gates.md) | 02–14 | `done` | Commit `bd6ca0d`, merged `95970f5`. Checkstyle 10.21.0, JaCoCo 0.8.12 (LINE 85 / BRANCH 70 over domain+application, measured 86.3 / 75.4), 8/8 ArchUnit rules, ESLint import boundaries proven to fail on probe violations, Prettier, Vitest thresholds, Actuator (4 exposed / 4 sensitive 404). Clean `./gradlew build` green with 15 tasks executed; frontend `format:check`+`lint`+`typecheck`+`test:coverage`+`build` all exit 0, 226 tests. Thresholds and exception process: [`docs/QUALITY-GATES.md`](../docs/QUALITY-GATES.md). Found and fixed **F-26**. **F-25 closed** 2026-07-30 — the shared-chrome import of `features/auth` is inverted and the ESLint carve-out is gone. |
 
 ## Phase 1 — knowledge, intake, chat, research, itinerary
@@ -156,8 +156,8 @@ Everything a feature needs now exists: contract, database, identity, mail,
 admin, frontend platform, PWA, and the AI runtime. Task 15 (quality gates) closed Phase 0B and
 merged as `95970f5`, which unblocked tasks 16 and 20.
 
-F-23 is no longer only a note: `LayerRulesTest.domainIsFrameworkFree` now permits `reactor..`
-explicitly, so resolving F-23 means deleting one entry from that rule's allow-list.
+F-23 is closed: `LayerRulesTest.domainIsFrameworkFree` now **forbids** `reactor..`, and the rule
+passes. The domain has no framework import of any kind, which is the property it existed to have.
 
 Proven against a running Compose stack, through the ADR 006 same-origin proxy exactly as a
 browser reaches it:
@@ -171,13 +171,13 @@ browser reaches it:
 | `/auth/me` | `200`, `roles ["USER"]`, `linked_providers ["LOCAL"]` |
 | Seeded dev admin | `ADMIN` / `123456` → `200`, `roles ["ADMIN"]` |
 
-**Open decisions carried into Phase 1** — none blocking, but **F-22 and F-23 should be settled
+**Open decisions carried into Phase 1** — **F-22 and F-23 are both closed** (2026-07-30). Historical note: they were flagged as things that should be settled
 before Task 15** writes the ArchUnit ruleset:
 
 | ID | Decision needed |
 |---|---|
 | **F-22** | The LLM stub is not blocked in production. ADR 010 §3 forbids a stub *knowledge* adapter in prod; nothing equivalent exists for the LLM, so a prod deploy with no key serves placeholder text |
-| **F-23** | Reactor `Flux` now appears in `domain/` via `LlmPort`. Both PLAN §5.1 and ADR 007 put it there, but it is a third-party type in the layer that is meant to have none |
+| **F-23** | ✅ **CLOSED** 2026-07-30. The streaming turn moved from `domain/port/LlmPort` to `application/ai/LlmStreamPort`, so the domain imports no framework at all and `reactor..` is now on `domainIsFrameworkFree`'s forbidden list rather than absent from it. Interface segregation rather than relocation: `ChatTurnService` streams and never completes, `StructuredOutputRunner` completes and never streams, so neither lost anything. Adapters implement both through `ai/client/LlmProvider`, and `AiConfig` publishes one bean injectable as either port |
 | **F-21** | `PLAN.md` §4.2.11's stack row names Serwist's `defaultCache`, which network-first caches same-origin `/api/`. Task 13 declined it; the row should be corrected |
 | **F-17** | `PLAN.md` §4.0.5's endpoint table still calls `/auth/refresh` "optional v1.1" and omits `/auth/logout-all` |
 | **F-19** | ADR 009 §6's "keyed on both" is ambiguous; task 08 used a composite key |

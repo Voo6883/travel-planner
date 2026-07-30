@@ -6,7 +6,7 @@ import com.travelplanner.domain.ai.LlmOptions;
 import com.travelplanner.domain.ai.Prompt;
 import com.travelplanner.domain.ai.ToolSpec;
 import com.travelplanner.domain.exception.AiProviderException;
-import com.travelplanner.domain.port.LlmPort;
+import com.travelplanner.ai.client.LlmProvider;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -26,7 +26,7 @@ import reactor.core.publisher.Flux;
  * usually answers with prose again, and a fake that quietly switched to an empty string on the
  * repair attempt would test a failure mode no provider has.
  */
-final class ScriptedLlm implements LlmPort {
+final class ScriptedLlm implements LlmProvider {
 
     private final Deque<String> replies = new ArrayDeque<>();
     private final List<Prompt> prompts = new ArrayList<>();

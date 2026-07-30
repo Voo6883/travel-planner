@@ -1,5 +1,6 @@
 package com.travelplanner.ai.langchain4j;
 
+import com.travelplanner.ai.client.LlmProvider;
 import com.travelplanner.domain.ai.LlmCompletion;
 import com.travelplanner.domain.ai.LlmEvent;
 import com.travelplanner.domain.ai.LlmOptions;
@@ -8,7 +9,6 @@ import com.travelplanner.domain.ai.Prompt;
 import com.travelplanner.domain.ai.StopReason;
 import com.travelplanner.domain.ai.ToolSpec;
 import com.travelplanner.domain.exception.AiProviderException;
-import com.travelplanner.domain.port.LlmPort;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
@@ -31,7 +31,7 @@ import reactor.core.publisher.Flux;
  * bounded repair attempt are written once for every provider including the stub — rather than
  * three times, differently.
  */
-abstract class LangChain4jLlmAdapter implements LlmPort {
+abstract class LangChain4jLlmAdapter implements LlmProvider {
 
     private final String providerName;
     private final String modelName;

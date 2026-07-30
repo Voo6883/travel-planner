@@ -57,13 +57,7 @@
     "LlmPort": {
       "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/LlmPort.java",
       "implementations": [
-        "apps/backend/src/main/java/com/travelplanner/ai/client/LlmClientRouter.java",
-        "apps/backend/src/main/java/com/travelplanner/ai/langchain4j/LangChain4jLlmAdapter.java",
-        "apps/backend/src/main/java/com/travelplanner/ai/stub/StubLlmAdapter.java",
-        "apps/backend/src/test/java/com/travelplanner/ai/client/LlmClientRouterTest.java",
-        "apps/backend/src/test/java/com/travelplanner/ai/extraction/ScriptedLlm.java",
-        "apps/backend/src/test/java/com/travelplanner/ai/structured/StructuredOutputRunnerTest.java",
-        "apps/backend/src/test/java/com/travelplanner/application/chat/ChatTestFakes.java"
+        "apps/backend/src/test/java/com/travelplanner/ai/structured/StructuredOutputRunnerTest.java"
       ]
     },
     "LoginAttemptPort": {
@@ -698,6 +692,13 @@
           "apps/backend/src/main/java/com/travelplanner/application/trip/TripBriefService.java",
           "apps/backend/src/main/java/com/travelplanner/application/trip/TripBriefView.java",
           "apps/backend/src/main/java/com/travelplanner/application/trip/TripService.java"
+        ],
+        "adapters": []
+      },
+      "ai": {
+        "controllers": [],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/ai/LlmStreamPort.java"
         ],
         "adapters": []
       },

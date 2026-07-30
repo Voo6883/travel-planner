@@ -1,6 +1,5 @@
 package com.travelplanner.ai.client;
 
-import com.travelplanner.domain.port.LlmPort;
 import java.util.Map;
 
 /**
@@ -15,7 +14,7 @@ import java.util.Map;
  * @param routing feature name to provider name; entries naming an absent provider are ignored at
  *     runtime, having already been rejected at startup by {@code AiConfigValidator}
  */
-public record RoutingTable(Map<String, LlmPort> providers, Map<String, String> routing,
+public record RoutingTable(Map<String, LlmProvider> providers, Map<String, String> routing,
         String defaultProvider) {
 
     public RoutingTable {

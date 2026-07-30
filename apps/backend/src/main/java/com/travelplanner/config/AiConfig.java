@@ -2,6 +2,7 @@ package com.travelplanner.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.ai.client.LlmClientRouter;
+import com.travelplanner.ai.client.LlmProvider;
 import com.travelplanner.ai.client.RouterSupport;
 import com.travelplanner.ai.client.RoutingTable;
 import com.travelplanner.ai.extraction.LlmTripBriefExtractor;
@@ -12,9 +13,10 @@ import com.travelplanner.ai.prompt.PromptTemplateStore;
 import com.travelplanner.ai.resilience.AiRetryPolicy;
 import com.travelplanner.ai.resilience.CircuitBreakerGate;
 import com.travelplanner.ai.resilience.CountingCircuitBreakerGate;
+import com.travelplanner.ai.structured.StructuredOutputRunner;
 import com.travelplanner.ai.stub.StubEmbeddingAdapter;
 import com.travelplanner.ai.stub.StubLlmAdapter;
-import com.travelplanner.ai.structured.StructuredOutputRunner;
+import com.travelplanner.application.ai.LlmStreamPort;
 import com.travelplanner.domain.ai.AiCallRecord;
 import com.travelplanner.domain.port.AiCallLogPort;
 import com.travelplanner.domain.port.EmbeddingPort;
@@ -72,11 +74,19 @@ public class AiConfig {
     }
 
     /**
-     * The bean features inject. Typed as {@link LlmPort} so nothing outside this class depends on the
-     * router's concrete type, which is what keeps a future change of routing strategy invisible.
+     * The bean features inject — <strong>one</strong> instance, injectable as either port.
+     *
+     * <p>Typed as {@link LlmProvider} rather than as the concrete router, so nothing outside this class
+     * depends on the routing strategy. {@code LlmProvider} extends both {@link LlmPort} and
+     * {@link LlmStreamPort}, which is what lets {@code StructuredOutputRunner} ask for the blocking
+     * port and {@code ChatTurnService} ask for the streaming one while Spring resolves both to this.
+     *
+     * <p>Publishing two beans instead — one per port — would be worse in two ways: injecting
+     * {@code LlmPort} would become ambiguous, and two routers could fall out of step on the breaker
+     * state they are each supposed to be the single owner of.
      */
     @Bean
-    public LlmPort llmPort(AiCallRecorder recorder, CircuitBreakerGate breaker) {
+    public LlmProvider llmProvider(AiCallRecorder recorder, CircuitBreakerGate breaker) {
         return new LlmClientRouter(routingTable(),
                 new RouterSupport(AiRetryPolicy.of(properties.getResilience()), breaker, recorder));
     }
@@ -86,7 +96,7 @@ public class AiConfig {
      * can name it explicitly, and so the map is never empty.
      */
     private RoutingTable routingTable() {
-        Map<String, LlmPort> providers = new LinkedHashMap<>();
+        Map<String, LlmProvider> providers = new LinkedHashMap<>();
         providers.put(AiProperties.STUB_PROVIDER, new StubLlmAdapter());
         for (String name : selectedProviders()) {
             if (AiProperties.ANTHROPIC_PROVIDER.equals(name)) {

@@ -5,7 +5,6 @@ import com.travelplanner.ai.observability.AiCallRecorder;
 import com.travelplanner.domain.ai.LlmEvent;
 import com.travelplanner.domain.ai.ToolSpec;
 import com.travelplanner.domain.exception.AiProviderException;
-import com.travelplanner.domain.port.LlmPort;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -48,7 +47,7 @@ final class StreamingCall {
     }
 
     Flux<LlmEvent> execute(LlmClientRouter.CallSpec spec, List<ToolSpec> tools) {
-        LlmPort provider = router.resolve(spec.options());
+        LlmProvider provider = router.resolve(spec.options());
         AiCallContext context = router.contextFor(spec);
         AtomicReference<LlmEvent.Usage> usage = new AtomicReference<>(LlmEvent.Usage.none());
         AtomicReference<String> errorCode = new AtomicReference<>();

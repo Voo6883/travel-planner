@@ -16,7 +16,6 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
 
 /** Structured output: extraction, one repair attempt, then a typed failure — never a half-object. */
 class StructuredOutputRunnerTest {
@@ -154,14 +153,5 @@ class StructuredOutputRunnerTest {
             return LlmCompletion.ofText(complete(prompt, callOptions), LlmEvent.Usage.none());
         }
 
-        @Override
-        public Flux<LlmEvent> stream(Prompt prompt, LlmOptions callOptions) {
-            return Flux.empty();
-        }
-
-        @Override
-        public Flux<LlmEvent> stream(Prompt prompt, List<ToolSpec> tools, LlmOptions callOptions) {
-            return Flux.empty();
-        }
     }
 }

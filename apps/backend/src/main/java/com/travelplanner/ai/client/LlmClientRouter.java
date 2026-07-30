@@ -42,9 +42,9 @@ import reactor.core.publisher.Flux;
  * attempt's answer to them produces a message no model ever wrote. ADR 007's {@code StreamError}
  * frame is the substitute — the failure is made explicit and the decision handed to the caller.
  */
-public final class LlmClientRouter implements LlmPort {
+public final class LlmClientRouter implements LlmProvider {
 
-    private final Map<String, LlmPort> providers;
+    private final Map<String, LlmProvider> providers;
     private final Map<String, String> routing;
     private final String defaultProvider;
     private final AiRetryPolicy retryPolicy;
@@ -121,8 +121,8 @@ public final class LlmClientRouter implements LlmPort {
      * <p>Timing brackets the whole thing including retries, because "how long did the user wait" is
      * the number that matters, not "how long did the final attempt take".
      */
-    private LlmCompletion guarded(CallSpec spec, Function<LlmPort, LlmCompletion> call) {
-        LlmPort provider = resolve(spec.options());
+    private LlmCompletion guarded(CallSpec spec, Function<LlmProvider, LlmCompletion> call) {
+        LlmProvider provider = resolve(spec.options());
         AiCallContext context = contextFor(spec);
         requireClosedBreaker(provider.providerName());
         long startedAt = System.nanoTime();
@@ -139,9 +139,9 @@ public final class LlmClientRouter implements LlmPort {
     }
 
     /** Package-private so {@link StreamingCall} composes the same routing and instrumentation. */
-    LlmPort resolve(LlmOptions options) {
+    LlmProvider resolve(LlmOptions options) {
         String name = providerFor(options == null ? LlmOptions.DEFAULT_FEATURE : options.feature());
-        LlmPort provider = providers.get(name);
+        LlmProvider provider = providers.get(name);
         if (provider == null) {
             throw AiProviderException.unavailable("no adapter is registered for provider " + name);
         }
@@ -151,7 +151,7 @@ public final class LlmClientRouter implements LlmPort {
     AiCallContext contextFor(CallSpec spec) {
         LlmOptions options = spec.options();
         String feature = options == null ? LlmOptions.DEFAULT_FEATURE : options.feature();
-        LlmPort provider = resolve(options);
+        LlmProvider provider = resolve(options);
         return new AiCallContext(feature, operationOf(spec), provider.providerName(),
                 modelOf(options, provider), null, PromptHasher.hash(spec.prompt()));
     }
@@ -190,7 +190,7 @@ public final class LlmClientRouter implements LlmPort {
      * returned zero for every call that did not override the model, which is nearly all of them. A
      * cost column that is uniformly zero reads as "AI is free" rather than as "not measured".
      */
-    private static String modelOf(LlmOptions options, LlmPort provider) {
+    private static String modelOf(LlmOptions options, LlmProvider provider) {
         String override = options == null ? null : options.model();
         return override == null || override.isBlank() ? provider.modelName() : override;
     }

@@ -63,14 +63,18 @@ class LayerRulesTest {
     // ---------------------------------------------------------------------------------------
 
     /**
-     * No framework in the domain.
+     * No framework in the domain. <strong>None</strong> — the list below has no exceptions in it.
      *
-     * <p>Reactor is the one third-party package allowed, and it is a knowing exception rather than
-     * an oversight: ADR 007 puts {@code Flux<LlmEvent>} on {@code LlmPort}, which lives in
-     * {@code domain/port}. It is recorded as open question <strong>F-23</strong> in
-     * {@code tasks/STATUS.md} — a third-party type in the layer that is meant to have none. If
-     * F-23 is resolved by moving the reactive type out, delete {@code reactor..} from this list;
-     * the rule will then hold the stronger property.
+     * <p>It used to omit {@code reactor..}, which was an exception by silence: ADR 007 types the
+     * streaming turn as {@code Flux<LlmEvent>}, and that method sat on {@code domain/port/LlmPort}.
+     * A rule with a hole in it is a rule that has been talked out of applying, and this one was the
+     * whole reason the layer exists — that its types are constructible with no framework present.
+     *
+     * <p><strong>F-23 is closed.</strong> The streaming turn moved to
+     * {@code application/ai/LlmStreamPort}; {@code LlmPort} kept the blocking methods and now imports
+     * nothing but its own value types. Reactor is on the forbidden list, and the rule holds for real.
+     * Do not add an entry back: if a domain type appears to need a framework, the type is in the
+     * wrong package.
      */
     @ArchTest
     static final ArchRule domainIsFrameworkFree = noClasses()
@@ -81,7 +85,8 @@ class LayerRulesTest {
                     "jakarta.servlet..",
                     "com.fasterxml.jackson..",
                     "dev.langchain4j..",
-                    "org.hibernate..")
+                    "org.hibernate..",
+                    "reactor..")
             .because("domain types must be constructible and assertable without a framework on the classpath");
 
     // ---------------------------------------------------------------------------------------

@@ -112,7 +112,7 @@ Two, both deliberate and both recorded as open questions rather than hidden:
 
 | Exception | Where | Tracked as |
 |---|---|---|
-| `reactor..` permitted in the domain | `domainIsFrameworkFree` | **F-23** — ADR 007 puts `Flux<LlmEvent>` on `LlmPort` |
+| ~~`reactor..` permitted in the domain~~ | `domainIsFrameworkFree` | **F-23 closed** 2026-07-30. The streaming turn is on `application/ai/LlmStreamPort`; `reactor..` is now forbidden in the domain and the rule passes. **Do not add an entry back** — a domain type that appears to need a framework is in the wrong package |
 | `components/layout/**` may import `@/features/auth` | ESLint zone | **F-25** — the shared app shell renders identity |
 
 `ConstantName` is suppressed for the architecture test package only

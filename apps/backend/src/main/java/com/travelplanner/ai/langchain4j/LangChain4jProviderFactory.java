@@ -1,8 +1,8 @@
 package com.travelplanner.ai.langchain4j;
 
+import com.travelplanner.ai.client.LlmProvider;
 import com.travelplanner.config.AiProperties;
 import com.travelplanner.domain.port.EmbeddingPort;
-import com.travelplanner.domain.port.LlmPort;
 import java.time.Duration;
 
 /**
@@ -19,11 +19,11 @@ public final class LangChain4jProviderFactory {
     }
 
     /** @param timeout the per-call budget; a hung provider must not hold a thread indefinitely */
-    public static LlmPort anthropic(AiProperties.Anthropic settings, Duration timeout) {
+    public static LlmProvider anthropic(AiProperties.Anthropic settings, Duration timeout) {
         return new AnthropicLlmAdapter(settings, timeout);
     }
 
-    public static LlmPort openAi(AiProperties.OpenAi settings, Duration timeout) {
+    public static LlmProvider openAi(AiProperties.OpenAi settings, Duration timeout) {
         return new OpenAiLlmAdapter(settings, timeout);
     }
 
