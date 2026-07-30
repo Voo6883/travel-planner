@@ -39,6 +39,12 @@ public class MailProperties {
 
     private final Resend resend = new Resend();
 
+    /**
+     * {@code null} means "derive it from the provider" — see {@link #isAutoVerifyRegistrations()}.
+     * A boxed {@code Boolean} precisely so "unset" is distinguishable from "explicitly false".
+     */
+    private Boolean autoVerifyRegistrations;
+
     public String getProvider() {
         return provider;
     }
@@ -55,6 +61,36 @@ public class MailProperties {
      */
     public boolean isStub() {
         return STUB_PROVIDER.equals(provider);
+    }
+
+    /**
+     * Whether a new account starts verified.
+     *
+     * <p><strong>Defaults to {@link #isStub()}, and is now separately overridable.</strong> The two
+     * were the same expression, and conflating them had a consequence nobody had seen: the entire
+     * integration suite runs on the stub mailer — it is what {@code AccountLifecycleApiIntegrationTest}
+     * reads captured mail out of — so every account it registered came out verified, and the five
+     * tests asserting the verification gate had been failing since task 09 introduced the auto-verify
+     * rule against task 08's assertions. They were never noticed because the Testcontainers suite
+     * needs Docker, which this project's machine does not have.
+     *
+     * <p>A suite whose job is to prove the verification gate must be able to exercise it. So
+     * {@code application-integration-test.yml} sets this to {@code false} and keeps the stub adapter
+     * for capture — the production code path, with delivery intercepted.
+     *
+     * <p>Local development is unchanged: unset, this still derives from the provider, so a fresh
+     * checkout with no {@code RESEND_API_KEY} still gets usable accounts rather than a sign-up that
+     * dead-ends for anyone not reading the log at {@code DEBUG}.
+     *
+     * <p>{@code MailConfigValidator} refuses to start under {@code prod} on the stub provider, so the
+     * relaxation still cannot reach production whichever way this is set.
+     */
+    public boolean isAutoVerifyRegistrations() {
+        return autoVerifyRegistrations == null ? isStub() : autoVerifyRegistrations;
+    }
+
+    public void setAutoVerifyRegistrations(Boolean value) {
+        this.autoVerifyRegistrations = value;
     }
 
     public void setProvider(String provider) {

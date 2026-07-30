@@ -19,3 +19,15 @@ logging:
     root: WARN
     com.travelplanner: INFO
     org.flywaydb: INFO
+
+travelplanner:
+  mail:
+    # The suite runs on the stub mailer — AccountLifecycleApiIntegrationTest reads captured mail out
+    # of StubMailerAdapter. `autoVerifyRegistrations` used to be derived from that fact, so every
+    # account this suite registered came out already verified and the five tests asserting the
+    # verification gate could not pass. They had been failing since task 09 introduced the rule
+    # against task 08's assertions, unnoticed because Testcontainers needs Docker.
+    #
+    # A suite whose job is to prove the verification gate has to be able to exercise it: production
+    # code path, delivery intercepted.
+    auto-verify-registrations: false

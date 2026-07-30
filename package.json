@@ -17,6 +17,7 @@
     "verify:fast": "node scripts/verify.mjs fast",
     "verify:task": "node scripts/verify.mjs task",
     "verify:full": "node scripts/verify.mjs full",
+    "test:integration": "node scripts/integration-db.mjs",
     "task:context": "node scripts/task-context.mjs",
     "task:report": "node scripts/task-report.mjs",
     "code-map": "node scripts/code-map.mjs",

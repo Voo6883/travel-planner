@@ -186,8 +186,20 @@ staleness wrong everywhere while still returning a plausible citation.
 ### 4.8 Environment quirks on this machine
 
 - Docker is **not available**; there is native PostgreSQL 16.6 + pgvector 0.8.1 on `localhost:5432`.
-  Testcontainers suites cannot run. Verify schema/entity alignment by booting with
-  `ddl-auto: validate` instead — it checks every mapping and is real evidence.
+  **The Testcontainers suite still runs** — `npm run test:integration` points it at that server,
+  creating a throwaway `travel_planner_it_<pid>` database per run and dropping it afterwards. This
+  replaced the previous advice, which was to boot with `ddl-auto: validate` and accept that as
+  evidence: that checks every entity mapping and is genuinely useful, but it does not run a single
+  test, so "the migration applies" and "the conditional UPDATE serialises two writers" were being
+  taken on trust. Task 16's Testcontainers waiver (F-32) was granted on those grounds and no longer
+  needs to be.
+  - What it does not cover: the *pinned* version. A container fixes PostgreSQL 16 and a pgvector
+    build; a local install is whatever is installed. CI keeps using the container, and a claim should
+    say which one it came from — "green on local Postgres 16.6" and "green in a pinned container" are
+    different sentences.
+  - `AbstractPostgresIntegrationTest` skips the container only when `INTEGRATION_TEST_JDBC_URL` is
+    set, and reads it from the environment rather than a property so it cannot be committed.
+  - Still genuinely out of reach without Docker: `docker compose` and the CI smoke test.
 - Backend runs on **8081** (`SERVER_PORT` in `.env`) because Oracle XE owns 8080.
 - The database is `postgres` with the `postgres` superuser — a deviation from the plan's
   `travel_planner`, deliberately chosen by the owner.

@@ -88,12 +88,35 @@ public class RefreshTokenService {
      * the read is still needed for is telling an ordinary dead session apart from a replay: an
      * expired or logged-out token must not sign the account out of every other device.
      *
+     * <h2>Why this method is not {@code @TransactionalWrite}</h2>
+     *
+     * <p>It was, and that was wrong twice over. A Testcontainers run of
+     * {@code RefreshTokenRotationConcurrencyIT} hung indefinitely and showed both.
+     *
+     * <p><b>Pool starvation.</b> {@link SessionRevocationService#revokeAllSessions} is
+     * {@code REQUIRES_NEW}, which <em>suspends</em> the caller's transaction — keeping its pooled
+     * connection — and then asks for a second one. Eight simultaneous refreshes of one token therefore
+     * wanted sixteen connections from a pool of ten, while the suspended transactions still held the
+     * row lock that the revocation needed. That is a deadlock across the pool and the row, not a
+     * deadlock inside PostgreSQL, so nothing detected it and nothing timed out: the endpoint simply
+     * stopped answering. It needs only one connection at a time now, because there is no outer
+     * transaction to suspend.
+     *
+     * <p><b>The retry was actively dangerous.</b> {@code @TransactionalWrite} also carries
+     * {@code @Retryable(CannotAcquireLockException)}. A deadlock victim would have had the whole
+     * rotation retried — and the second attempt reads its own committed {@code rotated_at}, concludes
+     * the token was replayed, and revokes every session the account has. A lock-timing accident would
+     * have signed a user out of all their devices.
+     *
+     * <p>Nothing is lost by dropping it. There is no multi-statement invariant here to protect: the
+     * atomicity is in {@link RefreshTokenPort#markRotated}'s {@code WHERE} clause, which is exactly
+     * where this class put it, and the adapter gives that one statement its own boundary.
+     *
      * @return the owning user id, for which the caller mints a new access token
      * @throws UnauthorizedException for a missing, unknown, expired, revoked, or replayed token —
      *         uniformly, because a caller holding a bad refresh token learns nothing useful from
      *         being told which kind of bad it was
      */
-    @TransactionalWrite
     public UUID rotate(String rawToken) {
         RefreshToken presented = require(rawToken);
 

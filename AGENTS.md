@@ -134,6 +134,7 @@ docker compose up --build                        # full stack
 npm run verify:fast                              # the edit loop — scoped to what you changed
 npm run verify:task -- 18                        # before claiming a task is done
 npm run verify:full                              # what CI runs (needs Docker)
+npm run test:integration                         # the container suite on a LOCAL Postgres instead
 ```
 
 Frontend on `:3000`, backend API on `:8080/api/v1` inside Docker (`:8081` on the host by default —
@@ -149,5 +150,8 @@ The base VM already provides the runtimes the plan requires — do **not** reins
 - JDK 21 (`java -version`) — matches backend requirement.
 - npm 10.x, git 2.x.
 
-Docker + Compose is **not** preinstalled. Without it you can still run everything except
-`verify:full`'s Testcontainers suite and the compose stack; say so rather than reporting a pass.
+Docker + Compose is **not** preinstalled. Without it, `npm run test:integration` runs the
+Testcontainers suite against a locally-installed PostgreSQL instead — so the only thing genuinely out
+of reach is the compose stack and its smoke test. Say which one you ran rather than reporting a bare
+pass: "integration suite green on local Postgres 16.6" and "green in a pinned container" are
+different claims.

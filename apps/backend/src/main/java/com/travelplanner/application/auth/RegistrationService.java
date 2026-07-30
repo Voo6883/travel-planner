@@ -114,7 +114,7 @@ public class RegistrationService {
      * {@code RESEND_API_KEY} stops at boot rather than silently accepting unverified addresses.
      */
     private boolean autoVerify() {
-        return mail.isStub();
+        return mail.isAutoVerifyRegistrations();
     }
 
     private static User newAccount(RegisterCommand command, String passwordHash, boolean emailVerified) {

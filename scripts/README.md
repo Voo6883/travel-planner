@@ -26,6 +26,7 @@ Contract defined by [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) §
 | `lib/generate-support.mjs` | Shared plumbing: never-overwrite change sets, sorted registry inserts, naming |
 | `lib/generators/*.mjs` | One generator each: error codes, migrations, backend slices, frontend features |
 | `tests/generate.test.mjs` | `node:test` suite for the generators (`npm run scripts:test`) |
+| `integration-db.mjs` | Runs the Testcontainers suite against a locally-installed Postgres (`npm run test:integration`) |
 | `tests/test-check-prerequisites.sh` | Unit tests for the bash gate |
 | `tests/check-prerequisites.tests.ps1` | Unit tests for the PowerShell gate |
 | `tests/run-prereq-tests.mjs` | Cross-platform dispatcher behind `npm run prereq:test` |
@@ -219,6 +220,7 @@ npm run docs:stale             # fail if a doc contradicts the tree (CI runs thi
 npm run verify:fast            # every edit — scoped by git diff. Seconds.
 npm run verify:task -- 18      # task completion — coverage, ArchUnit, drift. A minute.
 npm run verify:full            # what CI runs, Testcontainers included. Needs Docker.
+npm run test:integration       # the same suite, against a LOCAL Postgres. No Docker.
 
 npm run task:report -- 18      # runs the real gates, writes artifacts/task-18-evidence.md
 ```
@@ -276,3 +278,42 @@ its plan first. A collision aborts the whole set and names every conflict, not j
 - **`stale-docs` only checks claims a machine can decide.** Each assertion pairs a claim pattern with a
   contradicting condition and fires only when both hold. "Is this paragraph still accurate" is not
   checkable, and a gate with false positives is a gate that gets switched off.
+
+---
+
+## Running the integration suite without Docker
+
+```bash
+npm run test:integration                              # everything
+npm run test:integration -- --tests '*Concurrency*'   # extra args go through to Gradle
+```
+
+The integration suite is the only thing that proves a migration actually applies, that an entity's
+column types satisfy `ddl-auto: validate`, and that a conditional `UPDATE` really serialises two
+writers. It needs Docker, and Docker Desktop does not work on every machine —
+[`../docs/HANDOFF-REMAINING-WORK.md`](../docs/HANDOFF-REMAINING-WORK.md) §4.8 records the specific
+failure on this project's. The result was migrations shipping with "compiles but was not applied"
+attached, which is a caveat nobody can act on later.
+
+A locally-installed PostgreSQL is right there, so this uses it.
+
+| | |
+|---|---|
+| **Creates** | a throwaway database per run, `travel_planner_it_<pid>` |
+| **Drops it** | always, including on failure — terminating leftover pool connections first, or `DROP DATABASE` fails |
+| **Requires** | `psql` (found on PATH or under the Windows install roots) and the `vector` extension |
+| **Overrides** | `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD` |
+
+**What it guarantees:** the suite meets a genuinely empty schema, which is what makes "migrations
+apply from nothing" a real assertion, and it cannot touch a database anybody cares about.
+
+**What it cannot:** the *version*. A container pins PostgreSQL 16 and pgvector; a local install is
+whatever is installed. So the script prints both and refuses outright when pgvector is missing —
+otherwise V1's `CREATE EXTENSION vector` fails with a message about a control file, which reads as a
+database problem rather than a missing prerequisite.
+
+**CI keeps using Testcontainers.** `AbstractPostgresIntegrationTest` only skips the container when
+`INTEGRATION_TEST_JDBC_URL` is set, and it is read from the environment rather than a property
+precisely so it cannot be committed — a checked-in override pointing at one developer's machine would
+silently disable the container for everybody. This is the local fallback, not a replacement: an unrun
+test is worth less than one run against a database somebody prepared deliberately.

@@ -110,6 +110,9 @@ Three stages, cheapest first. The gates are identical — only the timing differ
 npm run verify:fast            # the edit loop; scoped to what git says you changed
 npm run verify:task -- 18      # before claiming a task is done: coverage, ArchUnit, drift
 npm run verify:full            # what CI runs, Testcontainers included (needs Docker)
+
+npm run test:integration       # the Testcontainers suite against a LOCAL Postgres — no Docker.
+                               # Creates a throwaway database per run and drops it afterwards.
 ```
 
 ### Working on a task
