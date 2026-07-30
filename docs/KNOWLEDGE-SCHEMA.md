@@ -17,8 +17,13 @@
 | `V16` | `transport_mode`, `route_segment`, `travel_app` |
 | `V17` | `seasonality`, `price_history` |
 | `V18` | `destination_guide_embedding`, `poi_embedding` + HNSW indexes |
+| `V19` | `planner_session`, `conversation`, `message` (task 20 — not TKB, listed for numbering) |
+| `V20` | `trip_brief` brief columns (task 18 — not TKB, listed for numbering) |
+| `V21` | `travel_app_replacement` |
 
-**Next free migration: `V19`.**
+**Next free migration: run `npm run code-map` — it derives the number from the filenames.** A figure
+written here goes stale the moment two branches read it on different days, which is exactly how two
+migrations end up sharing a version and Flyway refuses to start the second one.
 
 ## 2. Shape
 
@@ -33,7 +38,10 @@ destination ──┬── destination_guide ── destination_guide_embedding
               ├── seasonality           (12 rows, one per month)
               └── price_history
 
-travel_app     (keyed by country_code, NOT destination — Grab covers Thailand, not just Bangkok)
+travel_app ────┬── travel_app_replacement
+               │      (keyed by country_code, NOT destination — Grab covers Thailand, not just
+               │       Bangkok. The replacement row says "the app you already have does not work
+               └───    here"; its replaced_app_key is a GLOBAL slug and deliberately not an FK)
 ```
 
 `destination` is the only catalogue table with **no** `source_id`: it is a place, not a claim about one.
@@ -166,6 +174,33 @@ Per destination: 1 guide (`overview` / `food` / `practical`, `locale = en`), are
 route segments (by area slug pair + mode slug), 12 seasonality rows, price history, plus country-scoped
 travel apps and a `sources` file.
 
+A travel app may carry a `replaces` array — the V21 suppressions, nested under the local app rather than
+declared at the top level. Nested is where a curator can get it right: the statement is "this app replaces
+that one", and a top-level list would repeat the local app's slug, which is one more thing to typo into a
+suppression that matches nothing.
+
+```json
+{
+  "country_code": "CN",
+  "slug": "sample-ride-hailing",
+  "category": "RIDEHAILING",
+  "replaces": [
+    {
+      "replaced_app_key": "uber",
+      "replaced_app_name": "Uber",
+      "reason": "NOT_AVAILABLE",
+      "detail": "The sentence the traveller reads. Market-specific, and writing it is the point at which somebody checks whether it is still true."
+    }
+  ]
+}
+```
+
+`reason` mirrors `domain/enums/AppReplacementReason`: `NOT_AVAILABLE`, `NETWORK_BLOCKED`,
+`NEEDS_LOCAL_PAYMENT`, `NOT_THE_LOCAL_STANDARD`. Four categories rather than free text because the UI
+wording differs — only the last one is advice rather than a warning, and rendering advice in a red box
+trains travellers to ignore the box. `MigrationContractTest` asserts the enum and the CHECK constraint
+agree, so adding a reason without widening the constraint fails the build.
+
 ADR 010 §1 curated depth per destination: 1 guide, ≥4 areas, ≥25 POIs (≥8 `FOOD`), ≥1 transport mode set,
 ≥3 travel apps, 12 months seasonality, route segments for curated pairs only.
 
@@ -175,6 +210,9 @@ Constraints a seed will hit:
 - `route_segment` forbids `from_area = to_area`; `duration_minutes > 0` and **whole minutes** (the column is
   `integer`, so `RouteSegment` rejects a sub-minute `Duration` rather than truncating silently).
 - `travel_app` needs at least one store link.
+- `travel_app_replacement.replaced_app_key` must be a lower-case slug (`uber`, `google-maps`). Enforced
+  in SQL, in the record, **and** at load time, because the failure is silent: a key with a trailing
+  space or a capital letter matches no app, so the pack renders and the warning is simply absent.
 - `poi.slug` unique per destination; `destination_area.slug` unique per destination.
 
 Sample data must use the reserved `stub:sample` source with `SAMPLE_DATA` / `SAMPLE`, and must **not** be
@@ -189,15 +227,30 @@ unchanged rows are never re-embedded, which is what stops a nightly refresh re-e
 
 **Task 41 (curation)** exposes for editing: `destination_guide` (`overview`, `food`, `practical`), `poi`
 (`name`, `description`, `category`, `tags`, `opening_hours`, `price_band`, coordinates, `area_id`), and
-`travel_app` (`name`, `category`, `description`, store URLs) — each with its `source_id` and an audit
-trail. `destination_guide` and `poi` carry a `version` column for that UI's optimistic locking; note it is
+`travel_app` (`name`, `category`, `description`, store URLs) plus its `travel_app_replacement` rows —
+each with its `source_id` and an audit trail. Replacements need the same review discipline as any other
+claim: "Uber does not work here" stops being true the day it starts working, and a stale suppression is
+worse than a stale store link because it actively steers a traveller away from an app that now works. `destination_guide` and `poi` carry a `version` column for that UI's optimistic locking; note it is
 **not** ADR 008's user-versus-agent lock and the records deliberately do not implement `Versioned`.
 
 Neither task may change `embedding_model` or `embedding_dimension` in place — see §5.
 
 ## 9. Known gaps
 
-Recorded in [`tasks/STATUS.md`](../tasks/STATUS.md): **F-27** (`DestinationArea` coordinates unchecked —
-record and V14 must move together), **F-28** (`KnowledgeQuery` array-based equality), **F-29**
-(`Destination.timezone` never validated as an IANA zone, which Task 28 depends on), **F-30**
-(`DestinationNotCoveredException.supportedSlugs` is `transient`).
+**Closed 2026-07-30** (the dev-branch review pass): **F-27** — `DestinationArea` now range-checks both
+coordinates, matching `Destination`; **F-28** — `KnowledgeQuery` has value equality over its `float[]`,
+so task 37's semantic cache can key on it instead of missing on every lookup; **F-29** —
+`Destination.timezone` is validated against the JVM's tzdb, so a bad zone fails at seed time rather than
+in task 28's scheduler. The review's schema gap (no way to say "Didi replaces Uber in China") is closed
+by V21 and §7 above.
+
+**Still open**, recorded in [`tasks/STATUS.md`](../tasks/STATUS.md): **F-30**
+(`DestinationNotCoveredException.supportedSlugs` is `transient`), **F-34** (real curation unstarted — the
+committed dataset is deliberately SAMPLE and below ADR 010 §1's floor of 25 POIs, so
+`findSupportedDestinations()` is empty and nothing can be ranked; capability gate **17C**).
+
+V21's own gap, recorded here rather than as a finding because it is a scope decision rather than a
+defect: the table cannot express "this app does not work here and there is no local alternative".
+`local_app_id` is `NOT NULL`, because a row's entire content is "install this one instead". Task 29
+(route and mobility) is the first consumer that might need the alternative-less form; adding it is an
+additive migration and a nullable column, not a redesign.

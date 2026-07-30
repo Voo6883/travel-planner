@@ -1,5 +1,6 @@
 package com.travelplanner.infrastructure.knowledge;
 
+import com.travelplanner.domain.enums.AppReplacementReason;
 import com.travelplanner.domain.enums.CoverageLevel;
 import com.travelplanner.domain.enums.CrowdBand;
 import com.travelplanner.domain.enums.PoiCategory;
@@ -192,6 +193,32 @@ public record SampleKnowledgeDocument(
             String description,
             String iosUrl,
             String androidUrl,
-            String sourceRef) {
+            String sourceRef,
+            List<AppReplacementNode> replaces) {
+
+        public TravelAppNode {
+            // Absent in every seed file written before V21, and optional for most apps afterwards —
+            // a transit app replaces nothing. Normalising here rather than null-checking at each use
+            // keeps the writer's loop readable and means an omitted key behaves as "none".
+            replaces = replaces == null ? List.of() : List.copyOf(replaces);
+        }
+    }
+
+    /**
+     * One row of {@code travel_app_replacement} (V21), nested under the local app that replaces it.
+     *
+     * <p>Nested rather than a top-level array because that is where a curator can get it right: the
+     * statement is "this app replaces that one", and writing it beside the local app's own entry makes
+     * the pairing impossible to mis-key. A top-level list would need the local app's slug repeated,
+     * which is one more thing to typo into a suppression that silently matches nothing.
+     *
+     * @param replacedAppKey a lower-case slug for a globally-known app — {@code uber},
+     *        {@code whatsapp}. Not country-scoped; the same key means the same product everywhere
+     */
+    public record AppReplacementNode(
+            String replacedAppKey,
+            String replacedAppName,
+            AppReplacementReason reason,
+            String detail) {
     }
 }

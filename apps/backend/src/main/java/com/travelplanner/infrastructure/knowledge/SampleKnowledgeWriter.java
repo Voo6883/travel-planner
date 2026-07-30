@@ -11,6 +11,7 @@ import com.travelplanner.infrastructure.knowledge.SampleKnowledgeDocument.PriceO
 import com.travelplanner.infrastructure.knowledge.SampleKnowledgeDocument.RouteSegmentNode;
 import com.travelplanner.infrastructure.knowledge.SampleKnowledgeDocument.SeasonalityNode;
 import com.travelplanner.infrastructure.knowledge.SampleKnowledgeDocument.TransportModeNode;
+import com.travelplanner.infrastructure.knowledge.SampleKnowledgeDocument.AppReplacementNode;
 import com.travelplanner.infrastructure.knowledge.SampleKnowledgeDocument.TravelAppNode;
 import com.travelplanner.infrastructure.persistence.entity.DestinationAreaEntity;
 import com.travelplanner.infrastructure.persistence.entity.DestinationEntity;
@@ -22,6 +23,7 @@ import com.travelplanner.infrastructure.persistence.entity.RouteSegmentEntity;
 import com.travelplanner.infrastructure.persistence.entity.SeasonalityEntity;
 import com.travelplanner.infrastructure.persistence.entity.TransportModeEntity;
 import com.travelplanner.infrastructure.persistence.entity.TravelAppEntity;
+import com.travelplanner.infrastructure.persistence.entity.TravelAppReplacementEntity;
 import com.travelplanner.infrastructure.persistence.repository.DestinationAreaJpaRepository;
 import com.travelplanner.infrastructure.persistence.repository.DestinationGuideJpaRepository;
 import com.travelplanner.infrastructure.persistence.repository.DestinationJpaRepository;
@@ -32,6 +34,7 @@ import com.travelplanner.infrastructure.persistence.repository.RouteSegmentJpaRe
 import com.travelplanner.infrastructure.persistence.repository.SeasonalityJpaRepository;
 import com.travelplanner.infrastructure.persistence.repository.TransportModeJpaRepository;
 import com.travelplanner.infrastructure.persistence.repository.TravelAppJpaRepository;
+import com.travelplanner.infrastructure.persistence.repository.TravelAppReplacementJpaRepository;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -84,6 +87,17 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiresDatabase
 public class SampleKnowledgeWriter {
 
+    /**
+     * Mirrors {@code ck_travel_app_replacement_key_is_slug} (V21) and
+     * {@code TravelAppReplacement.SLUG}.
+     *
+     * <p>Checked at load time so a mistyped key fails naming the seed file, not as a constraint
+     * violation naming a table. The key is a join target: a trailing space suppresses nothing while
+     * looking entirely correct in JSON, and the symptom is a missing warning rather than an error.
+     */
+    private static final java.util.regex.Pattern REPLACED_APP_KEY =
+            java.util.regex.Pattern.compile("^[a-z0-9]+(-[a-z0-9]+)*$");
+
     private final KnowledgeSourceJpaRepository sources;
     private final DestinationJpaRepository destinations;
     private final DestinationGuideJpaRepository guides;
@@ -94,6 +108,7 @@ public class SampleKnowledgeWriter {
     private final SeasonalityJpaRepository seasonality;
     private final PriceHistoryJpaRepository priceHistory;
     private final TravelAppJpaRepository travelApps;
+    private final TravelAppReplacementJpaRepository travelAppReplacements;
     private final SampleEmbeddingWriter embeddings;
 
     @SuppressWarnings("checkstyle:ParameterNumber")
@@ -108,6 +123,7 @@ public class SampleKnowledgeWriter {
             SeasonalityJpaRepository seasonality,
             PriceHistoryJpaRepository priceHistory,
             TravelAppJpaRepository travelApps,
+            TravelAppReplacementJpaRepository travelAppReplacements,
             SampleEmbeddingWriter embeddings) {
         this.sources = sources;
         this.destinations = destinations;
@@ -119,6 +135,7 @@ public class SampleKnowledgeWriter {
         this.seasonality = seasonality;
         this.priceHistory = priceHistory;
         this.travelApps = travelApps;
+        this.travelAppReplacements = travelAppReplacements;
         this.embeddings = embeddings;
     }
 
@@ -479,9 +496,9 @@ public class SampleKnowledgeWriter {
     }
 
     private void seedTravelApps(SampleKnowledgeDocument document, SeedContext context) {
-        Set<String> existing = new HashSet<>();
+        Map<String, TravelAppEntity> bySlug = new HashMap<>();
         for (TravelAppEntity app : travelApps.findByCountryCode(context.countryCode)) {
-            existing.add(app.getSlug());
+            bySlug.put(app.getSlug(), app);
         }
         for (TravelAppNode node : document.travelApps()) {
             if (!context.countryCode.equals(node.countryCode())) {
@@ -491,23 +508,77 @@ public class SampleKnowledgeWriter {
                         + node.slug() + "' declares country '" + node.countryCode()
                         + "' but the destination is in '" + context.countryCode + "'");
             }
-            if (!existing.add(node.slug())) {
+            TravelAppEntity app = bySlug.get(node.slug());
+            if (app == null) {
+                app = newTravelApp(node, context);
+                travelApps.save(app);
+                bySlug.put(node.slug(), app);
+                context.created();
+            }
+            // Reconciled for an app that already existed, not only for a new one. A curator adding a
+            // `replaces` entry to a seed file whose app row was written last week must see it land;
+            // skipping the whole app because its slug is known would make the addition a silent
+            // no-op, and the pack would keep recommending the app the row exists to warn about.
+            seedTravelAppReplacements(node, app, context);
+        }
+    }
+
+    private TravelAppEntity newTravelApp(TravelAppNode node, SeedContext context) {
+        TravelAppEntity entity = new TravelAppEntity();
+        entity.setId(UUID.randomUUID());
+        entity.setCountryCode(node.countryCode());
+        entity.setSlug(node.slug());
+        entity.setName(node.name());
+        entity.setCategory(node.category());
+        entity.setDescription(node.description());
+        entity.setIosUrl(node.iosUrl());
+        entity.setAndroidUrl(node.androidUrl());
+        entity.setSource(context.source);
+        entity.setRetrievedAt(context.now);
+        entity.setCreatedAt(context.now);
+        entity.setUpdatedAt(context.now);
+        return entity;
+    }
+
+    /**
+     * The V21 rows for one local app: "the app you already have does not work here".
+     *
+     * <p>Idempotent on {@code (local_app_id, replaced_app_key)}, which is also the unique constraint,
+     * so a re-run adds nothing and a second seed file naming the same pair is a no-op rather than a
+     * constraint violation that fails the whole load.
+     *
+     * <p>The key is validated here rather than left to the database. {@code ck_..._key_is_slug} would
+     * catch it, but as a constraint violation naming a table; a curator who typed a trailing space is
+     * better served by a message naming the app and the destination file.
+     */
+    private void seedTravelAppReplacements(TravelAppNode node, TravelAppEntity app,
+            SeedContext context) {
+        Set<String> existing = new HashSet<>();
+        for (TravelAppReplacementEntity row : travelAppReplacements.findByLocalAppId(app.getId())) {
+            existing.add(row.getReplacedAppKey());
+        }
+        for (AppReplacementNode replacement : node.replaces()) {
+            String key = replacement.replacedAppKey();
+            if (key == null || !REPLACED_APP_KEY.matcher(key).matches()) {
+                throw new IllegalStateException(context.destinationSlug + ": travel app '"
+                        + node.slug() + "' declares replaced_app_key '" + key
+                        + "', which is not a lower-case slug — it would suppress nothing.");
+            }
+            if (!existing.add(key)) {
                 continue;
             }
-            TravelAppEntity entity = new TravelAppEntity();
+            TravelAppReplacementEntity entity = new TravelAppReplacementEntity();
             entity.setId(UUID.randomUUID());
-            entity.setCountryCode(node.countryCode());
-            entity.setSlug(node.slug());
-            entity.setName(node.name());
-            entity.setCategory(node.category());
-            entity.setDescription(node.description());
-            entity.setIosUrl(node.iosUrl());
-            entity.setAndroidUrl(node.androidUrl());
+            entity.setLocalAppId(app.getId());
+            entity.setReplacedAppKey(key);
+            entity.setReplacedAppName(replacement.replacedAppName());
+            entity.setReason(replacement.reason());
+            entity.setDetail(replacement.detail());
             entity.setSource(context.source);
             entity.setRetrievedAt(context.now);
             entity.setCreatedAt(context.now);
             entity.setUpdatedAt(context.now);
-            travelApps.save(entity);
+            travelAppReplacements.save(entity);
             context.created();
         }
     }

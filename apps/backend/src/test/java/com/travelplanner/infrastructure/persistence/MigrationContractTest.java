@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.travelplanner.domain.enums.AdminAction;
 import com.travelplanner.domain.enums.AdminActionResult;
+import com.travelplanner.domain.enums.AppReplacementReason;
 import com.travelplanner.domain.enums.ConversationScope;
 import com.travelplanner.domain.enums.ConversationState;
 import com.travelplanner.domain.enums.ChatMessageRole;
@@ -332,6 +333,41 @@ class MigrationContractTest {
         assertThat(constantsIn(chatMigration, "CONSTRAINT ck_message_status CHECK (status IN ("))
                 .containsExactlyInAnyOrderElementsOf(
                         Stream.of(ChatMessageStatus.values()).map(Enum::name).toList());
+    }
+
+    @Test
+    void theAppReplacementReasonConstraintListsExactlyTheDomainEnumConstants() {
+        assertThat(constantsIn(read("V21__create_travel_app_replacement.sql"),
+                "CONSTRAINT ck_travel_app_replacement_reason CHECK (reason IN ("))
+                .containsExactlyInAnyOrderElementsOf(
+                        Stream.of(AppReplacementReason.values()).map(Enum::name).toList());
+    }
+
+    /**
+     * The suppression table's two structural decisions, asserted rather than trusted to review.
+     *
+     * <p>Both are the kind of thing a later "tidy-up" would undo while making the schema look more
+     * normalised, and both would fail silently. A {@code country_code} column here would be a second
+     * source of truth for a fact {@code travel_app} already holds, and the two can disagree; a
+     * foreign key on {@code replaced_app_key} would force a {@code travel_app} row for an app that
+     * must never appear in a pack, which one forgotten {@code WHERE} then recommends installing.
+     */
+    @Test
+    void theSuppressionTableDoesNotDuplicateCountryOrReferenceTheReplacedApp() {
+        String migration = stripComments(read("V21__create_travel_app_replacement.sql"));
+        String table = between(migration, "CREATE TABLE travel_app_replacement (", "\n);");
+
+        assertThat(table)
+                .describedAs("country lives on travel_app, reachable through local_app_id")
+                .doesNotContain("country_code");
+        assertThat(table)
+                .describedAs("the replaced app is a global slug, not a row in this country's pack")
+                .doesNotContain("REFERENCES travel_app (id)\n        FOREIGN KEY (replaced");
+        assertThat(table).contains("CONSTRAINT uq_travel_app_replacement_pair UNIQUE "
+                + "(local_app_id, replaced_app_key)");
+        // A key that is not a slug is a suppression that matches nothing — silent, and invisible in
+        // review, because the pack still renders.
+        assertThat(table).contains("CONSTRAINT ck_travel_app_replacement_key_is_slug");
     }
 
     @Test

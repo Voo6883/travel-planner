@@ -11,6 +11,7 @@ import com.travelplanner.domain.model.RouteSegment;
 import com.travelplanner.domain.model.SeasonalityMonth;
 import com.travelplanner.domain.model.TransportMode;
 import com.travelplanner.domain.model.TravelApp;
+import com.travelplanner.domain.model.TravelAppReplacement;
 import com.travelplanner.domain.valueobject.KnowledgeQuery;
 import java.util.List;
 import java.util.Optional;
@@ -75,6 +76,20 @@ public interface KnowledgePort {
 
     /** App packs are per country, not per city — Grab covers Thailand, not just Bangkok. */
     List<TravelApp> findTravelApps(String countryCode);
+
+    /**
+     * Which globally-held apps do not work in this country, and what to install instead (V21).
+     *
+     * <p>The negative half of an app pack, and a separate call rather than a field on
+     * {@link TravelApp} because it answers a different question. A caller building a pack asks both;
+     * a caller annotating an itinerary leg — task 29 — asks only this one, and would otherwise have
+     * to load every app in the country to find out whether Uber is worth suggesting.
+     *
+     * <p>An empty list means "nothing is recorded as suppressed here", which is <em>not</em> the same
+     * as "everything works". Absence of curation is not evidence, and PLAN §4.1.0 forbids treating it
+     * as such — so a caller must not turn an empty result into a positive claim.
+     */
+    List<TravelAppReplacement> findTravelAppReplacements(String countryCode);
 
     /** All twelve months for a FULL destination, ordered January to December. */
     List<SeasonalityMonth> findSeasonality(UUID destinationId);

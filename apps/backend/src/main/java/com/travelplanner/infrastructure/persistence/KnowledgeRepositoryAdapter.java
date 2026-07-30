@@ -13,6 +13,7 @@ import com.travelplanner.domain.model.RouteSegment;
 import com.travelplanner.domain.model.SeasonalityMonth;
 import com.travelplanner.domain.model.TransportMode;
 import com.travelplanner.domain.model.TravelApp;
+import com.travelplanner.domain.model.TravelAppReplacement;
 import com.travelplanner.domain.port.KnowledgePort;
 import com.travelplanner.domain.valueobject.KnowledgeQuery;
 import com.travelplanner.infrastructure.persistence.mapper.DestinationAreaPersistenceMapper;
@@ -24,6 +25,7 @@ import com.travelplanner.infrastructure.persistence.mapper.RouteSegmentPersisten
 import com.travelplanner.infrastructure.persistence.mapper.SeasonalityMonthPersistenceMapper;
 import com.travelplanner.infrastructure.persistence.mapper.TransportModePersistenceMapper;
 import com.travelplanner.infrastructure.persistence.mapper.TravelAppPersistenceMapper;
+import com.travelplanner.infrastructure.persistence.mapper.TravelAppReplacementPersistenceMapper;
 import com.travelplanner.infrastructure.persistence.repository.DestinationAreaJpaRepository;
 import com.travelplanner.infrastructure.persistence.repository.DestinationGuideJpaRepository;
 import com.travelplanner.infrastructure.persistence.repository.DestinationJpaRepository;
@@ -33,6 +35,7 @@ import com.travelplanner.infrastructure.persistence.repository.RouteSegmentJpaRe
 import com.travelplanner.infrastructure.persistence.repository.SeasonalityJpaRepository;
 import com.travelplanner.infrastructure.persistence.repository.TransportModeJpaRepository;
 import com.travelplanner.infrastructure.persistence.repository.TravelAppJpaRepository;
+import com.travelplanner.infrastructure.persistence.repository.TravelAppReplacementJpaRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -71,6 +74,7 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
     private final TransportModeJpaRepository transportModes;
     private final RouteSegmentJpaRepository routeSegments;
     private final TravelAppJpaRepository travelApps;
+    private final TravelAppReplacementJpaRepository travelAppReplacements;
     private final SeasonalityJpaRepository seasonality;
     private final PriceHistoryJpaRepository priceHistory;
 
@@ -81,6 +85,7 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
     private final TransportModePersistenceMapper transportModeMapper;
     private final RouteSegmentPersistenceMapper routeSegmentMapper;
     private final TravelAppPersistenceMapper travelAppMapper;
+    private final TravelAppReplacementPersistenceMapper travelAppReplacementMapper;
     private final SeasonalityMonthPersistenceMapper seasonalityMapper;
     private final PriceObservationPersistenceMapper priceObservationMapper;
 
@@ -95,6 +100,7 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
             TransportModeJpaRepository transportModes,
             RouteSegmentJpaRepository routeSegments,
             TravelAppJpaRepository travelApps,
+            TravelAppReplacementJpaRepository travelAppReplacements,
             SeasonalityJpaRepository seasonality,
             PriceHistoryJpaRepository priceHistory,
             DestinationPersistenceMapper destinationMapper,
@@ -104,6 +110,7 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
             TransportModePersistenceMapper transportModeMapper,
             RouteSegmentPersistenceMapper routeSegmentMapper,
             TravelAppPersistenceMapper travelAppMapper,
+            TravelAppReplacementPersistenceMapper travelAppReplacementMapper,
             SeasonalityMonthPersistenceMapper seasonalityMapper,
             PriceObservationPersistenceMapper priceObservationMapper,
             KnowledgeVectorSearch vectorSearch) {
@@ -114,6 +121,7 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
         this.transportModes = transportModes;
         this.routeSegments = routeSegments;
         this.travelApps = travelApps;
+        this.travelAppReplacements = travelAppReplacements;
         this.seasonality = seasonality;
         this.priceHistory = priceHistory;
         this.destinationMapper = destinationMapper;
@@ -123,6 +131,7 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
         this.transportModeMapper = transportModeMapper;
         this.routeSegmentMapper = routeSegmentMapper;
         this.travelAppMapper = travelAppMapper;
+        this.travelAppReplacementMapper = travelAppReplacementMapper;
         this.seasonalityMapper = seasonalityMapper;
         this.priceObservationMapper = priceObservationMapper;
         this.vectorSearch = vectorSearch;
@@ -185,6 +194,13 @@ public class KnowledgeRepositoryAdapter implements KnowledgePort {
     public List<TravelApp> findTravelApps(String countryCode) {
         return travelApps.findByCountryCode(countryCode).stream()
                 .map(travelAppMapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<TravelAppReplacement> findTravelAppReplacements(String countryCode) {
+        return travelAppReplacements.findByCountryCode(countryCode).stream()
+                .map(travelAppReplacementMapper::toDomain)
                 .toList();
     }
 

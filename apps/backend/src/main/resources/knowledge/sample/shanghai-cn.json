@@ -470,7 +470,15 @@
       "description": "SAMPLE DATA — an invented app. Populates the RIDEHAILING category of the country app pack. Not a real product; the store links deliberately do not resolve.",
       "ios_url": "https://example.invalid/sample-app/sample-ride-hailing/ios",
       "android_url": "https://example.invalid/sample-app/sample-ride-hailing/android",
-      "source_ref": "stub:sample"
+      "source_ref": "stub:sample",
+      "replaces": [
+        {
+          "replaced_app_key": "sample-global-ride-hailing",
+          "replaced_app_name": "Sample Global Ride-Hailing App",
+          "reason": "NOT_AVAILABLE",
+          "detail": "SAMPLE DATA — an invented suppression, present so the V21 shape is exercised end to end. The real statement this models (a global ride-hailing app that does not operate in a market, and the local app to install instead) is real curation and belongs to capability gate 17C — see F-34. ADR 010 §3 forbids a stub emitting a plausible travel fact, so the replaced app is deliberately fictional too."
+        }
+      ]
     },
     {
       "country_code": "CN",

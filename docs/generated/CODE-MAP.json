@@ -370,7 +370,7 @@
     }
   },
   "migrations": {
-    "nextFreeVersion": "V21",
+    "nextFreeVersion": "V22",
     "gaps": [],
     "applied": [
       {
@@ -538,6 +538,14 @@
         "altersTables": [
           "trip_brief"
         ]
+      },
+      {
+        "version": 21,
+        "file": "apps/backend/src/main/resources/db/migration/V21__create_travel_app_replacement.sql",
+        "createsTables": [
+          "travel_app_replacement"
+        ],
+        "altersTables": []
       }
     ]
   },
@@ -768,6 +776,7 @@
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/SourcedEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/TransportModeEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/TravelAppEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/TravelAppReplacementEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/TripBriefEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/TripEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/UserEntity.java",
@@ -794,6 +803,7 @@
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/SeasonalityMonthPersistenceMapper.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/TransportModePersistenceMapper.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/TravelAppPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/TravelAppReplacementPersistenceMapper.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/TripBriefPersistenceMapper.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/TripPersistenceMapper.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/UserIdentityPersistenceMapper.java",
@@ -823,6 +833,7 @@
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/SeasonalityJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/TransportModeJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/TravelAppJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/TravelAppReplacementJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/TripBriefJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/TripJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/UserIdentityJpaRepository.java",
