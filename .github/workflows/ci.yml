@@ -299,6 +299,25 @@ jobs:
           [ "$fail" -eq 0 ] && echo "no committed secrets found"
           exit "$fail"
 
+      # Documentation that lies to an agent is a defect, not untidiness. The 2026-07-29 review
+      # found README.md and AGENTS.md still describing the repository as planning-only with
+      # "nothing to run", while both applications were building and gating here. An agent handed
+      # that as authoritative context refuses to run the build or scaffolds a second application
+      # beside the first — a wasted task cycle before anyone notices.
+      #
+      # Both checks are dependency-free Node, for the same reason the secret scan above is plain
+      # shell: a gate that needs an install is a gate that gets skipped when the install breaks.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Documentation is not stale
+        run: npm run docs:stale
+
+      - name: CODE-MAP is current
+        run: npm run code-map:check
+
       # PR-only: flags dependencies introduced with known vulnerabilities.
       - name: Dependency review
         if: github.event_name == 'pull_request'

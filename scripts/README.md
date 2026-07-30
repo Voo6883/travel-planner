@@ -15,6 +15,13 @@ Contract defined by [`plans/superpower/PLAN.md`](../plans/superpower/PLAN.md) §
 | `dev-apps.mjs` | Runs backend + frontend together (`npm run dev:apps`) |
 | `install-postgres-windows.ps1` | Native PostgreSQL 16 install to `D:\PostgreSQL\16` |
 | `install-pgvector-windows.ps1` | pgvector extension for native Windows Postgres |
+| `lib/repo.mjs` | Shared read-only helpers — repo paths, markdown sections, STATUS ledger parsing |
+| `lib/code-map.mjs` | Derives the code map from the tree (ports, error codes, migrations, features, tasks) |
+| `code-map.mjs` | Writes `docs/generated/CODE-MAP.json`; `--check` fails when it is stale (`npm run code-map`) |
+| `task-context.mjs` | The per-task execution pack (`npm run task:context -- 21`) |
+| `verify.mjs` | The three-stage gate ladder (`npm run verify:fast` / `verify:task` / `verify:full`) |
+| `task-report.mjs` | Runs the real gates and writes `artifacts/task-NN-evidence.md` (`npm run task:report -- 18`) |
+| `stale-docs.mjs` | Fails when agent-facing docs contradict the tree (`npm run docs:stale`) |
 | `tests/test-check-prerequisites.sh` | Unit tests for the bash gate |
 | `tests/check-prerequisites.tests.ps1` | Unit tests for the PowerShell gate |
 | `tests/run-prereq-tests.mjs` | Cross-platform dispatcher behind `npm run prereq:test` |
@@ -190,3 +197,47 @@ point of the gate.
 scripts, add parsing cases to *both* test suites, and update the table in this file. There is no
 shared implementation between the two scripts by design — the mirrored test suites are what keep
 them honest.
+
+---
+
+## Agent-efficiency tooling
+
+Added in response to the 2026-07-29 dev-branch review §6. All five are dependency-free Node: the root
+`package.json` has no `dependencies` and no `devDependencies` (PLAN §4.0.0 — orchestration only), and
+a gate that needs an install is a gate that gets skipped the week the install breaks.
+
+```bash
+npm run task:context -- 21     # ~4 KB: dependency gate, DoD, resolved PLAN line ranges, findings
+npm run code-map               # regenerate docs/generated/CODE-MAP.json
+npm run code-map:check         # fail if the committed map is stale (CI runs this)
+npm run docs:stale             # fail if a doc contradicts the tree (CI runs this)
+
+npm run verify:fast            # every edit — scoped by git diff. Seconds.
+npm run verify:task -- 18      # task completion — coverage, ArchUnit, drift. A minute.
+npm run verify:full            # what CI runs, Testcontainers included. Needs Docker.
+
+npm run task:report -- 18      # runs the real gates, writes artifacts/task-18-evidence.md
+```
+
+### What each one is for
+
+| Command | The waste it removes |
+|---|---|
+| `task:context` | Re-reading 7,500+ lines of planning docs to establish a dozen facts, once per task. |
+| `code-map` | Repository-wide `grep` for "who implements this port", "what is the next migration", "is this error code translated". |
+| `verify:*` | Paying Testcontainers and a production build to find out a one-line fix compiles. |
+| `task:report` | Hand-assembled evidence — which can be paraphrased, or quoted from a run three commits old. |
+| `docs:stale` | An agent acting confidently on documentation that stopped being true. |
+
+### Deliberate limits
+
+- **`code-map` is regexes, not an AST walk.** Its output decides which three files an agent opens.
+  Being wrong about an unusual declaration costs one extra file read; a parser would cost a
+  dependency this package is not allowed to have. Ambiguity is omitted rather than guessed.
+- **`task:report` does not write `tasks/STATUS.md`.** "CI is green for this commit" is a fact only the
+  CI provider can assert, and a local script that wrote `done` on the strength of a local run would be
+  manufacturing the evidence the gate exists to demand. It prints the ledger line to paste, and the
+  conditions under which pasting it is honest.
+- **`stale-docs` only checks claims a machine can decide.** Each assertion pairs a claim pattern with a
+  contradicting condition and fires only when both hold. "Is this paragraph still accurate" is not
+  checkable, and a gate with false positives is a gate that gets switched off.

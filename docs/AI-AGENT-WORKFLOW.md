@@ -14,16 +14,30 @@
 
 Run once at the start of every coding session.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  READ   AGENTS.md → this file → PLAN.md (relevant §)        │
-│  CHECK  npm run prereq  (stop if fails)                     │
-│  SCOPE  Map task → C1–C5 | Phase 0a/0b | infra | docs only │
-│  BRANCH git checkout -b cursor/<desc>-5b6b  (or feature/*)  │
-└─────────────────────────────────────────────────────────────┘
+```bash
+npm run prereq                      # stop if this fails
+npm run task:context -- NN          # the pack: gate, DoD, PLAN line ranges, open findings
+git checkout -b agent/task-NN-<slug> dev
 ```
 
+**Start with `task:context`, not with the PLAN.** The 2026-07-29 review's central finding about this
+project was not that the AI writes bad code — it was that every task pays to rediscover the same
+context. `plans/superpower/PLAN.md` is 3,700 lines; the pack is about four kilobytes and answers the
+questions that actually block a start:
+
+- which dependencies are `done`, and which are not (computed, not quoted from a table)
+- the objective, scope, "do not" list and Definition of Done, verbatim from the brief
+- every `§` reference in Required reading resolved to a **line range**
+- the next free migration number, derived from the filenames
+- which ports exist, which have no implementation, which error codes are untranslated
+- the `F-NN` findings already recorded against this task
+- the previous task's handoff
+
+Then read three or four real files. `docs/generated/CODE-MAP.json` says which ones.
+
 ### Required reading by task type
+
+The pack resolves these to line ranges for the task at hand — this table is the fallback.
 
 | Task | Read before writing code |
 |---|---|
@@ -227,20 +241,28 @@ lib/api/<resource>-api.ts →  zod validate, 1 param per function
 
 ### Step 8 — VERIFY (before presenting diff)
 
-Run applicable checks:
+Three stages, cheapest first. **The gates are identical at every stage — only the timing differs.**
+Nothing is skipped or weakened; `verify:full` still runs exactly what CI runs.
 
 ```bash
-# Backend
-./gradlew test checkstyleMain
+npm run verify:fast              # every edit. Scoped by `git diff`: a backend-only change
+                                 # does not start Node. Seconds.
+npm run verify:task -- NN         # before claiming the task is done. Adds coverage thresholds,
+                                 # ArchUnit, format check, contract and CODE-MAP drift.
+npm run verify:full              # what CI runs, Testcontainers and production build included.
+                                 # Needs Docker.
+```
 
-# Frontend
-cd apps/frontend && npm run lint && npm run test && npm run build
+Why this ladder exists: the only command previously documented was the full one, so an agent fixing a
+one-line style violation paid for Testcontainers, a Next.js production build and whole-repository
+coverage to find out. That cost is not paid once — it is paid on every iteration of the edit loop,
+which is where nearly all of an agent's time goes.
 
-# Contract
-npm run codegen && git diff --exit-code apps/frontend/src/generated/
+A **skipped** step is never reported as a pass. `verify:task` and `verify:full` fail outright if any
+step could not run — those are the stages whose output gets quoted as evidence.
 
-# Infra (if touched)
-docker compose up --build -d && ./scripts/wait-for-services.sh
+```bash
+npm run task:report -- NN         # runs the real gates and writes artifacts/task-NN-evidence.md
 ```
 
 ---
@@ -476,3 +498,40 @@ When presenting completed work, use this structure:
 | Workflow version | 1.0 |
 | Aligned to PLAN | `plans/superpower/PLAN.md` (post tech-lead + coding-rules pass) |
 | Last updated | 2026-07-25 |
+
+---
+
+## 8. Working in parallel — one writer, two readers
+
+From the review's §6.G. The constraint is not about trust, it is about diffs: two agents writing to
+one capability produce a change nobody can review, and a conflict nobody can attribute.
+
+| Role | Access | Responsibility |
+|---|---|---|
+| **Context / planner** | read-only | Produce the `task:context` pack, the file list, the risk list, and the test plan. Does not write code. |
+| **Implementer** | write, one capability | Implement exactly one task or capability gate. Does not widen scope; a discovered defect becomes a finding, not an extra commit. |
+| **Reviewer / test** | read-only, or test-only fixes | Read the diff, run the gates, file findings. **Does not refactor on the way past** — a reviewer's tidy-up is a change with no reviewer. |
+
+**Two writing agents must never share a capability branch.** Parallelism happens only where the
+dependency graph in `tasks/EXECUTION-BASELINE.md` §4 says two capabilities are independent, and each
+gets its own `agent/task-NN-*` branch off `dev`.
+
+## 9. Keeping context cheap
+
+Four rules, all from the review's §6.H. Each one is about the same thing: an agent pays to read the
+repository on every task, so what the repository says has to be worth reading.
+
+1. **Comments carry invariants and traps, not narrative.** "Why this cannot be a timestamp" belongs in
+   the code; the full derivation belongs in an ADR the comment links to. A 300-line file that
+   re-explains a rule three other files also explain is a cost paid on every read, forever.
+2. **Required reading points at sections, not documents.** `task:context` resolves `§4.0.2` to a line
+   range; a brief that says "read the PLAN" is asking a model to read 3,700 lines, and the cheapest
+   correct behaviour for a model that cannot find the anchor is to do exactly that.
+3. **One or two canonical reference files per layer.** New work copies a named example rather than
+   inferring the convention from a survey. `RefreshTokenService` for a write path with revocation,
+   `LlmClientRouter` for cross-cutting instrumentation, `chat-state.ts` for a reducer.
+4. **Stale documentation is a build failure.** `npm run docs:stale` runs in CI. A document asserting
+   that `apps/backend` and `apps/frontend` do not exist is worse than an absent document — it is a
+   wrong answer delivered with authority, and it costs a whole task cycle before anyone notices. The
+   check cannot tell a quotation from a claim, so this paragraph deliberately describes the pattern
+   instead of reproducing it; erring that way keeps false negatives at zero, which matters more.

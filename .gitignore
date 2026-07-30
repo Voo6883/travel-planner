@@ -36,3 +36,8 @@ secrets/
 # `npm run test:coverage`; committing them would produce diff noise on every run and, worse,
 # let a stale report be mistaken for current evidence.
 apps/frontend/coverage/
+
+# `npm run task:report -- NN` output. Deliberately ignored: it is evidence attached to a PR or
+# pasted into the ledger, and a committed copy is a report that outlives the run that produced it —
+# which is exactly the stale-evidence problem the command exists to remove.
+artifacts/

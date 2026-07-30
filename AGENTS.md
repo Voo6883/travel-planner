@@ -9,8 +9,25 @@
 npm run prereq                    # must pass before any code generation
 ```
 
-**No code without a task ID.** Work orders live in [`tasks/`](tasks/) — one task per branch/PR
-(`agent/task-NN-*`), executed in dependency order. Start at [`tasks/README.md`](tasks/README.md).
+**No code without a task ID.** Work orders live in [`tasks/`](tasks/), executed in dependency order.
+Start at [`tasks/README.md`](tasks/README.md); check the live gate with `npm run task:context -- NN`.
+
+### Branch policy
+
+```
+agent/task-NN-<slug>  ──PR──▶  dev  ──PR──▶  master
+```
+
+- **One task, one branch, one PR into `dev`.** Cut it from `dev`, not from `master`.
+- `dev → master` is a milestone PR, not a per-task one.
+- Direct commits to `dev` are for documentation and tooling only.
+
+This is not bureaucracy, and it was not being followed: tasks 16–20 landed as direct commits to
+`dev`, and the 2026-07-29 review named four things that cost. A task-sized PR is the only place a
+reviewable diff exists; a task-sized branch is the only thing a bad task can be rolled back to; a
+CI run bound to a PR is the only evidence that a *specific* task passed rather than the branch it
+happened to be sitting on; and two agents working without branch isolation cannot run in parallel
+at all. Committing straight to `dev` trades all four for one saved command.
 
 | Step | Action |
 |---|---|
@@ -74,25 +91,55 @@ see [`docs/AGENT-HARNESS.md`](docs/AGENT-HARNESS.md) §3.
 
 ## Cursor Cloud specific instructions
 
-### Repository status: planning phase (no application code yet)
+### Repository status: Phase 0 complete, Phase 1 in progress
 
-This repo currently contains **planning documentation only** (no application scaffold):
+This is a working application, not a planning repository. Anything that tells you otherwise is
+out of date — report it rather than acting on it.
 
-- `README.md` — product overview and planned quick start
-- `plans/superpower/PLAN.md` — locked architecture (source of truth for architecture)
-- `plans/USE-CASES.md`, `plans/BACKLOG.md`, `plans/TRAVEL-KNOWLEDGE-CATALOG.md`
-- `tasks/` — 40 execution-sized implementation briefs (`00`–`39`) + `tasks/README.md`
-- `docs/AGENT-HARNESS.md` — agent scope control & drift prevention
-- `docs/AI-AGENT-WORKFLOW.md`, `docs/ADDING-A-FEATURE.md`
-- `docs/UI-UX-DESIGN-SYSTEM.md`, `docs/ARCHITECTURE-DIAGRAMS.md`
-- `docs/adr/` — locked ADRs (Gradle, JWT, extensibility, auth/Resend, PWA)
-- `docs/PLAN-COMPATIBILITY.md` — post-merge plan compatibility review
+| | |
+|---|---|
+| Backend | `apps/backend` — Spring Boot 3.5 / Java 21 / Gradle, ~20 domain ports, Flyway migrations |
+| Frontend | `apps/frontend` — Next.js 15 / React 19 / TypeScript, PWA, `en` + `ms` locales |
+| Runtime | `docker-compose.yml` (full stack) and `docker-compose.dev.yml` (Postgres only) |
+| CI | `.github/workflows/ci.yml` — five jobs, all gating |
+| Done | Tasks 00–16 |
+| In progress | Tasks 17–20 |
+| Next | Task 21, and only after 17–20 close — see [`docs/HANDOFF-REMAINING-WORK.md`](docs/HANDOFF-REMAINING-WORK.md) |
 
-There is **no scaffolded application yet**: no `package.json`, no `apps/frontend`
-(Next.js) or `apps/backend` (Spring Boot), no `docker-compose.yml`, no source, tests,
-lint config, or build tooling. Consequently there is currently **nothing to install,
-lint, test, build, or run**. Any "run the app" request cannot be fulfilled until the
-Phase 0 scaffold described in `plans/superpower/PLAN.md` §10 exists.
+**Do not scaffold anything.** If a task reads as "create the backend", the task is stale, not the
+tree. Live status is [`tasks/STATUS.md`](tasks/STATUS.md); it is the only source of truth for what
+is `done`, and prose anywhere else that disagrees with it is wrong by definition.
+
+### Orient yourself in one command, not by reading the plan
+
+```bash
+npm run task:context -- 21      # gate, objective, DoD, resolved PLAN line ranges, open findings
+```
+
+`docs/generated/CODE-MAP.json` holds the rest: every port and its implementations, every error code
+and whether the UI translates it, every migration and the next free version, every feature's files.
+Read that and three or four real files. Reading `plans/superpower/PLAN.md` end to end costs about
+3,700 lines and answers less.
+
+### Commands that actually work here
+
+```bash
+npm run prereq                                   # toolchain gate
+cp .env.example .env                             # ports are env-driven; 8081 locally
+
+npm run dev:db                                   # Postgres + pgvector only
+npm run dev                                      # both apps on the host, hot reload
+docker compose up --build                        # full stack
+
+npm run verify:fast                              # the edit loop — scoped to what you changed
+npm run verify:task -- 18                        # before claiming a task is done
+npm run verify:full                              # what CI runs (needs Docker)
+```
+
+Frontend on `:3000`, backend API on `:8080/api/v1` inside Docker (`:8081` on the host by default —
+Oracle XE owns 8080 on some machines). Dev admin seed: `ADMIN` / `123456`, **dev/docker/local only**;
+the `prod` profile refuses to construct the seeder, the mail stand-ins, the identity stand-ins, and
+the stub LLM.
 
 ### Preinstalled toolchain (already satisfies the plan)
 
@@ -102,15 +149,5 @@ The base VM already provides the runtimes the plan requires — do **not** reins
 - JDK 21 (`java -version`) — matches backend requirement.
 - npm 10.x, git 2.x.
 
-Not preinstalled (add only once the corresponding code lands):
-
-- Docker + Compose — needed for the planned `docker compose up` full-stack runtime.
-
-### When the app gets scaffolded
-
-Once code exists, follow the commands documented in `README.md` ("Quick start") and
-`plans/superpower/PLAN.md` §4.0.0 rather than duplicating them here — e.g. `npm run prereq`,
-`cp .env.example .env`, `docker compose up --build` (full stack) or
-`docker compose -f docker-compose.dev.yml up -d` (Postgres only, apps on host).
-Frontend runs on port 3000, backend API on `:8080/api/v1`, Postgres on `:5432`.
-Dev admin seed: username `ADMIN`, password `123456` (dev/docker only).
+Docker + Compose is **not** preinstalled. Without it you can still run everything except
+`verify:full`'s Testcontainers suite and the compose stack; say so rather than reporting a pass.

@@ -1,7 +1,15 @@
 # Execution Baseline — Travel Planner Implementation
 
 > Deliverable of [Task 00](00-plan-baseline.md). This is the execution-control layer for all
-> implementation work. It contains **no application code** and creates no scaffold.
+> implementation work — dependency graph, authority order, blockers, handoff and evidence rules.
+>
+> **This document is a snapshot of 2026-07-25, and §1 is history rather than current state.** The
+> repository was empty of application code on that date; it is not now. Phase 0 is complete and
+> Phase 1 is under way — `apps/backend` and `apps/frontend` are both real, both build, and both
+> gate in CI. For what exists today, read [`STATUS.md`](STATUS.md); for what to do next, read
+> [`../docs/HANDOFF-REMAINING-WORK.md`](../docs/HANDOFF-REMAINING-WORK.md).
+>
+> §§2–9 — the graph, the authority order, the evidence rules — are still in force.
 >
 > Companion document: the task status ledger in [`STATUS.md`](STATUS.md).
 
@@ -19,7 +27,7 @@
 | `origin/master` | `aa20043` — in sync, nothing unpushed |
 | `dev` | `aa20043` — identical to `master` (0 ahead / 0 behind) |
 | `main` | `b8cfec6` — **38 commits behind `master`**, contributes no unique file content |
-| Application scaffold present | **No** — see below |
+| Application scaffold present | **Not at baseline** — created by tasks 01–05; see below |
 | Working tree | Clean |
 
 ### Supersedes the commit recorded in `tasks/README.md`
@@ -30,7 +38,7 @@ briefs) and `docs/AGENT-HARNESS.md`. **`aa20043` is the authoritative baseline f
 work.** `tasks/README.md` is left unedited — amending it is outside this task's scope and is
 recorded as follow-up **F-1**.
 
-### No application scaffold confirmed
+### The tree was empty at baseline — HISTORY, 2026-07-25
 
 ```
 $ ls package.json docker-compose.yml apps .nvmrc scripts
@@ -41,8 +49,10 @@ ls: cannot access '.nvmrc': No such file or directory
 ls: cannot access 'scripts': No such file or directory
 ```
 
-The repository contains planning documentation only. Phase 0A starts from zero, as
-`AGENTS.md` and `docs/PLAN-COMPATIBILITY.md` §"Kickoff readiness" both assert.
+That was the state Phase 0A started from. **Every one of those paths exists today** — tasks 01–05
+created them and tasks 06–16 filled them in. Recorded here because the dependency graph in §4 was
+drawn against a genuinely empty tree, and reading the graph without that context makes its ordering
+look arbitrary.
 
 ---
 

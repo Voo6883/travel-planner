@@ -3,7 +3,7 @@
 > Deliverable of [Task 00](00-plan-baseline.md). Single source of truth for what is `done`.
 > Baseline and dependency rationale: [`EXECUTION-BASELINE.md`](EXECUTION-BASELINE.md).
 
-**Baseline commit:** `aa20043` · **Working branch:** `dev` · **Last updated:** 2026-07-29
+**Baseline commit:** `aa20043` · **Working branch:** `dev` · **Last updated:** 2026-07-30
 
 ## Status values
 
@@ -14,9 +14,39 @@
 | `blocked` | Cannot proceed — a blocker ID is recorded in the Notes column. |
 | `review` | Implementation complete, PR open, evidence gate not yet accepted. |
 | `done` | Merged **and** the `docs/AGENT-HARNESS.md` §6 evidence gate passed with real command output. |
+| `done_with_accepted_debt` | Merged and gated, but a named follow-up was accepted by the owner. **Requires** an `F-NN` in Notes and a task that owns closing it. Task 16 is the case this exists for. |
 
-**A task may only start when every task in its `Depends on` column is `done`**
-(`docs/AGENT-HARNESS.md` §2). Generated code alone never justifies `done`.
+**A task may only start when every task in its `Depends on` column is `done`, or when the specific
+capability it needs is a `done` capability gate of an `in_progress` dependency** (`docs/AGENT-HARNESS.md`
+§2). Generated code alone never justifies `done`.
+
+### Capability gates
+
+Tasks 18, 19 and 20 each started while a dependency was still `in_progress`. In all three cases the
+reason was sound — the *capability* being depended on was finished even though the task was not — and
+in all three cases the justification was written afterwards, as an exception to a rule. The 2026-07-29
+review was right that exceptions are the wrong mechanism: a rule broken three times for good reasons
+is a rule stated at the wrong granularity.
+
+So a task whose scope splits into independently consumable capabilities declares them, and a dependent
+task depends on the **gate** rather than on the whole task:
+
+| Task | Gate | Capability it publishes | Status |
+|---|---|---|---|
+| 17 | **17A** | Seed contract + loader + SAMPLE dataset + `GET /destinations/supported` | `done` |
+| 17 | **17B** | Hybrid retrieval — vector + `tsvector` fusion, shared adapter contract tests | `not_started` |
+| 17 | **17C** | Real curation for the first three destinations (needs a named owner — **F-34**) | `not_started` |
+| 18 | **18A** | Trip + brief backend: CRUD, clarification, `expected_version`, migration V20 | `done` |
+| 18 | **18B** | Frontend brief editor + `locales/*/trip_brief.json` + `surprise_me` persistence | `not_started` |
+| 19 | **19A** | Versioned prompt, repair retry, fallback, golden fixtures, injection separation | `done` |
+| 19 | **19B** | `surprise_me` field wiring (needs **18B**'s migration) | `not_started` |
+| 20 | **20A** | Persistence: `planner_session`, `conversation`, `message`, `seq`, idempotency | `done` |
+| 20 | **20B** | SSE transport: POST/GET streams, typed events, partial status, cursor by `seq` | `done` |
+| 20 | **20C** | `Last-Event-ID` frame replay, **or** an ADR 007 amendment dropping the promise (**F-39**) | `not_started` |
+
+A gate reaches `done` under the same evidence rule as a task: real command output, and CI green on the
+PR that landed it. The gate table is what a dependent task cites — "21 depends on 18A, 19A, 20A, 20B"
+is checkable, where "18 is close enough" is a judgement call made by whoever is in a hurry.
 
 ## Rules for updating this file
 
@@ -24,6 +54,11 @@
 2. Moving a task to `done` requires the evidence link (PR number or commit) in Notes.
 3. Moving a task to `blocked` requires a blocker ID registered in
    [`EXECUTION-BASELINE.md`](EXECUTION-BASELINE.md) §7 — never a bare "blocked".
+4. Moving a task to `done_with_accepted_debt` requires an `F-NN` in Notes **and** the task that owns
+   closing it. Debt with no owner is a `done` that means nothing.
+5. Starting a task against a capability gate rather than a whole dependency requires the gate to be
+   listed as `done` in the table above, cited in the starting task's Notes. This replaces the practice
+   of starting first and recording the deviation afterwards.
 
 ---
 
@@ -50,7 +85,7 @@
 | 11 | [Frontend platform and auth UI](11-frontend-platform-auth-ui.md) | 03, 06, 08, 09, 10 | `done` | Commit `1c04f94`. **Closes F-18** — ADR 006 same-origin proxy; without it tasks 08–10's auth was unreachable from a browser. |
 | 12 | [Admin platform](12-admin-platform.md) | 07, 08, 09, 11 | `done` | Commit `3acc779`. Migration **V12**. Disable/reset terminate sessions, proven with a live cookie. Seed absent under `prod` (allow-list, not denylist). Review fixed a stale-write that silently undid revocation. |
 | 13 | [PWA foundation](13-pwa-foundation.md) | 04, 11 | `done` | Commit `6a18a37`. `/api/v1/**` network-only, enforced per-rule **and** by ordering. Declined PLAN §4.2.11's `defaultCache` row — see **F-21**. |
-| 14 | [AI provider platform](14-ai-provider-platform.md) | 06, 07, 09 | `done` | Commit `12b6b23`. Migration **V11**. `Flux<LlmEvent>` sealed union per ADR 007. Open: **F-22** (LLM stub not blocked in prod), **F-23** (Reactor in `domain/`). |
+| 14 | [AI provider platform](14-ai-provider-platform.md) | 06, 07, 09 | `done` | Commit `12b6b23`. Migration **V11**. `Flux<LlmEvent>` sealed union per ADR 007. **F-22 closed** 2026-07-30 — `AiConfigValidator` refuses `stub` as chat *and* embedding provider under `prod`, and the missing-key message no longer offers the stub as the remedy. Also closed on this pass: token usage was recorded as zero for every non-streaming call (the router read usage off a `String`), and `ai_call_log.model` fell back to `""` so every cost estimate was zero. Open: **F-23** (Reactor in `domain/`). |
 | 15 | [Architecture and quality gates](15-quality-gates.md) | 02–14 | `done` | Commit `bd6ca0d`, merged `95970f5`. Checkstyle 10.21.0, JaCoCo 0.8.12 (LINE 85 / BRANCH 70 over domain+application, measured 86.3 / 75.4), 8/8 ArchUnit rules, ESLint import boundaries proven to fail on probe violations, Prettier, Vitest thresholds, Actuator (4 exposed / 4 sensitive 404). Clean `./gradlew build` green with 15 tasks executed; frontend `format:check`+`lint`+`typecheck`+`test:coverage`+`build` all exit 0, 226 tests. Thresholds and exception process: [`docs/QUALITY-GATES.md`](../docs/QUALITY-GATES.md). Found and fixed **F-26**. New: **F-25**. |
 
 ## Phase 1 — knowledge, intake, chat, research, itinerary
@@ -61,7 +96,7 @@
 | 17 | [Knowledge seed and retrieval](17-knowledge-seed-retrieval.md) | 14, 16 | `in_progress` | Commit `50c2d68`. Seed format + idempotent loader + SAMPLE dataset (3 destinations, 142 rows, 39 embedding chunks) seeded **PARTIAL**; reader refuses a file declaring `FULL`. `GET /destinations/supported` public per ADR 010 §4. Prod refuses any `Stub*` knowledge bean. **Remaining: seed validation command for CI, hybrid vector+tsvector fusion, shared adapter contract tests.** Real curation is an open authoring task — see **F-34**. New: **F-33**. |
 | 18 | [Trip and TripBrief core](18-trip-brief-core.md) | 06, 07, 11, 15, 17 | `in_progress` | Commit `50c2d68`. Migration **V20** adds the brief columns V6 deferred. Trip + brief CRUD, derived clarification, `DRAFT`/`CLARIFICATION_NEEDED`/`BRIEF_COMPLETE` only, ADR 008 `expected_version` on every write with `409 version_conflict` + `details.current_version`. **Started while 17 was `in_progress`** — the interface it needed (`findSupportedDestinations`, `destination_not_covered`) already existed from 16. **Remaining: frontend brief editor + `locales/*/trip_brief.json`.** New: **F-35**. |
 | 19 | [LLM TripBrief extraction](19-llm-trip-brief-extraction.md) | 14, 18 | `in_progress` | Commit `1262401`. Versioned prompt `trip-brief-extract@v1` gated on the SHA of the **rendered** block. Structural prompt-injection separation (template variables cannot accept user text; fenced USER message; assertion that no user text reaches the system block). Domain validation authoritative — refused values are dropped so `forDetails()` asks about them. Retry hard-capped at one repair, then deterministic fallback. 11 golden fixtures incl. injection, multilingual `ms`, timeout, malformed. **Started while 18 was `in_progress`** — 18's backend, which it extracts into, was complete. **Remaining: `surprise_me` persistence (needs a migration + a `TripBriefDetails` field, task 18 owns that record).** |
-| 20 | [Conversation persistence and SSE](20-conversation-sse.md) | 06, 07, 11, 14, 15 | `in_progress` | Commit `50c2d68` (persistence + client) plus the SSE slice, uncommitted. Migration **V19** (`planner_session`, `conversation`, `message`). Per-conversation `seq` under `SELECT … FOR UPDATE`; `client_message_id` unique index for idempotency; partial messages marked, never discarded; no chain-of-thought storable. **Both routes now stream**: `POST`/`GET` on `/planner/chat/messages` and `/trips/{tripId}/chat/messages`, published in the contract with an `x-sse-stream` marker and a description-only body (ADR 007). A turn is three short write transactions with the model call strictly between them — nothing `@Transactional` exists in `application/chat/ChatTurnService`. Disconnect marks the partial answer `INTERRUPTED`; the provider-event translation is an allow-list with no default branch. Backend coverage LINE 92.3% / BRANCH 86.8% (`application/chat` 95.0% / 83.6%); frontend 331 tests green. **F-31** and **F-36** closed. **Remaining: `Last-Event-ID` frame replay (accepted and ignored today — see F-39), and the client role union must gain the three tool roles when tasks 21/22 write them (F-40).** |
+| 20 | [Conversation persistence and SSE](20-conversation-sse.md) | 06, 07, 11, 14, 15 | `in_progress` | Commit `50c2d68` (persistence + client) plus the SSE slice, uncommitted. Migration **V19** (`planner_session`, `conversation`, `message`). Per-conversation `seq` under `SELECT … FOR UPDATE`; `client_message_id` unique index for idempotency; partial messages marked, never discarded; no chain-of-thought storable. **Both routes now stream**: `POST`/`GET` on `/planner/chat/messages` and `/trips/{tripId}/chat/messages`, published in the contract with an `x-sse-stream` marker and a description-only body (ADR 007). A turn is three short write transactions with the model call strictly between them — nothing `@Transactional` exists in `application/chat/ChatTurnService`. Disconnect marks the partial answer `INTERRUPTED`; the provider-event translation is an allow-list with no default branch. Backend coverage LINE 92.3% / BRANCH 86.8% (`application/chat` 95.0% / 83.6%); frontend 331 tests green. **F-31** and **F-36** closed. **F-40 closed** 2026-07-30 — the client parses all six published roles; `tool_call` and `tool_result` are dropped from the transcript per design system §7.2 rather than rendered as raw JSON, and `lifecycle_event` renders with its own sender label. History is now ordered by the server's `seq`, which the contract publishes for that purpose — the client had been re-sorting by `created_at`, which cannot order a turn. **Remaining (gate 20C): `Last-Event-ID` frame replay, or an ADR 007 amendment dropping the per-frame id promise — see F-39.** |
 | 21 | [Planner chat and trip creation](21-planner-chat-trip-creation.md) | 18, 19, 20 | `not_started` | No `Validation` section. **First end-to-end product loop closes here.** |
 | 22 | [Trip chat intake tools](22-trip-chat-intake-tools.md) | 18, 19, 20, 21 | `not_started` | No `Validation` section. Tool args must be schema-validated. |
 | 23 | [Research job platform](23-research-job-platform.md) | 07, 18, 22 | `not_started` | |

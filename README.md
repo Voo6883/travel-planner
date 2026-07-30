@@ -2,8 +2,14 @@
 
 A **knowledge-based, LLM-powered travel planner**. Users chat to plan trips. Decisions are grounded in a **Travel Knowledge Base** — destinations, food, areas, POIs, seasonality, and prices — with the LLM reasoning over retrieved facts, not inventing them.
 
-> **Status:** Planning complete — architecture, delivery structure, sprint backlog, and a 40-task implementation plan are locked. Application code not yet scaffolded.
-> **Start here:** [`tasks/README.md`](tasks/README.md) → execute [`tasks/00-plan-baseline.md`](tasks/00-plan-baseline.md), then Task 01 onward in dependency order.
+> **Status: Phase 0 complete, Phase 1 in progress.** Tasks 00–16 are `done`; tasks 17–20 are in
+> progress. Both applications build, both are gated by CI, and the stack runs. Live status is
+> [`tasks/STATUS.md`](tasks/STATUS.md) — the only source of truth for what is `done`.
+>
+> **Start here:** `npm run task:context -- NN` for the task you are picking up, and
+> [`docs/HANDOFF-REMAINING-WORK.md`](docs/HANDOFF-REMAINING-WORK.md) for what is left.
+>
+> Current schema head: migration `V20`; next free version `V21` (`npm run code-map` derives it).
 
 ## Features (v1)
 
@@ -27,7 +33,7 @@ A **knowledge-based, LLM-powered travel planner**. Users chat to plan trips. Dec
 | Mailer | Resend (`resend.com`) |
 | Runtime | Docker Compose |
 
-## Repository layout (planned)
+## Repository layout
 
 **Monorepo with separate app folders** — frontend and backend never mixed.
 
@@ -69,7 +75,7 @@ npm run prereq
 | Git | 2.x+ |
 | Gradle | 8.x (wrapper in repo — no global install required) |
 
-## Quick start (planned)
+## Quick start
 
 ```bash
 # 1. Check prerequisites
@@ -83,11 +89,36 @@ cp .env.example .env
 docker compose up --build
 ```
 
+Or run the apps on the host with hot reload and only Postgres in Docker:
+
+```bash
+npm run dev:db                 # Postgres 16 + pgvector
+npm run dev                    # backend + frontend, both hot-reloading
+```
+
 | Service | URL |
 |---|---|
 | Frontend | http://localhost:3000 |
-| Backend API | http://localhost:8080/api/v1 |
+| Backend API | http://localhost:8080/api/v1 (host default `8081` — see `.env.example`) |
 | PostgreSQL | localhost:5432 |
+
+### Verifying a change
+
+Three stages, cheapest first. The gates are identical — only the timing differs.
+
+```bash
+npm run verify:fast            # the edit loop; scoped to what git says you changed
+npm run verify:task -- 18      # before claiming a task is done: coverage, ArchUnit, drift
+npm run verify:full            # what CI runs, Testcontainers included (needs Docker)
+```
+
+### Working on a task
+
+```bash
+npm run task:context -- 21     # dependency gate, DoD, resolved PLAN line ranges, open findings
+npm run code-map               # regenerate docs/generated/CODE-MAP.json
+npm run task:report -- 18      # capture real command output as completion evidence
+```
 
 ### Dev admin account (local / Docker only)
 

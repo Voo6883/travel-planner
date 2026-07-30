@@ -1,0 +1,1960 @@
+{
+  "generatedBy": "npm run code-map",
+  "ports": {
+    "AccountTokenPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/AccountTokenPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/AccountTokenRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/account/AccountTestFakes.java"
+      ]
+    },
+    "AdminAuditPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/AdminAuditPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/AuditEventRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/admin/AdminTestFakes.java"
+      ]
+    },
+    "AiCallLogPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/AiCallLogPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/AiCallLogRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/ai/client/LlmClientRouterTest.java"
+      ]
+    },
+    "ConversationContextPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/ConversationContextPort.java",
+      "implementations": []
+    },
+    "ConversationRepositoryPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/ConversationRepositoryPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/ConversationRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/chat/ChatTestFakes.java"
+      ]
+    },
+    "EmbeddingPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/EmbeddingPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/ai/langchain4j/OpenAiEmbeddingAdapter.java",
+        "apps/backend/src/main/java/com/travelplanner/ai/stub/StubEmbeddingAdapter.java"
+      ]
+    },
+    "IdentityProviderPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/IdentityProviderPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/auth/firebase/FirebaseIdentityAdapter.java",
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/auth/github/GithubOAuthIdentityAdapter.java",
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/auth/local/LocalPasswordIdentityAdapter.java"
+      ]
+    },
+    "KnowledgePort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/KnowledgePort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeRepositoryAdapter.java"
+      ]
+    },
+    "LlmPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/LlmPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/ai/client/LlmClientRouter.java",
+        "apps/backend/src/main/java/com/travelplanner/ai/langchain4j/LangChain4jLlmAdapter.java",
+        "apps/backend/src/main/java/com/travelplanner/ai/stub/StubLlmAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/ai/client/LlmClientRouterTest.java",
+        "apps/backend/src/test/java/com/travelplanner/ai/extraction/ScriptedLlm.java",
+        "apps/backend/src/test/java/com/travelplanner/ai/structured/StructuredOutputRunnerTest.java",
+        "apps/backend/src/test/java/com/travelplanner/application/chat/ChatTestFakes.java"
+      ]
+    },
+    "LoginAttemptPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/LoginAttemptPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/LoginAttemptRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/auth/AuthenticationServiceTest.java",
+        "apps/backend/src/test/java/com/travelplanner/application/auth/LoginAttemptGuardTest.java"
+      ]
+    },
+    "MailRateLimitPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/MailRateLimitPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/MailRateLimitRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/account/AccountTestFakes.java"
+      ]
+    },
+    "MailerPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/MailerPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/mail/ResendMailerAdapter.java",
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/mail/StubMailerAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/account/AccountTestFakes.java",
+        "apps/backend/src/test/java/com/travelplanner/application/mail/MailDispatcherTest.java"
+      ]
+    },
+    "OAuthAuthorizationPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/OAuthAuthorizationPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/auth/github/GithubOAuthIdentityAdapter.java"
+      ]
+    },
+    "PasswordHasherPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/PasswordHasherPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/auth/local/BcryptPasswordHasher.java",
+        "apps/backend/src/test/java/com/travelplanner/application/auth/AuthTestFakes.java",
+        "apps/backend/src/test/java/com/travelplanner/application/auth/PasswordPolicyTest.java"
+      ]
+    },
+    "RefreshTokenPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/RefreshTokenPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/RefreshTokenRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/auth/AuthTestFakes.java"
+      ]
+    },
+    "TripBriefExtractionPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/TripBriefExtractionPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/ai/extraction/LlmTripBriefExtractor.java",
+        "apps/backend/src/test/java/com/travelplanner/application/trip/TripBriefExtractionServiceTest.java"
+      ]
+    },
+    "TripBriefRepositoryPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/TripBriefRepositoryPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/TripBriefRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/trip/TripTestFakes.java"
+      ]
+    },
+    "TripRepositoryPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/TripRepositoryPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/TripRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/chat/ChatTestFakes.java",
+        "apps/backend/src/test/java/com/travelplanner/application/trip/TripTestFakes.java"
+      ]
+    },
+    "UserIdentityRepositoryPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/UserIdentityRepositoryPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/UserIdentityRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/auth/AuthTestFakes.java"
+      ]
+    },
+    "UserRepositoryPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/UserRepositoryPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/UserRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/auth/AuthTestFakes.java"
+      ]
+    }
+  },
+  "errorCodes": {
+    "declaredIn": "apps/backend/src/main/java/com/travelplanner/api/error/ApiErrorCode.java",
+    "codes": {
+      "account_closed": {
+        "constant": "ACCOUNT_CLOSED",
+        "httpStatus": "CONFLICT",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "account_disabled": {
+        "constant": "ACCOUNT_DISABLED",
+        "httpStatus": "FORBIDDEN",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "account_locked": {
+        "constant": "ACCOUNT_LOCKED",
+        "httpStatus": "LOCKED",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "ai_rate_limited": {
+        "constant": "AI_RATE_LIMITED",
+        "httpStatus": "TOO_MANY_REQUESTS",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "ai_response_invalid": {
+        "constant": "AI_RESPONSE_INVALID",
+        "httpStatus": "BAD_GATEWAY",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "ai_timeout": {
+        "constant": "AI_TIMEOUT",
+        "httpStatus": "GATEWAY_TIMEOUT",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "ai_unavailable": {
+        "constant": "AI_UNAVAILABLE",
+        "httpStatus": "SERVICE_UNAVAILABLE",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "destination_not_covered": {
+        "constant": "DESTINATION_NOT_COVERED",
+        "httpStatus": "NOT_FOUND",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "email_not_verified": {
+        "constant": "EMAIL_NOT_VERIFIED",
+        "httpStatus": "FORBIDDEN",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "firebase_email_not_verified": {
+        "constant": "FIREBASE_EMAIL_NOT_VERIFIED",
+        "httpStatus": "FORBIDDEN",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "forbidden": {
+        "constant": "FORBIDDEN",
+        "httpStatus": "FORBIDDEN",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "identity_already_linked": {
+        "constant": "IDENTITY_ALREADY_LINKED",
+        "httpStatus": "CONFLICT",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "internal_error": {
+        "constant": "INTERNAL_ERROR",
+        "httpStatus": "INTERNAL_SERVER_ERROR",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "invalid_credentials": {
+        "constant": "INVALID_CREDENTIALS",
+        "httpStatus": "UNAUTHORIZED",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "invalid_firebase_token": {
+        "constant": "INVALID_FIREBASE_TOKEN",
+        "httpStatus": "UNAUTHORIZED",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "invalid_oauth_state": {
+        "constant": "INVALID_OAUTH_STATE",
+        "httpStatus": "BAD_REQUEST",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "invalid_token": {
+        "constant": "INVALID_TOKEN",
+        "httpStatus": "BAD_REQUEST",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "last_sign_in_method": {
+        "constant": "LAST_SIGN_IN_METHOD",
+        "httpStatus": "CONFLICT",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "not_found": {
+        "constant": "NOT_FOUND",
+        "httpStatus": "NOT_FOUND",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "provider_email_unavailable": {
+        "constant": "PROVIDER_EMAIL_UNAVAILABLE",
+        "httpStatus": "UNPROCESSABLE_ENTITY",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "provider_link_required": {
+        "constant": "PROVIDER_LINK_REQUIRED",
+        "httpStatus": "CONFLICT",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "provider_unavailable": {
+        "constant": "PROVIDER_UNAVAILABLE",
+        "httpStatus": "SERVICE_UNAVAILABLE",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "rate_limited": {
+        "constant": "RATE_LIMITED",
+        "httpStatus": "TOO_MANY_REQUESTS",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "unauthorized": {
+        "constant": "UNAUTHORIZED",
+        "httpStatus": "UNAUTHORIZED",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "user_not_found": {
+        "constant": "USER_NOT_FOUND",
+        "httpStatus": "NOT_FOUND",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "validation_failed": {
+        "constant": "VALIDATION_FAILED",
+        "httpStatus": "BAD_REQUEST",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "version_conflict": {
+        "constant": "VERSION_CONFLICT",
+        "httpStatus": "CONFLICT",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      }
+    }
+  },
+  "migrations": {
+    "nextFreeVersion": "V21",
+    "gaps": [],
+    "applied": [
+      {
+        "version": 1,
+        "file": "apps/backend/src/main/resources/db/migration/V1__enable_extensions.sql",
+        "createsTables": [],
+        "altersTables": []
+      },
+      {
+        "version": 2,
+        "file": "apps/backend/src/main/resources/db/migration/V2__create_user_table.sql",
+        "createsTables": [
+          "user"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 3,
+        "file": "apps/backend/src/main/resources/db/migration/V3__create_user_identity_table.sql",
+        "createsTables": [
+          "user_identity"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 4,
+        "file": "apps/backend/src/main/resources/db/migration/V4__create_refresh_token_table.sql",
+        "createsTables": [
+          "refresh_token"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 5,
+        "file": "apps/backend/src/main/resources/db/migration/V5__create_trip_table.sql",
+        "createsTables": [
+          "trip"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 6,
+        "file": "apps/backend/src/main/resources/db/migration/V6__create_trip_brief_table.sql",
+        "createsTables": [
+          "trip_brief"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 7,
+        "file": "apps/backend/src/main/resources/db/migration/V7__create_login_attempt_table.sql",
+        "createsTables": [
+          "login_attempt"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 8,
+        "file": "apps/backend/src/main/resources/db/migration/V8__create_account_token_table.sql",
+        "createsTables": [
+          "account_token"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 9,
+        "file": "apps/backend/src/main/resources/db/migration/V9__create_mail_rate_limit_table.sql",
+        "createsTables": [
+          "mail_rate_limit"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 10,
+        "file": "apps/backend/src/main/resources/db/migration/V10__add_user_soft_delete.sql",
+        "createsTables": [],
+        "altersTables": [
+          "user"
+        ]
+      },
+      {
+        "version": 11,
+        "file": "apps/backend/src/main/resources/db/migration/V11__create_ai_call_log_table.sql",
+        "createsTables": [
+          "ai_call_log"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 12,
+        "file": "apps/backend/src/main/resources/db/migration/V12__create_audit_event_table.sql",
+        "createsTables": [
+          "audit_event"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 13,
+        "file": "apps/backend/src/main/resources/db/migration/V13__create_knowledge_source_table.sql",
+        "createsTables": [
+          "knowledge_source"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 14,
+        "file": "apps/backend/src/main/resources/db/migration/V14__create_destination_tables.sql",
+        "createsTables": [
+          "destination",
+          "destination_guide",
+          "destination_area"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 15,
+        "file": "apps/backend/src/main/resources/db/migration/V15__create_poi_table.sql",
+        "createsTables": [
+          "poi"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 16,
+        "file": "apps/backend/src/main/resources/db/migration/V16__create_mobility_tables.sql",
+        "createsTables": [
+          "transport_mode",
+          "route_segment",
+          "travel_app"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 17,
+        "file": "apps/backend/src/main/resources/db/migration/V17__create_seasonality_price_tables.sql",
+        "createsTables": [
+          "seasonality",
+          "price_history"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 18,
+        "file": "apps/backend/src/main/resources/db/migration/V18__create_knowledge_embeddings.sql",
+        "createsTables": [
+          "destination_guide_embedding",
+          "poi_embedding"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 19,
+        "file": "apps/backend/src/main/resources/db/migration/V19__create_conversation_tables.sql",
+        "createsTables": [
+          "planner_session",
+          "conversation",
+          "message"
+        ],
+        "altersTables": []
+      },
+      {
+        "version": 20,
+        "file": "apps/backend/src/main/resources/db/migration/V20__complete_trip_brief_columns.sql",
+        "createsTables": [],
+        "altersTables": [
+          "trip_brief"
+        ]
+      }
+    ]
+  },
+  "features": {
+    "backend": {
+      "account": {
+        "controllers": [
+          "apps/backend/src/main/java/com/travelplanner/api/controller/AccountController.java"
+        ],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/account/AccountDeletionService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/account/AccountLifecycleMailer.java",
+          "apps/backend/src/main/java/com/travelplanner/application/account/AccountStore.java",
+          "apps/backend/src/main/java/com/travelplanner/application/account/AccountTokenService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/account/EmailVerificationService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/account/MailRateLimitScope.java",
+          "apps/backend/src/main/java/com/travelplanner/application/account/MailRateLimiter.java",
+          "apps/backend/src/main/java/com/travelplanner/application/account/PasswordChangeService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/account/PasswordResetService.java"
+        ],
+        "adapters": []
+      },
+      "admin": {
+        "controllers": [
+          "apps/backend/src/main/java/com/travelplanner/api/controller/AdminUserController.java"
+        ],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/admin/AdminResetPasswordCommand.java",
+          "apps/backend/src/main/java/com/travelplanner/application/admin/AdminUserDirectory.java",
+          "apps/backend/src/main/java/com/travelplanner/application/admin/AdminUserPage.java",
+          "apps/backend/src/main/java/com/travelplanner/application/admin/AdminUserService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/admin/AdminUserStore.java",
+          "apps/backend/src/main/java/com/travelplanner/application/admin/AdminUserView.java",
+          "apps/backend/src/main/java/com/travelplanner/application/admin/DevAdminSeedWriter.java",
+          "apps/backend/src/main/java/com/travelplanner/application/admin/DevAdminSeeder.java",
+          "apps/backend/src/main/java/com/travelplanner/application/admin/SetUserEnabledCommand.java"
+        ],
+        "adapters": []
+      },
+      "auth": {
+        "controllers": [
+          "apps/backend/src/main/java/com/travelplanner/api/controller/AuthController.java"
+        ],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/auth/AccessTokenClaims.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/AccountLinkingService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/AuthService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/AuthenticationService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/CurrentUserView.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/ExternalIdentityService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/ExternalSignIn.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/IdentityProviderRegistry.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/IssuedSession.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/JwtTokenService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/LinkedAccount.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/LoginAttemptGuard.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/LoginCommand.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/OAuthFlowService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/OAuthState.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/PasswordPolicy.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/ProviderUnlinkService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/RefreshTokenService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/RegisterCommand.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/RegistrationOutcomes.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/RegistrationService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/SessionRevocationReason.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/SessionRevocationService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/SessionService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/auth/UserProfileService.java"
+        ],
+        "adapters": []
+      },
+      "chat": {
+        "controllers": [
+          "apps/backend/src/main/java/com/travelplanner/api/controller/ChatController.java"
+        ],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/chat/ChatConversationService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/chat/ChatHistoryPage.java",
+          "apps/backend/src/main/java/com/travelplanner/application/chat/ChatStreamEvent.java",
+          "apps/backend/src/main/java/com/travelplanner/application/chat/ChatTarget.java",
+          "apps/backend/src/main/java/com/travelplanner/application/chat/ChatTurn.java",
+          "apps/backend/src/main/java/com/travelplanner/application/chat/ChatTurnService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/chat/SendChatMessageCommand.java"
+        ],
+        "adapters": []
+      },
+      "destination": {
+        "controllers": [
+          "apps/backend/src/main/java/com/travelplanner/api/controller/DestinationController.java"
+        ],
+        "application": [],
+        "adapters": []
+      },
+      "external": {
+        "controllers": [
+          "apps/backend/src/main/java/com/travelplanner/api/controller/ExternalIdentityController.java"
+        ],
+        "application": [],
+        "adapters": []
+      },
+      "github": {
+        "controllers": [
+          "apps/backend/src/main/java/com/travelplanner/api/controller/GithubOAuthController.java"
+        ],
+        "application": [],
+        "adapters": []
+      },
+      "health": {
+        "controllers": [
+          "apps/backend/src/main/java/com/travelplanner/api/controller/HealthController.java"
+        ],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/health/ReadinessCheck.java",
+          "apps/backend/src/main/java/com/travelplanner/application/health/ReadinessContributor.java",
+          "apps/backend/src/main/java/com/travelplanner/application/health/ReadinessService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/health/ReadinessStatus.java"
+        ],
+        "adapters": []
+      },
+      "password": {
+        "controllers": [
+          "apps/backend/src/main/java/com/travelplanner/api/controller/PasswordController.java"
+        ],
+        "application": [],
+        "adapters": []
+      },
+      "provider": {
+        "controllers": [
+          "apps/backend/src/main/java/com/travelplanner/api/controller/ProviderLinkController.java"
+        ],
+        "application": [],
+        "adapters": []
+      },
+      "trip": {
+        "controllers": [
+          "apps/backend/src/main/java/com/travelplanner/api/controller/TripBriefController.java",
+          "apps/backend/src/main/java/com/travelplanner/api/controller/TripController.java"
+        ],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/trip/AnswerClarificationCommand.java",
+          "apps/backend/src/main/java/com/travelplanner/application/trip/ArchiveTripCommand.java",
+          "apps/backend/src/main/java/com/travelplanner/application/trip/CreateTripCommand.java",
+          "apps/backend/src/main/java/com/travelplanner/application/trip/ExtractTripBriefCommand.java",
+          "apps/backend/src/main/java/com/travelplanner/application/trip/RenameTripCommand.java",
+          "apps/backend/src/main/java/com/travelplanner/application/trip/SaveTripBriefCommand.java",
+          "apps/backend/src/main/java/com/travelplanner/application/trip/TripAccess.java",
+          "apps/backend/src/main/java/com/travelplanner/application/trip/TripBriefExtractionResult.java",
+          "apps/backend/src/main/java/com/travelplanner/application/trip/TripBriefExtractionService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/trip/TripBriefService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/trip/TripBriefView.java",
+          "apps/backend/src/main/java/com/travelplanner/application/trip/TripService.java"
+        ],
+        "adapters": []
+      },
+      "knowledge": {
+        "controllers": [],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/knowledge/SupportedDestinationService.java"
+        ],
+        "adapters": []
+      },
+      "mail": {
+        "controllers": [],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/mail/AccountMailService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/mail/MailDispatcher.java",
+          "apps/backend/src/main/java/com/travelplanner/application/mail/MailTemplate.java",
+          "apps/backend/src/main/java/com/travelplanner/application/mail/MailTemplateRenderer.java"
+        ],
+        "adapters": []
+      },
+      "page": {
+        "controllers": [],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/page/PageQuery.java"
+        ],
+        "adapters": []
+      },
+      "support": {
+        "controllers": [],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/support/TokenDigest.java",
+          "apps/backend/src/main/java/com/travelplanner/application/support/TransactionalWrite.java"
+        ],
+        "adapters": []
+      },
+      "persistence": {
+        "controllers": [],
+        "application": [],
+        "adapters": [
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/AccountTokenRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/AiCallLogRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/AuditEventRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/ConversationRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeVectorSearch.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/LoginAttemptRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/MailRateLimitRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/RefreshTokenRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/TripBriefRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/TripRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/UserIdentityRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/UserRepositoryAdapter.java"
+        ]
+      },
+      "entity": {
+        "controllers": [],
+        "application": [],
+        "adapters": [
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/AccountTokenEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/AiCallLogEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/AuditEventEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/ConversationEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/DestinationAreaEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/DestinationEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/DestinationGuideEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/KnowledgeSourceEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/LoginAttemptEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/MailRateLimitEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/MessageEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/PlannerSessionEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/PoiEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/PriceHistoryEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/RefreshTokenEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/RouteSegmentEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/SeasonalityEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/SourcedEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/TransportModeEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/TravelAppEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/TripBriefEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/TripEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/UserEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/UserIdentityEntity.java"
+        ]
+      },
+      "mapper": {
+        "controllers": [],
+        "application": [],
+        "adapters": [
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/AccountTokenPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/ConversationPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/DestinationAreaPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/DestinationGuidePersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/DestinationPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/KnowledgeProvenanceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/MessagePersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/PersistenceMapperConfig.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/PlannerSessionPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/PoiPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/PriceObservationPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/RefreshTokenPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/RouteSegmentPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/SeasonalityMonthPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/TransportModePersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/TravelAppPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/TripBriefPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/TripPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/UserIdentityPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/UserPersistenceMapper.java"
+        ]
+      },
+      "repository": {
+        "controllers": [],
+        "application": [],
+        "adapters": [
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/AccountTokenJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/AiCallLogJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/AuditEventJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/ConversationJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/DestinationAreaJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/DestinationGuideJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/DestinationJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/KnowledgeSourceJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/LoginAttemptJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/MailRateLimitJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/MessageJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/PlannerSessionJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/PoiJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/PriceHistoryJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/RefreshTokenJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/RouteSegmentJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/SeasonalityJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/TransportModeJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/TravelAppJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/TripBriefJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/TripJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/UserIdentityJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/UserJpaRepository.java"
+        ]
+      }
+    },
+    "frontendFeatures": {
+      "admin": [
+        "apps/frontend/src/features/admin/components/account-status-tag.tsx",
+        "apps/frontend/src/features/admin/components/reset-password-modal.tsx",
+        "apps/frontend/src/features/admin/components/user-detail-panel.tsx",
+        "apps/frontend/src/features/admin/components/user-list-panel.tsx",
+        "apps/frontend/src/features/admin/hooks/use-admin-users.ts",
+        "apps/frontend/src/features/admin/index.ts",
+        "apps/frontend/src/features/admin/lib/admin-format.ts"
+      ],
+      "auth": [
+        "apps/frontend/src/features/auth/components/account-settings-panel.tsx",
+        "apps/frontend/src/features/auth/components/auth-card.tsx",
+        "apps/frontend/src/features/auth/components/auth-error-notice.tsx",
+        "apps/frontend/src/features/auth/components/auth-guard.tsx",
+        "apps/frontend/src/features/auth/components/auth-provider-buttons.tsx",
+        "apps/frontend/src/features/auth/components/change-password-card.tsx",
+        "apps/frontend/src/features/auth/components/connected-accounts-card.tsx",
+        "apps/frontend/src/features/auth/components/danger-zone-card.tsx",
+        "apps/frontend/src/features/auth/components/forgot-password-panel.tsx",
+        "apps/frontend/src/features/auth/components/github-sign-in-button.tsx",
+        "apps/frontend/src/features/auth/components/google-sign-in-button.tsx",
+        "apps/frontend/src/features/auth/components/provider-linked-notice.tsx",
+        "apps/frontend/src/features/auth/components/reset-password-panel.tsx",
+        "apps/frontend/src/features/auth/components/sign-in-panel.tsx",
+        "apps/frontend/src/features/auth/components/sign-up-panel.tsx",
+        "apps/frontend/src/features/auth/components/verification-gate.tsx",
+        "apps/frontend/src/features/auth/components/verify-email-panel.tsx",
+        "apps/frontend/src/features/auth/hooks/use-account-mail.ts",
+        "apps/frontend/src/features/auth/hooks/use-account-management.ts",
+        "apps/frontend/src/features/auth/hooks/use-auth-session.ts",
+        "apps/frontend/src/features/auth/hooks/use-current-user.ts",
+        "apps/frontend/src/features/auth/hooks/use-google-auth.ts",
+        "apps/frontend/src/features/auth/hooks/use-password-reset.ts",
+        "apps/frontend/src/features/auth/hooks/use-sign-in.ts",
+        "apps/frontend/src/features/auth/hooks/use-sign-out.ts",
+        "apps/frontend/src/features/auth/hooks/use-sign-up.ts",
+        "apps/frontend/src/features/auth/hooks/use-verify-email.ts",
+        "apps/frontend/src/features/auth/index.ts",
+        "apps/frontend/src/features/auth/lib/firebase-client.ts",
+        "apps/frontend/src/features/auth/lib/form-rules.ts",
+        "apps/frontend/src/features/auth/lib/provider-labels.ts",
+        "apps/frontend/src/features/auth/schemas/credentials.schema.ts",
+        "apps/frontend/src/features/auth/types.ts"
+      ],
+      "chat": [
+        "apps/frontend/src/features/chat/components/chat-composer.tsx",
+        "apps/frontend/src/features/chat/components/chat-message-item.tsx",
+        "apps/frontend/src/features/chat/components/chat-message-list.tsx",
+        "apps/frontend/src/features/chat/components/chat-panel.tsx",
+        "apps/frontend/src/features/chat/components/chat-streaming-indicator.tsx",
+        "apps/frontend/src/features/chat/hooks/use-chat-stream.ts",
+        "apps/frontend/src/features/chat/index.ts",
+        "apps/frontend/src/features/chat/lib/chat-state.ts",
+        "apps/frontend/src/features/chat/lib/client-message-id.ts"
+      ],
+      "marketing": [
+        "apps/frontend/src/features/marketing/components/landing-footer.tsx",
+        "apps/frontend/src/features/marketing/components/landing-hero.tsx",
+        "apps/frontend/src/features/marketing/components/landing-preview.tsx",
+        "apps/frontend/src/features/marketing/components/landing-steps.tsx",
+        "apps/frontend/src/features/marketing/components/landing-trust.tsx",
+        "apps/frontend/src/features/marketing/components/marketing-header-controls.tsx",
+        "apps/frontend/src/features/marketing/components/marketing-header.tsx",
+        "apps/frontend/src/features/marketing/index.ts"
+      ]
+    },
+    "frontendQueryKeys": {
+      "declaredIn": "apps/frontend/src/lib/query/query-keys.ts",
+      "namespaces": [
+        "auth",
+        "admin",
+        "platform"
+      ]
+    }
+  },
+  "tasks": {
+    "10": {
+      "title": "Firebase and GitHub identity providers",
+      "file": "tasks/10-external-identity-providers.md",
+      "status": "done",
+      "dependsOn": [
+        "08",
+        "09"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "11": {
+      "title": "Frontend platform and auth UI",
+      "file": "tasks/11-frontend-platform-auth-ui.md",
+      "status": "done",
+      "dependsOn": [
+        "03",
+        "06",
+        "08",
+        "09",
+        "10"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "12": {
+      "title": "Admin platform",
+      "file": "tasks/12-admin-platform.md",
+      "status": "done",
+      "dependsOn": [
+        "07",
+        "08",
+        "09",
+        "11"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "13": {
+      "title": "PWA foundation",
+      "file": "tasks/13-pwa-foundation.md",
+      "status": "done",
+      "dependsOn": [
+        "04",
+        "11"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "14": {
+      "title": "AI provider platform",
+      "file": "tasks/14-ai-provider-platform.md",
+      "status": "done",
+      "dependsOn": [
+        "06",
+        "07",
+        "09"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "15": {
+      "title": "Architecture and quality gates",
+      "file": "tasks/15-quality-gates.md",
+      "status": "done",
+      "dependsOn": [
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "16": {
+      "title": "Knowledge domain and schema",
+      "file": "tasks/16-knowledge-domain-schema.md",
+      "status": "done",
+      "dependsOn": [
+        "07",
+        "14",
+        "15"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "17": {
+      "title": "Knowledge seed and retrieval",
+      "file": "tasks/17-knowledge-seed-retrieval.md",
+      "status": "in_progress",
+      "dependsOn": [
+        "14",
+        "16"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "18": {
+      "title": "Trip and TripBrief core",
+      "file": "tasks/18-trip-brief-core.md",
+      "status": "in_progress",
+      "dependsOn": [
+        "06",
+        "07",
+        "11",
+        "15",
+        "17"
+      ],
+      "blockedBy": [
+        "17"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "19": {
+      "title": "LLM TripBrief extraction",
+      "file": "tasks/19-llm-trip-brief-extraction.md",
+      "status": "in_progress",
+      "dependsOn": [
+        "14",
+        "18"
+      ],
+      "blockedBy": [
+        "18"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "20": {
+      "title": "Conversation persistence and SSE",
+      "file": "tasks/20-conversation-sse.md",
+      "status": "in_progress",
+      "dependsOn": [
+        "06",
+        "07",
+        "11",
+        "14",
+        "15"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "21": {
+      "title": "Planner chat and trip creation",
+      "file": "tasks/21-planner-chat-trip-creation.md",
+      "status": "not_started",
+      "dependsOn": [
+        "18",
+        "19",
+        "20"
+      ],
+      "blockedBy": [
+        "18",
+        "19",
+        "20"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "22": {
+      "title": "Trip chat intake tools",
+      "file": "tasks/22-trip-chat-intake-tools.md",
+      "status": "not_started",
+      "dependsOn": [
+        "18",
+        "19",
+        "20",
+        "21"
+      ],
+      "blockedBy": [
+        "18",
+        "19",
+        "20",
+        "21"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "23": {
+      "title": "Research job platform",
+      "file": "tasks/23-research-job-platform.md",
+      "status": "not_started",
+      "dependsOn": [
+        "07",
+        "18",
+        "22"
+      ],
+      "blockedBy": [
+        "18",
+        "22"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "24": {
+      "title": "Deterministic destination ranking",
+      "file": "tasks/24-destination-ranking.md",
+      "status": "not_started",
+      "dependsOn": [
+        "17",
+        "18",
+        "23"
+      ],
+      "blockedBy": [
+        "17",
+        "18",
+        "23"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "25": {
+      "title": "Travel research agent",
+      "file": "tasks/25-travel-research-agent.md",
+      "status": "not_started",
+      "dependsOn": [
+        "14",
+        "17",
+        "23",
+        "24"
+      ],
+      "blockedBy": [
+        "17",
+        "23",
+        "24"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "26": {
+      "title": "Research API and frontend",
+      "file": "tasks/26-research-api-frontend.md",
+      "status": "not_started",
+      "dependsOn": [
+        "11",
+        "23",
+        "24",
+        "25"
+      ],
+      "blockedBy": [
+        "23",
+        "24",
+        "25"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "27": {
+      "title": "Research chat tools and evaluation",
+      "file": "tasks/27-research-chat-evaluation.md",
+      "status": "not_started",
+      "dependsOn": [
+        "22",
+        "25",
+        "26"
+      ],
+      "blockedBy": [
+        "22",
+        "25",
+        "26"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "28": {
+      "title": "Itinerary domain and scheduling",
+      "file": "tasks/28-itinerary-domain-scheduling.md",
+      "status": "not_started",
+      "dependsOn": [
+        "17",
+        "18",
+        "26"
+      ],
+      "blockedBy": [
+        "17",
+        "18",
+        "26"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "29": {
+      "title": "Route and mobility planning",
+      "file": "tasks/29-route-mobility.md",
+      "status": "not_started",
+      "dependsOn": [
+        "17",
+        "28"
+      ],
+      "blockedBy": [
+        "17",
+        "28"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "30": {
+      "title": "Itinerary generation agent",
+      "file": "tasks/30-itinerary-agent.md",
+      "status": "not_started",
+      "dependsOn": [
+        "14",
+        "26",
+        "28",
+        "29"
+      ],
+      "blockedBy": [
+        "26",
+        "28",
+        "29"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "31": {
+      "title": "Itinerary UI and chat editing",
+      "file": "tasks/31-itinerary-ui-chat-editing.md",
+      "status": "not_started",
+      "dependsOn": [
+        "22",
+        "27",
+        "30"
+      ],
+      "blockedBy": [
+        "22",
+        "27",
+        "30"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "32": {
+      "title": "Booking quote domain and stub suppliers",
+      "file": "tasks/32-booking-quotes-stubs.md",
+      "status": "not_started",
+      "dependsOn": [
+        "07",
+        "15",
+        "31"
+      ],
+      "blockedBy": [
+        "31"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "33": {
+      "title": "Booking confirmation safety",
+      "file": "tasks/33-booking-confirmation-safety.md",
+      "status": "not_started",
+      "dependsOn": [
+        "32"
+      ],
+      "blockedBy": [
+        "32"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "34": {
+      "title": "Payment and live adapter slots",
+      "file": "tasks/34-payment-live-adapters.md",
+      "status": "not_started",
+      "dependsOn": [
+        "32",
+        "33"
+      ],
+      "blockedBy": [
+        "32",
+        "33"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "35": {
+      "title": "Booking chat tools",
+      "file": "tasks/35-booking-chat-tools.md",
+      "status": "not_started",
+      "dependsOn": [
+        "27",
+        "31",
+        "32",
+        "33"
+      ],
+      "blockedBy": [
+        "27",
+        "31",
+        "32",
+        "33"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "36": {
+      "title": "Chat security and rendering",
+      "file": "tasks/36-chat-security-rendering.md",
+      "status": "not_started",
+      "dependsOn": [
+        "20",
+        "21",
+        "22",
+        "27",
+        "31",
+        "35"
+      ],
+      "blockedBy": [
+        "20",
+        "21",
+        "22",
+        "27",
+        "31",
+        "35"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "37": {
+      "title": "Semantic cache and Redis",
+      "file": "tasks/37-semantic-cache-redis.md",
+      "status": "not_started",
+      "dependsOn": [
+        "14",
+        "17",
+        "25",
+        "30",
+        "35",
+        "36"
+      ],
+      "blockedBy": [
+        "17",
+        "25",
+        "30",
+        "35",
+        "36"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "38": {
+      "title": "Full-system verification",
+      "file": "tasks/38-full-system-verification.md",
+      "status": "not_started",
+      "dependsOn": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30",
+        "31",
+        "32",
+        "33",
+        "34",
+        "35",
+        "36",
+        "37",
+        "40",
+        "41"
+      ],
+      "blockedBy": [
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30",
+        "31",
+        "32",
+        "33",
+        "34",
+        "35",
+        "36",
+        "37",
+        "40",
+        "41"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "39": {
+      "title": "Production configuration and release readiness",
+      "file": "tasks/39-release-readiness.md",
+      "status": "not_started",
+      "dependsOn": [
+        "38"
+      ],
+      "blockedBy": [
+        "38"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "40": {
+      "title": "TKB refresh and re-embedding",
+      "file": "tasks/40-tkb-refresh-reembed.md",
+      "status": "not_started",
+      "dependsOn": [
+        "14",
+        "15",
+        "16",
+        "17"
+      ],
+      "blockedBy": [
+        "17"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "41": {
+      "title": "Admin knowledge curation",
+      "file": "tasks/41-admin-knowledge-curation.md",
+      "status": "not_started",
+      "dependsOn": [
+        "12",
+        "16",
+        "17",
+        "40"
+      ],
+      "blockedBy": [
+        "17",
+        "40"
+      ],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "00": {
+      "title": "Baseline and execution map",
+      "file": "tasks/00-plan-baseline.md",
+      "status": "done",
+      "dependsOn": [],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Deliverables",
+        "Validation",
+        "Definition of Done",
+        "Suggested branch and commit"
+      ]
+    },
+    "01": {
+      "title": "Prerequisite and root tooling",
+      "file": "tasks/01-prerequisite-root-tooling.md",
+      "status": "done",
+      "dependsOn": [
+        "00"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "02": {
+      "title": "Backend minimal scaffold",
+      "file": "tasks/02-backend-minimal-scaffold.md",
+      "status": "done",
+      "dependsOn": [
+        "01"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "03": {
+      "title": "Frontend minimal scaffold",
+      "file": "tasks/03-frontend-minimal-scaffold.md",
+      "status": "done",
+      "dependsOn": [
+        "01"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "04": {
+      "title": "Docker runtime and orchestration",
+      "file": "tasks/04-docker-runtime.md",
+      "status": "done",
+      "dependsOn": [
+        "01",
+        "02",
+        "03"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "05": {
+      "title": "CI and repository workflow",
+      "file": "tasks/05-ci-repository-workflow.md",
+      "status": "done",
+      "dependsOn": [
+        "01",
+        "02",
+        "03",
+        "04"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "06": {
+      "title": "OpenAPI and error platform",
+      "file": "tasks/06-openapi-error-platform.md",
+      "status": "done",
+      "dependsOn": [
+        "02",
+        "03",
+        "04",
+        "05"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "07": {
+      "title": "Database and domain foundation",
+      "file": "tasks/07-database-domain-foundation.md",
+      "status": "done",
+      "dependsOn": [
+        "02",
+        "04",
+        "06"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "08": {
+      "title": "Local identity and JWT session",
+      "file": "tasks/08-local-identity-jwt.md",
+      "status": "done",
+      "dependsOn": [
+        "06",
+        "07"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    },
+    "09": {
+      "title": "Mailer and account lifecycle",
+      "file": "tasks/09-mailer-account-lifecycle.md",
+      "status": "done",
+      "dependsOn": [
+        "08"
+      ],
+      "blockedBy": [],
+      "hasSections": [
+        "Objective",
+        "Dependencies",
+        "Required reading",
+        "Scope",
+        "Do not",
+        "Validation",
+        "Definition of Done",
+        "Handoff",
+        "Suggested branch and commit"
+      ]
+    }
+  }
+}
