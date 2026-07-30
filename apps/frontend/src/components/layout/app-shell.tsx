@@ -5,15 +5,20 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { OfflineBanner } from '@/components/ui/offline-banner';
-import { useCurrentUser } from '@/features/auth';
 import { cn } from '@/lib/utils/cn';
-import { AccountMenu } from './account-menu';
 import { ADMIN_NAV_ITEM, PLANNER_NAV_ITEMS, type NavItem } from './app-nav';
 
 export interface AppShellProps {
   children: ReactNode;
   /** Rendered next to the brand as an "Admin" context label (§8.10). */
   contextLabel?: string;
+  /**
+   * §5.1: the admin link is shown only to authorised users. A prop rather than a role lookup —
+   * the shell renders identity but does not read it.
+   */
+  isAdmin?: boolean;
+  /** The account menu, already wired to whatever owns identity. */
+  accountMenu?: ReactNode;
 }
 
 /**
@@ -27,11 +32,15 @@ export interface AppShellProps {
  * The bottom bar carries `pb-[env(safe-area-inset-bottom)]` through a utility class rather than
  * an arbitrary value; §4.4 requires the inset on full-screen PWA navigation, and without it the
  * last item sits under the home indicator on iOS.
+ *
+ * <b>Presentational.</b> It used to call `useCurrentUser` from `@/features/auth` to decide whether to
+ * show the admin link, which made shared chrome depend on a feature and needed an ESLint exception to
+ * compile. Identity now arrives as `isAdmin` and `accountMenu`, supplied by
+ * `features/auth/components/authenticated-app-shell.tsx`. Every route should use that; this one is
+ * the layout, and knows nothing about who is signed in.
  */
-export function AppShell({ children, contextLabel }: AppShellProps) {
+export function AppShell({ children, contextLabel, isAdmin = false, accountMenu }: AppShellProps) {
   const t = useTranslations('common');
-  const { data: user } = useCurrentUser();
-  const isAdmin = user?.roles.includes('ADMIN') ?? false;
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -51,7 +60,7 @@ export function AppShell({ children, contextLabel }: AppShellProps) {
             </span>
           ) : null}
         </div>
-        <AccountMenu />
+        {accountMenu}
       </header>
 
       <div className="flex flex-1">

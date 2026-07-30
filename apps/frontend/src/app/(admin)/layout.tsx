@@ -1,7 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
-import { AppShell } from '@/components/layout/app-shell';
-import { AuthGuard } from '@/features/auth';
+import { AuthGuard, AuthenticatedAppShell } from '@/features/auth';
 
 /**
  * `(admin)` requires the `ADMIN` role on top of a live session (§8.10).
@@ -20,7 +19,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <AuthGuard require="admin">
-      <AppShell contextLabel={t('nav.admin_context')}>{children}</AppShell>
+      <AuthenticatedAppShell contextLabel={t('nav.admin_context')}>{children}</AuthenticatedAppShell>
     </AuthGuard>
   );
 }

@@ -6,6 +6,7 @@
  * assemble half an auth flow without the hook that owns its rules.
  */
 export { AccountSettingsPanel } from './components/account-settings-panel';
+export { AuthenticatedAppShell } from './components/authenticated-app-shell';
 export { AuthGuard } from './components/auth-guard';
 export { ForgotPasswordPanel } from './components/forgot-password-panel';
 export { ProviderLinkedNotice } from './components/provider-linked-notice';

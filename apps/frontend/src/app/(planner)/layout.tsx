@@ -1,6 +1,5 @@
 import { Suspense, type ReactNode } from 'react';
-import { AppShell } from '@/components/layout/app-shell';
-import { AuthGuard, ProviderLinkedNotice } from '@/features/auth';
+import { AuthGuard, AuthenticatedAppShell, ProviderLinkedNotice } from '@/features/auth';
 
 /**
  * Everything under `(planner)` requires a live, email-verified session (UC-A08).
@@ -19,7 +18,7 @@ export default function PlannerLayout({ children }: { children: ReactNode }) {
       <Suspense>
         <ProviderLinkedNotice />
       </Suspense>
-      <AppShell>{children}</AppShell>
+      <AuthenticatedAppShell>{children}</AuthenticatedAppShell>
     </AuthGuard>
   );
 }

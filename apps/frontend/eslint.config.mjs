@@ -119,26 +119,17 @@ const config = [
 
   // Zone: shared UI, hooks and styles. Reusable by anything, so they may know about nothing above
   // them — not a feature, not a route, not the generated client.
+  //
+  // `src/components/layout/**` used to be carved out of this zone: app-shell.tsx and
+  // account-menu.tsx called useCurrentUser / useSignOut from @/features/auth, which is a shared
+  // component importing a feature. F-25 recorded it, the 2026-07-29 review named it again, and it is
+  // **closed** — the two components take identity as props, and
+  // features/auth/components/authenticated-app-shell.tsx supplies it. The exception is gone rather
+  // than narrowed, so nothing in shared code has a precedent to point at.
   {
     files: ['src/components/**', 'src/hooks/**', 'src/styles/**'],
-    ignores: ['src/components/layout/**', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
-    rules: restrict(NO_FEATURES, NO_APP, NO_GENERATED),
-  },
-
-  // Zone: the app shell — a KNOWN EXCEPTION to the rule above.
-  //
-  // components/layout/app-shell.tsx and account-menu.tsx call useCurrentUser / useSignOut from
-  // @/features/auth. That is a real violation, not a case that deserves to exist: the chrome is
-  // shared, but it renders identity, so it is coupled to auth.
-  //
-  // Recorded as open question F-25 in tasks/STATUS.md. Fixing it means passing the user down from
-  // a route-level provider, or moving the shell into features/auth. Task 15 declines to make that
-  // call — it belongs to whoever owns the layout — and deleting the rule for ALL shared code would
-  // also stop covering src/hooks and src/styles, which comply today.
-  {
-    files: ['src/components/layout/**'],
     ignores: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
-    rules: restrict(NO_APP, NO_GENERATED),
+    rules: restrict(NO_FEATURES, NO_APP, NO_GENERATED),
   },
 
   // Zone: the typed API layer. The one place allowed to see the generated client.

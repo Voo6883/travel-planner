@@ -857,6 +857,7 @@
         "apps/frontend/src/features/auth/components/auth-error-notice.tsx",
         "apps/frontend/src/features/auth/components/auth-guard.tsx",
         "apps/frontend/src/features/auth/components/auth-provider-buttons.tsx",
+        "apps/frontend/src/features/auth/components/authenticated-app-shell.tsx",
         "apps/frontend/src/features/auth/components/change-password-card.tsx",
         "apps/frontend/src/features/auth/components/connected-accounts-card.tsx",
         "apps/frontend/src/features/auth/components/danger-zone-card.tsx",
