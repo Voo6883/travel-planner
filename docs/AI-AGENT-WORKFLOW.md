@@ -521,9 +521,34 @@ gets its own `agent/task-NN-*` branch off `dev`.
 Four rules, all from the review's §6.H. Each one is about the same thing: an agent pays to read the
 repository on every task, so what the repository says has to be worth reading.
 
-1. **Comments carry invariants and traps, not narrative.** "Why this cannot be a timestamp" belongs in
-   the code; the full derivation belongs in an ADR the comment links to. A 300-line file that
-   re-explains a rule three other files also explain is a cost paid on every read, forever.
+1. **Write fewer comments. The default is none.**
+
+   The earlier version of this rule said comments should "carry invariants, not narrative", and it did
+   not work — the code it governs is over-commented, including everything written under it. A rule an
+   author can satisfy by believing their own paragraph is important is not a rule. So it is concrete
+   now:
+
+   - **Write a comment only where a competent reader would otherwise make a specific mistake**, and
+     name the mistake. `// seq may contain gaps — do not use it for arithmetic` earns its line. "This
+     method loads the user" does not.
+   - **Class/type doc is one or two sentences.** What it is, and the one thing that is surprising about
+     it. If more than that seems necessary, the reasoning belongs somewhere read on demand rather than
+     on every pass — see below.
+   - **Never explain the language, the framework, or the diff.** No `// increment the counter`, no
+     tutorials on `@Transactional`, no `// this used to be X`. Git holds the history.
+   - **Say it once.** A rationale repeated in a class doc, a method doc and an inline comment is one
+     idea costing three reads. Put it at the outermost place a reader arrives and link the rest.
+   - **Delete a comment the code now makes obvious.** A comment kept "for safety" alongside a clear
+     name is a second thing to maintain and the first thing to go stale.
+
+   **Long reasoning is not worthless — it is misplaced.** Trade-offs, rejected alternatives, measured
+   numbers and the story of a defect belong in an ADR, a `tasks/STATUS.md` finding row, or the commit
+   message. All three are read when someone is asking that question; a comment is read every time
+   anyone opens the file. Moving a paragraph out of a file and into the commit that introduced it loses
+   nothing and costs every future reader nothing.
+
+   The test to apply before keeping a comment: *would deleting this cause a specific, nameable
+   error?* If the answer is "it explains the thinking", move it to the commit message.
 2. **Required reading points at sections, not documents.** `task:context` resolves `§4.0.2` to a line
    range; a brief that says "read the PLAN" is asking a model to read 3,700 lines, and the cheapest
    correct behaviour for a model that cannot find the anchor is to do exactly that.

@@ -50,6 +50,10 @@ see [`docs/AGENT-HARNESS.md`](docs/AGENT-HARNESS.md) §3.
 - **Stub adapter** when vendor API is undecided (`§4.0.7`)
 - **Vertical slice** — new feature = new packages; don't edit unrelated services (§4.0.8)
 - **Minimal diff** — only change what the task requires
+- **Fewest comments that work** — default none. Write one only where a competent reader would
+  otherwise make a *specific* mistake, and name it. Type doc is 1–2 sentences. Trade-offs, rejected
+  alternatives and defect stories go in the commit message, an ADR, or a `tasks/STATUS.md` finding —
+  all read on demand; a comment is read on every pass. `docs/AI-AGENT-WORKFLOW.md` §9.1
 
 ## Where code goes
 

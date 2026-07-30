@@ -79,12 +79,9 @@ import java.util.UUID;
 /**
  * Persistence for ${names.human} (tasks/NN-*.md).
  *
- * <p>TODO: say what this port is for in one sentence, and — more usefully — what it deliberately does
- * <em>not</em> offer. The interesting comment on a port is the query somebody will want and must not
- * have; see {@code RefreshTokenPort} for the shape ("there is deliberately no find-the-active-token").
- *
- * <p>Implemented in {@code infrastructure/persistence/}. The domain declares what it needs; the
- * adapter decides how. Nothing in {@code domain/} or {@code application/} may name the adapter.
+ * <p>TODO: one sentence on what this port is for, and the query somebody will want and must not have.
+ * {@code RefreshTokenPort} is the reference. Nothing in {@code domain/} or {@code application/} may
+ * name the adapter.
  */
 public interface ${names.Pascal}RepositoryPort {
 
@@ -113,12 +110,10 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * ${names.human} use cases (tasks/NN-*.md, UC-???).
  *
- * <p>TODO: describe the rules this service owns, not the methods it has. The methods are visible; the
- * rules are the reason a reader is here.
+ * <p>TODO: the rules this service owns, not the methods it has.
  *
- * <p><strong>Every caller is scoped by owner.</strong> PLAN §4.0.2-L: a read that could return another
- * user's row is a read that eventually does. {@link UserContext} is a parameter rather than something
- * fetched from a security context inside, so a call site cannot forget it.
+ * <p>Every method takes {@link UserContext} as a parameter rather than reading a security context, so
+ * a call site cannot forget to scope by owner (PLAN §4.0.2-L).
  */
 @Service
 @RequiresDatabase
@@ -130,30 +125,19 @@ public class ${names.Pascal}Service {
         this.${names.camel}s = ${names.camel}s;
     }
 
-    /**
-     * TODO: the read path.
-     *
-     * <p>{@code readOnly = true} rather than {@link TransactionalWrite}: a query needs neither the
-     * rollback rules nor the deadlock retry, and marking it read-only lets the driver skip the write
-     * bookkeeping.
-     */
+    /** TODO: the read path. */
     @Transactional(readOnly = true)
     public UUID find(UUID id, UserContext caller) {
-        // TODO: scope by caller.userId() and return a ${names.Pascal}View, not a domain record —
-        // a domain type on the wire makes every future field an accidental API change.
+        // TODO: scope by caller.userId(); return a ${names.Pascal}View, never a domain record — a
+        // domain type on the wire makes every future field an accidental API change.
         return ${names.camel}s.findIdById(id).orElseThrow(() -> new UnsupportedOperationException("TODO"));
     }
 
     /**
      * TODO: the write path.
      *
-     * <p>{@link TransactionalWrite} is already here and must stay: it is the only thing that makes the
-     * write atomic and retries the deadlock victim PostgreSQL picks. Nothing else in the codebase
-     * catches its absence, which is exactly why the template has it on.
-     *
-     * <p><strong>No LLM call, no supplier HTTP call, no web search inside this method.</strong> Each
-     * holds a pooled connection across a network wait, and a retried transaction repeats the side
-     * effect. Do the IO first, then persist the validated result here.
+     * <p>{@link TransactionalWrite} must stay — no gate catches its absence. No LLM, supplier or search
+     * call inside: each holds a pooled connection across a network wait, and a retry repeats it.
      */
     @TransactionalWrite
     public UUID create(Create${names.Pascal}Command command, UserContext caller) {
