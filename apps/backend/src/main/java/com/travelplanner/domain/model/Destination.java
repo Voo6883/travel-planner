@@ -52,6 +52,13 @@ public record Destination(
             throw new IllegalArgumentException(
                     "slug must be 1.." + MAX_SLUG_LENGTH + " characters, got '" + slug + "'");
         }
+        if (name.isBlank()) {
+            // A blank name reaches the destination picker as an unclickable empty row and the
+            // itinerary header as nothing at all. `not null` in the schema does not catch it:
+            // PostgreSQL considers '' a perfectly good non-null string.
+            throw new IllegalArgumentException("name must not be blank");
+        }
+        requireIanaZone(timezone);
         // ISO 3166-1 alpha-2, matching char(2) in the schema. Checked here so a three-letter code
         // fails with a message rather than as a truncation.
         if (countryCode.length() != 2) {
@@ -66,6 +73,31 @@ public record Destination(
         }
         if (longitude != null && (longitude < -180 || longitude > 180)) {
             throw new IllegalArgumentException("longitude out of range: " + longitude);
+        }
+    }
+
+    /**
+     * The timezone has to be a zone the JVM can actually resolve, not merely a non-empty string.
+     *
+     * <p>Everything C3 does with it happens later and elsewhere: an itinerary converts an event to
+     * local time at scheduling time, and {@code ZoneId.of} throws there. By then the bad value is a
+     * curated row in the database, the stack trace names the scheduler, and the fix is a data
+     * migration. Rejecting {@code "Asia/Tokio"} at construction moves that failure to the seed
+     * loader, where the offending file is still on screen.
+     *
+     * <p>{@code ZoneId.of} rather than a regex, because the set of valid zones is the tzdb the JVM
+     * ships and a pattern can only check that a string looks like one. {@code "UTC+7"} looks fine
+     * and is not a zone; it is a fixed offset that ignores the DST an itinerary has to respect.
+     */
+    private static void requireIanaZone(String timezone) {
+        try {
+            java.time.ZoneId zone = java.time.ZoneId.of(timezone);
+            if (!java.time.ZoneId.getAvailableZoneIds().contains(zone.getId())) {
+                throw new java.time.DateTimeException("not a region-based zone");
+            }
+        } catch (java.time.DateTimeException unresolvable) {
+            throw new IllegalArgumentException("timezone must be an IANA zone id such as "
+                    + "'Asia/Tokyo', got '" + timezone + "'", unresolvable);
         }
     }
 

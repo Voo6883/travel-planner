@@ -29,6 +29,7 @@ public final class LlmOptions {
     private final Integer maxOutputTokens;
     private final Duration timeout;
     private final List<String> stopSequences;
+    private final AiOperation operation;
 
     private LlmOptions(Builder builder) {
         this.feature = builder.feature;
@@ -38,6 +39,7 @@ public final class LlmOptions {
         this.maxOutputTokens = builder.maxOutputTokens;
         this.timeout = builder.timeout;
         this.stopSequences = List.copyOf(builder.stopSequences);
+        this.operation = builder.operation;
     }
 
     /** Everything defaulted: the configured default provider, model, and limits. */
@@ -83,6 +85,21 @@ public final class LlmOptions {
         return stopSequences;
     }
 
+    /**
+     * How this call should be labelled in {@code ai_call_log}, or {@code null} for the port method's
+     * own name.
+     *
+     * <p>The one setting here that is not a provider parameter. It rides along with the options
+     * because the options object is the only thing that travels from a composed caller down to the
+     * router, and the router is the only place a call is recorded — so a composition such as
+     * {@code StructuredOutputRunner}, whose attempts reach the provider as ordinary completions, has
+     * no other way to say what they were part of. Setting it changes nothing about the request that
+     * is sent.
+     */
+    public AiOperation operation() {
+        return operation;
+    }
+
     /** Mutable builder; not thread-safe, and not meant to be shared. */
     public static final class Builder {
 
@@ -93,6 +110,7 @@ public final class LlmOptions {
         private Integer maxOutputTokens;
         private Duration timeout;
         private List<String> stopSequences = List.of();
+        private AiOperation operation;
 
         private Builder() {
         }
@@ -142,6 +160,12 @@ public final class LlmOptions {
 
         public Builder stopSequences(List<String> value) {
             this.stopSequences = value == null ? List.of() : List.copyOf(value);
+            return this;
+        }
+
+        /** Overrides the {@code ai_call_log} operation label; see {@link LlmOptions#operation()}. */
+        public Builder operation(AiOperation value) {
+            this.operation = value;
             return this;
         }
 

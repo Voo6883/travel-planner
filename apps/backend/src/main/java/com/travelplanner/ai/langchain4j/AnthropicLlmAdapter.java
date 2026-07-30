@@ -25,7 +25,7 @@ final class AnthropicLlmAdapter extends LangChain4jLlmAdapter {
     private final StreamingChatModel streamingChatModel;
 
     AnthropicLlmAdapter(AiProperties.Anthropic settings, java.time.Duration timeout) {
-        super(AiProperties.ANTHROPIC_PROVIDER);
+        super(AiProperties.ANTHROPIC_PROVIDER, settings.getModel());
         AnthropicChatModel.AnthropicChatModelBuilder blocking = AnthropicChatModel.builder()
                 .apiKey(settings.getApiKey())
                 .modelName(settings.getModel())

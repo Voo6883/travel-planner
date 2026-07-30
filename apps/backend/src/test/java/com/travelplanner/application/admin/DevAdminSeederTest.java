@@ -27,10 +27,16 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
  * {@code @Profile} exactly as the real container does, and needs neither Docker nor a database — so
  * this runs in {@code ./gradlew test} rather than in a suite somebody might skip.
  *
- * <p>The seeding tests call {@link DevAdminSeeder#seed()} directly. {@code ApplicationRunner#run} is
- * invoked by {@code SpringApplication}, which this harness is not, and the transactional and retry
+ * <p>The seeding tests call {@link DevAdminSeedWriter#seed()} directly. {@code ApplicationRunner#run}
+ * is invoked by {@code SpringApplication}, which this harness is not, and the transactional and retry
  * annotations are inert here because no proxy infrastructure is registered — which is what makes the
  * fakes' state readable straight after the call.
+ *
+ * <p>That inertness is also why {@link #theRunnerDelegatesToASeparateBeanSoTheProxyIsNotBypassed()}
+ * asserts on the bean graph instead. The self-invocation defect this split fixed is invisible to a
+ * direct call by definition — the annotation does nothing here either — so the only thing that can be
+ * checked without standing up transaction infrastructure is that the write is reachable only through
+ * another bean's reference.
  */
 class DevAdminSeederTest {
 
@@ -41,7 +47,7 @@ class DevAdminSeederTest {
             // bean is absent for a reason that has nothing to do with the profile, and every
             // assertion below would pass vacuously.
             .withPropertyValues("spring.datasource.url=jdbc:postgresql://localhost:5432/ignored")
-            .withUserConfiguration(DevAdminSeeder.class);
+            .withUserConfiguration(DevAdminSeeder.class, DevAdminSeedWriter.class);
 
     // ---------------------------------------------------------------------------------------
     // "Production cannot create the development seed" — the Definition of Done item
@@ -87,7 +93,7 @@ class DevAdminSeederTest {
         contexts.withPropertyValues("spring.profiles.active=local").run(context -> {
             FakeUsers users = (FakeUsers) context.getBean(UserRepositoryPort.class);
 
-            assertThat(context.getBean(DevAdminSeeder.class).seed()).isTrue();
+            assertThat(context.getBean(DevAdminSeedWriter.class).seed()).isTrue();
 
             User seeded = users.findByUsernameIgnoreCase(DevAdminSeeder.USERNAME).orElseThrow();
             assertThat(seeded.role()).isEqualTo(Role.ADMIN);
@@ -103,7 +109,7 @@ class DevAdminSeederTest {
     void neverStoresTheSeedPasswordInPlainText() {
         contexts.withPropertyValues("spring.profiles.active=docker").run(context -> {
             FakeUsers users = (FakeUsers) context.getBean(UserRepositoryPort.class);
-            context.getBean(DevAdminSeeder.class).seed();
+            context.getBean(DevAdminSeedWriter.class).seed();
 
             User seeded = users.findByUsernameIgnoreCase(DevAdminSeeder.USERNAME).orElseThrow();
             assertThat(seeded.passwordHash())
@@ -112,11 +118,32 @@ class DevAdminSeederTest {
         });
     }
 
+    /**
+     * The structural half of the self-invocation fix: the write is not a method on the runner, so
+     * there is no {@code this.seed()} for a proxy to be bypassed by.
+     */
+    @Test
+    void theRunnerDelegatesToASeparateBeanSoTheProxyIsNotBypassed() {
+        contexts.withPropertyValues("spring.profiles.active=local").run(context -> {
+            assertThat(context).hasSingleBean(DevAdminSeedWriter.class);
+            assertThat(DevAdminSeeder.class.getDeclaredMethods())
+                    .noneMatch(method -> "seed".equals(method.getName()));
+        });
+    }
+
+    @Test
+    void theWriterIsAlsoAbsentUnderTheProdProfile() {
+        // Both halves carry the gate. A future refactor that made the runner conditional on
+        // something else must not leave a transactional admin-creating bean in a prod context.
+        contexts.withPropertyValues("spring.profiles.active=prod")
+                .run(context -> assertThat(context).doesNotHaveBean(DevAdminSeedWriter.class));
+    }
+
     @Test
     void isIdempotentAcrossRestartsAndLeavesAChangedPasswordAlone() {
         contexts.withPropertyValues("spring.profiles.active=local").run(context -> {
             FakeUsers users = (FakeUsers) context.getBean(UserRepositoryPort.class);
-            DevAdminSeeder seeder = context.getBean(DevAdminSeeder.class);
+            DevAdminSeedWriter seeder = context.getBean(DevAdminSeedWriter.class);
             seeder.seed();
 
             User original = users.findByUsernameIgnoreCase(DevAdminSeeder.USERNAME).orElseThrow();

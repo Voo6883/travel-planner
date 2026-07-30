@@ -29,6 +29,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
 /**
  * Wires the AI platform (task 14; PLAN §5).
@@ -60,8 +61,8 @@ public class AiConfig {
      */
     private final Clock clock = Clock.systemUTC();
 
-    public AiConfig(AiProperties properties) {
-        AiConfigValidator.validate(properties);
+    public AiConfig(AiProperties properties, Environment environment) {
+        AiConfigValidator.validate(properties, environment.getActiveProfiles());
         this.properties = properties;
         log.info("AI platform: default provider={} embeddings={}/{} routing={}",
                 properties.getProvider().getDefaultProvider(),

@@ -267,12 +267,12 @@ final class ChatTestFakes {
         }
 
         @Override
-        public String complete(Prompt prompt, LlmOptions options) {
-            throw new UnsupportedOperationException();
+        public String modelName() {
+            return "scripted-model";
         }
 
         @Override
-        public <T> T completeStructured(Prompt prompt, Class<T> type, LlmOptions options) {
+        public String complete(Prompt prompt, LlmOptions options) {
             throw new UnsupportedOperationException();
         }
 

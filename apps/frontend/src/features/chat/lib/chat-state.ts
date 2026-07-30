@@ -52,6 +52,14 @@ export interface ChatMessage {
   readonly role: ChatRole;
   readonly text: string;
   readonly status: ChatMessageStatus;
+  /**
+   * The server's ordinal, or `null` while the message exists only optimistically.
+   *
+   * This is what the transcript is ordered by. `createdAt` cannot do it: `now()` is fixed for a
+   * whole transaction in Postgres, so a turn's tool call, tool result and assistant reply all carry
+   * the same timestamp and are unordered under it.
+   */
+  readonly seq: number | null;
   readonly createdAt: string | null;
 }
 
@@ -189,12 +197,14 @@ function loadHistory(
     }
   }
   for (const persisted of history) {
+    if (!isRenderable(persisted.role)) {
+      continue;
+    }
     const existing = committed.get(persisted.message_id);
     committed.set(persisted.message_id, existing?.status === 'streaming' ? existing : toMessage(persisted, existing));
   }
 
-  // Stable sort: ties keep the order they were inserted in, which is the server's own order.
-  const ordered = [...committed.values()].sort(byCreatedAt);
+  const ordered = [...committed.values()].sort(bySeq);
   const inFlight = state.messages.filter(
     (message) => message.messageId === null && (message.status === 'pending' || message.status === 'failed'),
   );
@@ -207,6 +217,21 @@ function loadHistory(
   };
 }
 
+/**
+ * Which of the six wire roles reach the transcript.
+ *
+ * `tool_call` and `tool_result` do not. Their `content` is the tool's JSON, and design system §7.2
+ * forbids showing internal tool identifiers or raw JSON — the live stream already keeps only "some
+ * tool is running" (see `ChatToolActivity`), and a reloaded page has to agree with the live one or
+ * refreshing would reveal what streaming hid.
+ *
+ * Dropping them here rather than in the schema is the whole point of the split: they still *parse*,
+ * so a page containing one loads instead of failing, and only the rendering opts out.
+ */
+function isRenderable(role: ChatHistoryMessage['role']): role is ChatRole {
+  return role !== 'tool_call' && role !== 'tool_result';
+}
+
 function toMessage(persisted: ChatHistoryMessage, existing?: ChatMessage): ChatMessage {
   return {
     // The key of an entry already on screen is preserved so React does not remount the bubble —
@@ -214,11 +239,23 @@ function toMessage(persisted: ChatHistoryMessage, existing?: ChatMessage): ChatM
     key: existing?.key ?? persisted.client_message_id ?? persisted.message_id,
     clientMessageId: persisted.client_message_id ?? existing?.clientMessageId ?? null,
     messageId: persisted.message_id,
-    role: persisted.role,
+    role: renderableRole(persisted.role),
     text: persisted.content,
     status: persistedStatus(persisted),
+    seq: persisted.seq,
     createdAt: persisted.created_at,
   };
+}
+
+/**
+ * Narrows a wire role to a renderable one.
+ *
+ * Only ever called behind {@link isRenderable}, so the fallback is unreachable — it exists because
+ * a cast would silently accept a seventh role added to the contract later, and this way the value
+ * lands on `system` (a neutral note) instead of on a sender label that does not exist.
+ */
+function renderableRole(role: ChatHistoryMessage['role']): ChatRole {
+  return isRenderable(role) ? role : 'system';
 }
 
 function persistedStatus(persisted: ChatHistoryMessage): ChatMessageStatus {
@@ -228,18 +265,25 @@ function persistedStatus(persisted: ChatHistoryMessage): ChatMessageStatus {
   return persisted.role === 'user' ? 'sent' : 'complete';
 }
 
-/** `null` sorts last: an entry with no timestamp yet is one the server has not committed. */
-function byCreatedAt(left: ChatMessage, right: ChatMessage): number {
-  if (left.createdAt === right.createdAt) {
+/**
+ * Orders the transcript by the server's ordinal.
+ *
+ * `null` sorts last: an entry with no `seq` is one the server has not committed, so it belongs after
+ * everything that has. This replaced a comparator over `createdAt`, which returned 0 for every row
+ * of the same turn — Postgres stamps them identically — and then relied on `Array.prototype.sort`
+ * being stable to preserve whatever order the response happened to arrive in.
+ */
+function bySeq(left: ChatMessage, right: ChatMessage): number {
+  if (left.seq === right.seq) {
     return 0;
   }
-  if (left.createdAt === null) {
+  if (left.seq === null) {
     return 1;
   }
-  if (right.createdAt === null) {
+  if (right.seq === null) {
     return -1;
   }
-  return left.createdAt < right.createdAt ? -1 : 1;
+  return left.seq - right.seq;
 }
 
 // -------------------------------------------------------------------------------------------
@@ -275,6 +319,9 @@ function sendUserMessage(state: ChatState, clientMessageId: string, text: string
     role: 'user',
     text,
     status: 'pending',
+    // No ordinal until the server commits the row; bySeq puts an uncommitted bubble last, which is
+    // where the user's just-typed message belongs.
+    seq: null,
     createdAt,
   };
 
@@ -404,6 +451,10 @@ function startMessage(
     role,
     text: content ?? '',
     status: role === 'assistant' ? 'streaming' : 'sent',
+    // ADR 007's frames carry the ordinal as the SSE event id rather than in the payload, so a
+    // streaming message has none until history is next read. Ordering is not at risk: a live turn is
+    // appended, and appended is where it goes.
+    seq: null,
     createdAt,
   };
 
@@ -433,6 +484,7 @@ function appendDelta(state: ChatState, messageId: string | null, text: string): 
       role: 'assistant',
       text,
       status: 'streaming',
+      seq: null,
       createdAt: null,
     };
     return { ...state, connection, messages: [...state.messages, opened] };

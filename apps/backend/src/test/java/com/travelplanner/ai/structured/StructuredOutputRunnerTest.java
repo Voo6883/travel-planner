@@ -137,15 +137,15 @@ class StructuredOutputRunnerTest {
         }
 
         @Override
+        public String modelName() {
+            return "scripted-model";
+        }
+
+        @Override
         public String complete(Prompt prompt, LlmOptions callOptions) {
             prompts.add(prompt);
             options.add(callOptions);
             return replies.isEmpty() ? "" : replies.removeFirst();
-        }
-
-        @Override
-        public <T> T completeStructured(Prompt prompt, Class<T> type, LlmOptions callOptions) {
-            throw new UnsupportedOperationException();
         }
 
         @Override

@@ -1988,13 +1988,23 @@ export interface components {
         /**
          * @description One stored message.
          *
-         *     No `seq`: it is the ordering the server sorts by, not a value a client has a use for, and
-         *     publishing it would invite arithmetic on a counter that is allowed to contain gaps. No
-         *     `conversation_id` either — the page carries it once.
+         *     No `conversation_id` — the page carries it once.
          */
         ChatMessage: {
             /** Format: uuid */
             message_id: string;
+            /**
+             * Format: int64
+             * @description **The ordering.** Per-conversation and monotonic, allocated under a row lock
+             *     (migration V19). This is the only total order on the wire: `created_at` cannot be one
+             *     (see below), so a client merging two pages into one keyed collection has to sort by
+             *     this. It is also ADR 007's resume position — the same number a stream sends as
+             *     `Last-Event-ID` — so it is already published on the SSE side.
+             *
+             *     Compare it, and pass it back as a cursor. Do not do arithmetic on it: it is allowed to
+             *     contain gaps, so a difference of five does not mean five messages.
+             */
+            seq: number;
             role: components["schemas"]["ChatMessageRole"];
             /**
              * @description User-visible text only. Never a provider reasoning trace and never a raw provider
@@ -2011,9 +2021,10 @@ export interface components {
             client_message_id?: string | null;
             /**
              * Format: date-time
-             * @description When the row was written. **Not an ordering.** `now()` is fixed for a whole transaction
-             *     in Postgres, so every row one turn writes shares this value byte for byte; the order is
-             *     the server's `seq`, and it has already been applied.
+             * @description When the row was written. **Not an ordering, and not usable as one.** `now()` is fixed
+             *     for a whole transaction in Postgres, so every row one turn writes — the tool call, the
+             *     tool result, the assistant reply — shares this value byte for byte. Sorting by it is
+             *     not "close enough": those rows are unordered under it. Use `seq`.
              */
             created_at: string;
         };

@@ -96,6 +96,7 @@ describe('useChatStream', () => {
       [
         {
           message_id: 'm1',
+          seq: 1,
           role: 'user',
           content: 'hello',
           status: 'complete',
@@ -304,6 +305,7 @@ describe('useChatStream', () => {
   it('pages backwards through history only while there is more to load', async () => {
     const page = Array.from({ length: 30 }, (_unused, index) => ({
       message_id: `m${index}`,
+      seq: index + 1,
       role: 'user',
       content: `message ${index}`,
       status: 'complete',

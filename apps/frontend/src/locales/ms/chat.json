@@ -11,7 +11,8 @@
   "sender": {
     "user": "Anda",
     "assistant": "Pembantu",
-    "system": "Kemas kini"
+    "system": "Kemas kini",
+    "lifecycle_event": "Kemas kini perjalanan"
   },
   "status": {
     "pending": "Menghantar…",

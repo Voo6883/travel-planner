@@ -109,9 +109,20 @@ class TripBriefSchemaContractTest {
         return source.substring(from + start.length(), to);
     }
 
+    /**
+     * Read with line endings normalised to LF.
+     *
+     * <p>{@code .gitattributes} declares {@code * text=auto}, so these {@code .sql} files arrive with
+     * CRLF in a Windows working tree and with LF in CI. The markers above are multi-line literals
+     * written with {@code \n}, so without this normalisation every marker that spans a line break
+     * fails to match on a developer's machine and matches in the pipeline. A suite that is red
+     * locally and green on merge is worse than one that is simply wrong: it teaches everyone to stop
+     * believing the local run.
+     */
     private static String read(String fileName) {
         try {
-            return Files.readString(Path.of("src/main/resources/db/migration").resolve(fileName));
+            return Files.readString(Path.of("src/main/resources/db/migration").resolve(fileName))
+                    .replace("\r\n", "\n");
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }

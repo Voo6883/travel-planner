@@ -32,7 +32,18 @@ export interface TextDeltaEvent {
   readonly text: string;
 }
 
-export type ChatRole = 'user' | 'assistant' | 'system';
+/**
+ * The roles a transcript can render.
+ *
+ * Narrower than `ChatMessageRole` in `chat-api.ts`, which is the six-value *wire* vocabulary, and
+ * deliberately so: `tool_call` and `tool_result` carry raw JSON in `content`, and design system §7.2
+ * forbids showing internal tool identifiers or raw JSON to a user. They are parsed (a page
+ * containing one must not fail) and then dropped by the reducer.
+ *
+ * `lifecycle_event` is ADR 007's `DomainEvent` — `trip_created` and its successors. It is a thing
+ * that happened to the trip, it is meant to be visible in the thread, and it has a sender label.
+ */
+export type ChatRole = 'user' | 'assistant' | 'system' | 'lifecycle_event';
 
 /**
  * A message opened.

@@ -156,6 +156,15 @@ public final class AuthTestFakes {
 
         public final Map<UUID, RefreshToken> byId = new LinkedHashMap<>();
 
+        /**
+         * Set to run a body <em>between</em> {@code markRotated}'s read of the row and its write.
+         * That interleaving is the whole point of the conditional {@code UPDATE}, and it is the one
+         * thing an in-memory fake cannot produce on its own — so the test supplies it, and the fake
+         * stays a faithful model of "the row's state at write time decides".
+         */
+        public Runnable beforeMarkRotated = () -> {
+        };
+
         @Override
         public RefreshToken save(RefreshToken token) {
             byId.put(token.id(), token);
@@ -166,6 +175,22 @@ public final class AuthTestFakes {
         public Optional<RefreshToken> findByTokenHash(String tokenHash) {
             return byId.values().stream()
                     .filter(token -> token.tokenHash().equals(tokenHash)).findFirst();
+        }
+
+        /**
+         * The in-memory equivalent of the conditional {@code UPDATE}: re-reads under the lock the
+         * {@code synchronized} block stands in for, and only then decides. Reading the token again
+         * rather than trusting a caller-supplied snapshot is what makes this fake able to fail the
+         * loser of a race — a version that took the caller's {@code RefreshToken} would let both
+         * callers through and the production bug would pass its own test.
+         */
+        @Override
+        public synchronized boolean markRotated(String tokenHash, Instant rotatedAt) {
+            beforeMarkRotated.run();
+            Optional<RefreshToken> claimable = findByTokenHash(tokenHash)
+                    .filter(token -> token.isUsableAt(rotatedAt));
+            claimable.ifPresent(token -> byId.put(token.id(), token.rotatedAt(rotatedAt)));
+            return claimable.isPresent();
         }
 
         @Override

@@ -332,7 +332,7 @@ class LangChain4jAdapterContractTest {
         private final Consumer<StreamingChatResponseHandler> script;
 
         private FakeAdapter(Consumer<StreamingChatResponseHandler> script) {
-            super("fake");
+            super("fake", "fake-model");
             this.script = script;
         }
 

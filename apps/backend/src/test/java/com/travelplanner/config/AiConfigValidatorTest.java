@@ -15,9 +15,14 @@ import org.junit.jupiter.api.Test;
  */
 class AiConfigValidatorTest {
 
+    /** The everyday case: no profile is production, so the stub is a legitimate choice. */
+    private static final String[] DEV = {"dev"};
+
+    private static final String[] PROD = {"prod"};
+
     @Test
     void acceptsTheShippedDefaultsSoAFreshCheckoutNeedsNoCredentials() {
-        assertThatCode(() -> AiConfigValidator.validate(new AiProperties())).doesNotThrowAnyException();
+        assertThatCode(() -> AiConfigValidator.validate(new AiProperties(), DEV)).doesNotThrowAnyException();
     }
 
     @Test
@@ -25,7 +30,7 @@ class AiConfigValidatorTest {
         AiProperties properties = new AiProperties();
         properties.getProvider().setDefaultProvider("anthropic");
 
-        assertThatThrownBy(() -> AiConfigValidator.validate(properties))
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, DEV))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("ANTHROPIC_API_KEY");
     }
@@ -39,7 +44,7 @@ class AiConfigValidatorTest {
         AiProperties properties = new AiProperties();
         properties.setRouting(Map.of("research", "openai"));
 
-        assertThatThrownBy(() -> AiConfigValidator.validate(properties))
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, DEV))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("OPENAI_API_KEY");
     }
@@ -49,7 +54,7 @@ class AiConfigValidatorTest {
         AiProperties properties = new AiProperties();
         properties.setRouting(Map.of("research", "antropic"));
 
-        assertThatThrownBy(() -> AiConfigValidator.validate(properties))
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, DEV))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Unknown AI provider 'antropic'");
     }
@@ -60,7 +65,71 @@ class AiConfigValidatorTest {
         properties.getProvider().setDefaultProvider("anthropic");
         properties.getAnthropic().setApiKey("sk-ant-test");
 
-        assertThatCode(() -> AiConfigValidator.validate(properties)).doesNotThrowAnyException();
+        assertThatCode(() -> AiConfigValidator.validate(properties, DEV)).doesNotThrowAnyException();
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // The production stub guard. Everything below would otherwise start cleanly and then serve
+    // placeholder text to real travellers — an outage nobody is paged for.
+    // ---------------------------------------------------------------------------------------
+
+    @Test
+    void refusesToStartInProductionOnTheStubChatModel() {
+        assertThatThrownBy(() -> AiConfigValidator.validate(new AiProperties(), PROD))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("stub LLM")
+                .hasMessageContaining("prod");
+    }
+
+    @Test
+    void refusesToStartInProductionWhenOnlyOneFeatureIsRoutedToTheStub() {
+        AiProperties properties = new AiProperties();
+        properties.getProvider().setDefaultProvider("anthropic");
+        properties.getAnthropic().setApiKey("sk-ant-test");
+        properties.setRouting(Map.of("research", "stub"));
+
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, PROD))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("stub LLM");
+    }
+
+    /**
+     * The quieter of the two. A stub chat model at least announces itself in its own output; stub
+     * embeddings produce deterministic noise, so retrieval returns confidently ranked nonsense and
+     * nothing prints the word "stub" anywhere.
+     */
+    @Test
+    void refusesToStartInProductionOnStubEmbeddings() {
+        AiProperties properties = new AiProperties();
+        properties.getProvider().setDefaultProvider("anthropic");
+        properties.getAnthropic().setApiKey("sk-ant-test");
+
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, PROD))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("embedding provider");
+    }
+
+    @Test
+    void acceptsAFullyConfiguredProductionSetup() {
+        AiProperties properties = new AiProperties();
+        properties.getProvider().setDefaultProvider("anthropic");
+        properties.getAnthropic().setApiKey("sk-ant-test");
+        properties.getEmbeddings().setProvider("openai");
+        properties.getOpenai().setApiKey("sk-test");
+
+        assertThatCode(() -> AiConfigValidator.validate(properties, PROD)).doesNotThrowAnyException();
+    }
+
+    /** The remedy in a missing-key message must not be "turn the model off". */
+    @Test
+    void doesNotAdvertiseTheStubAsTheProductionDefaultWhenAKeyIsMissing() {
+        AiProperties properties = new AiProperties();
+        properties.getProvider().setDefaultProvider("anthropic");
+
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, PROD))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ANTHROPIC_API_KEY")
+                .hasMessageNotContaining("the default, which needs no credentials");
     }
 
     // ---------------------------------------------------------------------------------------
@@ -75,7 +144,7 @@ class AiConfigValidatorTest {
         properties.getOpenai().setApiKey("sk-test");
         properties.getEmbeddings().setDimension(3072);
 
-        assertThatThrownBy(() -> AiConfigValidator.validate(properties))
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, DEV))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("1536");
     }
@@ -88,7 +157,7 @@ class AiConfigValidatorTest {
         properties.getEmbeddings().setModel("text-embedding-3-large");
         properties.getEmbeddings().setDimension(3072);
 
-        assertThatThrownBy(() -> AiConfigValidator.validate(properties))
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, DEV))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("ADR 010")
                 .hasMessageContaining("backfill");
@@ -100,7 +169,7 @@ class AiConfigValidatorTest {
         properties.getEmbeddings().setProvider("anthropic");
         properties.getAnthropic().setApiKey("sk-ant-test");
 
-        assertThatThrownBy(() -> AiConfigValidator.validate(properties))
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, DEV))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not supported");
     }
@@ -110,7 +179,7 @@ class AiConfigValidatorTest {
         AiProperties properties = new AiProperties();
         properties.getEmbeddings().setProvider("openai");
 
-        assertThatThrownBy(() -> AiConfigValidator.validate(properties))
+        assertThatThrownBy(() -> AiConfigValidator.validate(properties, DEV))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("OPENAI_API_KEY");
     }
@@ -121,6 +190,6 @@ class AiConfigValidatorTest {
         properties.getEmbeddings().setProvider("openai");
         properties.getOpenai().setApiKey("sk-test");
 
-        assertThatCode(() -> AiConfigValidator.validate(properties)).doesNotThrowAnyException();
+        assertThatCode(() -> AiConfigValidator.validate(properties, DEV)).doesNotThrowAnyException();
     }
 }

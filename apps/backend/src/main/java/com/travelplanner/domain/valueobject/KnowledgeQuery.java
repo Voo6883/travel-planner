@@ -89,4 +89,51 @@ public record KnowledgeQuery(
     public float[] embedding() {
         return embedding.clone();
     }
+
+    /**
+     * Value equality, including the vector.
+     *
+     * <p>A record's generated {@code equals} compares {@code float[]} by reference, so two queries
+     * built from identical inputs are unequal and one built from the same array is equal to itself
+     * and nothing else. That is not a style question here: task 37 keys the semantic cache on this
+     * type, and reference equality would make every cache lookup a miss — the cache would look
+     * present, cost nothing to maintain, and never hit. The same defect makes {@code hashCode}
+     * identity-based, which is the half that silently breaks {@code HashMap}.
+     *
+     * <p>{@link java.util.Arrays#equals(float[], float[])} rather than element-wise {@code ==}:
+     * it treats {@code NaN} as equal to itself and {@code 0.0f} as distinct from {@code -0.0f},
+     * which is what a cache key needs — reflexivity first, arithmetic sense second.
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        return other instanceof KnowledgeQuery query
+                && topK == query.topK
+                && Double.compare(similarityFloor, query.similarityFloor) == 0
+                && destinationId.equals(query.destinationId)
+                && text.equals(query.text)
+                && java.util.Arrays.equals(embedding, query.embedding)
+                && types.equals(query.types);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(destinationId, text, java.util.Arrays.hashCode(embedding), topK,
+                similarityFloor, types);
+    }
+
+    /**
+     * Excludes the vector.
+     *
+     * <p>The generated form prints {@code [F@1b6d3586}, which is noise, and a 1536-float dump would
+     * be worse — it is the one field that makes a log line unreadable and tells nobody anything.
+     */
+    @Override
+    public String toString() {
+        return "KnowledgeQuery[destinationId=" + destinationId + ", text='" + text + "', embedding="
+                + embedding.length + "d, topK=" + topK + ", similarityFloor=" + similarityFloor
+                + ", types=" + types + "]";
+    }
 }

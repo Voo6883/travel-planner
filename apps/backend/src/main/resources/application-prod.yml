@@ -19,6 +19,15 @@ spring:
     baseline-on-migrate: false
 
 travelplanner:
+  # AI under this profile. Nothing is set here on purpose — the values still arrive as environment
+  # variables — but the constraint is worth stating where an operator will read it:
+  #
+  #   AI_PROVIDER_DEFAULT and AI_EMBEDDINGS_PROVIDER default to `stub` in application.yml, and
+  #   AiConfigValidator REFUSES to start under `prod` on either. A stub chat model answers every
+  #   traveller with placeholder text and stub embeddings rank retrieval on deterministic noise;
+  #   both are outages that look like a healthy deployment. Set a real provider and its key.
+  #
+  # Same shape as the mail and identity stand-ins, which also refuse to be constructed here.
   security:
     session:
       # TLS is guaranteed here, so the session cookies are marked Secure and a browser will refuse

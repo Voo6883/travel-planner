@@ -11,7 +11,8 @@
   "sender": {
     "user": "You",
     "assistant": "Assistant",
-    "system": "Update"
+    "system": "Update",
+    "lifecycle_event": "Trip update"
   },
   "status": {
     "pending": "Sending…",

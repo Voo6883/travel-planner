@@ -50,7 +50,21 @@ export function chatMessagesPath(target: ChatTarget): string {
  */
 export const CHAT_HISTORY_PAGE_SIZE = 30;
 
-export type ChatMessageRole = 'user' | 'assistant' | 'system';
+/**
+ * Every role the contract publishes — all six of them.
+ *
+ * <b>This used to list three</b>, while `ChatMessageRole` in the contract has always enumerated six.
+ * The mismatch was not a narrowing; it was a page-breaking bug waiting for the first tool call.
+ * `historyMessageSchema` validates the whole array, so a single `tool_call` row anywhere in a page
+ * failed the parse and the reader lost the entire conversation rather than one message — and the
+ * first thing task 22 does is write those rows.
+ *
+ * Parsing a role is not the same as rendering one: `ChatRole` in `chat-events.ts` is the narrower
+ * *renderable* set, and `features/chat/lib/chat-state.ts` decides which of these six reach the
+ * transcript. Keeping the two separate is the point — the wire vocabulary grows when the server's
+ * does, and the UI opts in per role deliberately.
+ */
+export type ChatMessageRole = 'user' | 'assistant' | 'system' | 'tool_call' | 'tool_result' | 'lifecycle_event';
 
 /**
  * A persisted message, as the UI needs to think about it.
@@ -65,6 +79,14 @@ export type PersistedMessageStatus = 'complete' | 'interrupted';
 
 export interface ChatHistoryMessage {
   readonly message_id: string;
+  /**
+   * The server's per-conversation ordinal, and the only total order available.
+   *
+   * `created_at` is not one and cannot be made into one: `now()` is fixed for a whole transaction
+   * in Postgres, so a turn's tool call, tool result and assistant reply all carry the same value.
+   * The contract says as much on the field itself.
+   */
+  readonly seq: number;
   readonly role: ChatMessageRole;
   readonly content: string;
   readonly status: PersistedMessageStatus;
@@ -90,10 +112,18 @@ export interface ChatHistoryPage {
  * Normalising here as well would mean an upper-case regression on the server passed silently on
  * this one surface and broke on every other.
  */
-const roleSchema = z.union([z.literal('user'), z.literal('assistant'), z.literal('system')]);
+const roleSchema = z.union([
+  z.literal('user'),
+  z.literal('assistant'),
+  z.literal('system'),
+  z.literal('tool_call'),
+  z.literal('tool_result'),
+  z.literal('lifecycle_event'),
+]);
 
 const historyMessageSchema = z.object({
   message_id: z.string(),
+  seq: z.number(),
   role: roleSchema,
   content: z.string(),
   // Any string: the mapping to "whole answer or not" happens below, where the reasoning lives.
@@ -120,13 +150,15 @@ export interface ChatHistoryQuery {
 /**
  * One page of history, oldest first.
  *
- * <b>The sort is applied here, not trusted from the server.</b> "Durable chat messages reload in
- * order" is a Definition-of-Done item, and ordering that depends on a database's default row order
- * is the kind of thing that holds until an index changes.
+ * <b>The sort is applied here, not trusted from the server</b> — "durable chat messages reload in
+ * order" is a Definition-of-Done item, and defending it locally costs one comparison.
  *
- * Ties keep the order the server sent them in — `Array.prototype.sort` is stable, and two messages
- * sharing a millisecond (a user turn and the reply it triggered can) have a real order that only
- * the server knows. Inventing one from the id would sometimes put the answer before the question.
+ * <b>It sorts by `seq`, not by `created_at`.</b> It used to sort by the timestamp, which is the one
+ * key that provably cannot order a conversation: `now()` is fixed for a whole transaction in
+ * Postgres, so a turn's tool call, tool result and assistant reply are all stamped identically and
+ * are therefore unordered under it. The old comparator returned 0 for exactly those rows and leaned
+ * on `Array.prototype.sort` being stable to keep whatever order the response happened to arrive in —
+ * which is trusting the server's order while appearing not to.
  */
 export async function fetchChatHistory(query: ChatHistoryQuery, signal?: AbortSignal): Promise<ChatHistoryPage> {
   const search = new URLSearchParams({
@@ -160,13 +192,14 @@ function parseHistoryPage(payload: unknown): ChatHistoryPage {
   const items = parsed.items
     .map((item) => ({
       message_id: item.message_id,
+      seq: item.seq,
       role: item.role,
       content: item.content,
       status: persistedStatus(item.status),
       client_message_id: item.client_message_id ?? null,
       created_at: item.created_at,
     }))
-    .sort(compareByCreatedAt);
+    .sort(compareBySeq);
 
   return {
     page: parsed.page,
@@ -200,9 +233,6 @@ function persistedStatus(status: string | null | undefined): PersistedMessageSta
   return status === 'complete' ? 'complete' : 'interrupted';
 }
 
-function compareByCreatedAt(left: ChatHistoryMessage, right: ChatHistoryMessage): number {
-  if (left.created_at === right.created_at) {
-    return 0;
-  }
-  return left.created_at < right.created_at ? -1 : 1;
+function compareBySeq(left: ChatHistoryMessage, right: ChatHistoryMessage): number {
+  return left.seq - right.seq;
 }

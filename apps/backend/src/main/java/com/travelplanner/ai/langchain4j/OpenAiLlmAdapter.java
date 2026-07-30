@@ -24,7 +24,7 @@ final class OpenAiLlmAdapter extends LangChain4jLlmAdapter {
     private final StreamingChatModel streamingChatModel;
 
     OpenAiLlmAdapter(AiProperties.OpenAi settings, Duration timeout) {
-        super(AiProperties.OPENAI_PROVIDER);
+        super(AiProperties.OPENAI_PROVIDER, settings.getModel());
         OpenAiChatModel.OpenAiChatModelBuilder blocking = OpenAiChatModel.builder()
                 .apiKey(settings.getApiKey())
                 .modelName(settings.getModel())

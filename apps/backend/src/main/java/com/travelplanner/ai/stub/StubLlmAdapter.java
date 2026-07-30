@@ -50,20 +50,19 @@ public final class StubLlmAdapter implements LlmPort {
         return "stub";
     }
 
+    /**
+     * Not a real model name, and priced at nothing by {@code AiCostEstimator} because no rate is
+     * registered for it. That is the honest answer: stub traffic costs nothing, and a row claiming
+     * otherwise would put fictional money into a cost dashboard.
+     */
+    @Override
+    public String modelName() {
+        return "stub";
+    }
+
     @Override
     public String complete(Prompt prompt, LlmOptions options) {
         return reply(prompt);
-    }
-
-    /**
-     * Unsupported on purpose. Structured output is composed by {@code StructuredOutputRunner}, which
-     * calls {@link #complete} — so the stub gets the same schema instruction and the same validation
-     * as a live provider, and a test exercising structured output exercises the real code path.
-     */
-    @Override
-    public <T> T completeStructured(Prompt prompt, Class<T> type, LlmOptions options) {
-        throw new UnsupportedOperationException(
-                "Structured completion is composed by StructuredOutputRunner");
     }
 
     @Override

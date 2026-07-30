@@ -1,6 +1,7 @@
 package com.travelplanner.ai.structured;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.travelplanner.domain.ai.AiOperation;
 import com.travelplanner.domain.ai.LlmOptions;
 import com.travelplanner.domain.ai.Prompt;
 import com.travelplanner.domain.ai.PromptMessage;
@@ -105,6 +106,10 @@ public final class StructuredOutputRunner {
                 .maxOutputTokens(request.options().maxOutputTokens())
                 .timeout(request.options().timeout())
                 .temperature(0.0)
+                // Each attempt reaches the provider as a plain completion, and each attempt is
+                // separately billed. Labelling them keeps the repair round visible in ai_call_log
+                // as part of an extraction rather than as unexplained extra prose traffic.
+                .operation(AiOperation.COMPLETE_STRUCTURED)
                 .build();
     }
 }

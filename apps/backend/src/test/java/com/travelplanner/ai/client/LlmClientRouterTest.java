@@ -163,6 +163,59 @@ class LlmClientRouterTest {
         });
     }
 
+    /**
+     * The regression this exists for: {@code complete} returned a {@code String}, so the router had
+     * nothing to read usage off and wrote a zero-token row for every non-streaming call.
+     */
+    @Test
+    void recordsRealTokensForAPlainCompletionAndNotZero() {
+        router(Map.of(), "anthropic").complete(prompt(), LlmOptions.defaults());
+
+        assertThat(callLog.records).singleElement().satisfies(record -> {
+            assertThat(record.operation().name()).isEqualTo("COMPLETE");
+            assertThat(record.usage().inputTokens()).isEqualTo(11);
+            assertThat(record.usage().outputTokens()).isEqualTo(7);
+        });
+    }
+
+    /**
+     * The second half of the same defect. Tokens without a model name are still unpriceable, because
+     * {@code AiCostEstimator} looks a rate up by model — and a caller overriding the model is the
+     * rare case, so falling back to {@code ""} made the cost column uniformly zero.
+     */
+    @Test
+    void recordsTheAdaptersOwnModelWhenTheCallerDidNotOverrideIt() {
+        router(Map.of(), "anthropic").complete(prompt(), LlmOptions.defaults());
+
+        assertThat(callLog.records).singleElement()
+                .satisfies(record -> assertThat(record.model()).isEqualTo("anthropic-model"));
+    }
+
+    @Test
+    void prefersAnExplicitPerCallModelOverTheAdaptersDefault() {
+        router(Map.of(), "anthropic").complete(prompt(),
+                LlmOptions.builder().model("claude-haiku-4-5").build());
+
+        assertThat(callLog.records).singleElement()
+                .satisfies(record -> assertThat(record.model()).isEqualTo("claude-haiku-4-5"));
+    }
+
+    /**
+     * A composed caller may relabel the operation without changing the request. Structured extraction
+     * is the case: the provider sees a plain completion, but the cost of the extraction — including
+     * its repair attempt — has to be groupable as extraction.
+     */
+    @Test
+    void honoursAnOperationLabelSuppliedByAComposedCaller() {
+        router(Map.of(), "anthropic").complete(prompt(), LlmOptions.builder()
+                .operation(com.travelplanner.domain.ai.AiOperation.COMPLETE_STRUCTURED).build());
+
+        assertThat(callLog.records).singleElement().satisfies(record -> {
+            assertThat(record.operation().name()).isEqualTo("COMPLETE_STRUCTURED");
+            assertThat(record.usage().inputTokens()).isEqualTo(11);
+        });
+    }
+
     /** The no-PII guarantee, asserted rather than assumed. */
     @Test
     void recordsAHashOfThePromptAndNeverThePromptText() {
@@ -276,13 +329,13 @@ class LlmClientRouterTest {
         }
 
         @Override
-        public String complete(Prompt prompt, LlmOptions options) {
-            return completeWithTools(prompt, List.of(), options).text();
+        public String modelName() {
+            return name + "-model";
         }
 
         @Override
-        public <T> T completeStructured(Prompt prompt, Class<T> type, LlmOptions options) {
-            throw new UnsupportedOperationException();
+        public String complete(Prompt prompt, LlmOptions options) {
+            return completeWithTools(prompt, List.of(), options).text();
         }
 
         @Override

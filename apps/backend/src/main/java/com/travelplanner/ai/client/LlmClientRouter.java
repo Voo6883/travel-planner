@@ -66,22 +66,32 @@ public final class LlmClientRouter implements LlmPort {
         return defaultProvider;
     }
 
+    /** The default provider's model. Per-call resolution goes through {@link #modelOf}. */
+    @Override
+    public String modelName() {
+        return providers.get(defaultProvider).modelName();
+    }
+
     /** The provider configured for {@code feature}, or the default. Exposed for diagnostics. */
     public String providerFor(String feature) {
         String configured = routing.get(feature);
         return configured == null || !providers.containsKey(configured) ? defaultProvider : configured;
     }
 
+    /**
+     * Routed through {@link LlmPort#completeWithTools} with no tools offered, rather than through the
+     * adapter's own {@code complete}.
+     *
+     * <p>The two are the same provider call — every adapter implements the shorter one as
+     * {@code completeWithTools(...).text()} — but only one of them still has the token counts by the
+     * time the router sees the result. A {@code String} has nowhere to carry usage, so recording from
+     * it wrote a zero-token, zero-cost row for every non-streaming call in the system, including
+     * every structured-extraction attempt, which is the traffic {@code ai_call_log} exists to price.
+     */
     @Override
     public String complete(Prompt prompt, LlmOptions options) {
         return guarded(new CallSpec(prompt, options, AiOperation.COMPLETE),
-                provider -> provider.complete(prompt, options));
-    }
-
-    @Override
-    public <T> T completeStructured(Prompt prompt, Class<T> type, LlmOptions options) {
-        return guarded(new CallSpec(prompt, options, AiOperation.COMPLETE_STRUCTURED),
-                provider -> provider.completeStructured(prompt, type, options));
+                provider -> provider.completeWithTools(prompt, List.of(), options)).text();
     }
 
     @Override
@@ -111,15 +121,15 @@ public final class LlmClientRouter implements LlmPort {
      * <p>Timing brackets the whole thing including retries, because "how long did the user wait" is
      * the number that matters, not "how long did the final attempt take".
      */
-    private <T> T guarded(CallSpec spec, Function<LlmPort, T> call) {
+    private LlmCompletion guarded(CallSpec spec, Function<LlmPort, LlmCompletion> call) {
         LlmPort provider = resolve(spec.options());
         AiCallContext context = contextFor(spec);
         requireClosedBreaker(provider.providerName());
         long startedAt = System.nanoTime();
         try {
-            T result = retryPolicy.execute(() -> call.apply(provider));
+            LlmCompletion result = retryPolicy.execute(() -> call.apply(provider));
             breaker.recordSuccess(provider.providerName());
-            recorder.recordSuccess(context, usageOf(result), elapsedMs(startedAt));
+            recorder.recordSuccess(context, result.usage(), elapsedMs(startedAt));
             return result;
         } catch (AiProviderException failure) {
             breaker.recordFailure(provider.providerName());
@@ -141,8 +151,9 @@ public final class LlmClientRouter implements LlmPort {
     AiCallContext contextFor(CallSpec spec) {
         LlmOptions options = spec.options();
         String feature = options == null ? LlmOptions.DEFAULT_FEATURE : options.feature();
-        return new AiCallContext(feature, spec.operation(), resolve(options).providerName(),
-                modelOf(options), null, PromptHasher.hash(spec.prompt()));
+        LlmPort provider = resolve(options);
+        return new AiCallContext(feature, operationOf(spec), provider.providerName(),
+                modelOf(options, provider), null, PromptHasher.hash(spec.prompt()));
     }
 
     void requireClosedBreaker(String provider) {
@@ -159,13 +170,28 @@ public final class LlmClientRouter implements LlmPort {
         return (System.nanoTime() - startedAtNanos) / 1_000_000L;
     }
 
-    private static LlmEvent.Usage usageOf(Object result) {
-        return result instanceof LlmCompletion completion ? completion.usage() : LlmEvent.Usage.none();
+    /**
+     * The port method's own operation, unless the caller composed something on top of it and said so.
+     *
+     * <p>{@code StructuredOutputRunner} is the case: from the provider's side its attempts are plain
+     * completions, but from a cost dashboard's side they are schema-bound extraction, and that is the
+     * dimension somebody investigating a bill will group by.
+     */
+    private static AiOperation operationOf(CallSpec spec) {
+        LlmOptions options = spec.options();
+        return options == null || options.operation() == null ? spec.operation() : options.operation();
     }
 
-    private static String modelOf(LlmOptions options) {
-        // Blank when the caller did not override: the adapter's configured model is the truth, and
-        // guessing it here would put a wrong value into the cost estimate.
-        return options == null || options.model() == null ? "" : options.model();
+    /**
+     * The model that will actually be billed: the caller's override when there is one, otherwise the
+     * selected adapter's configured model.
+     *
+     * <p>Falling back to {@code ""} — as this did — meant {@code AiCostEstimator} found no rate and
+     * returned zero for every call that did not override the model, which is nearly all of them. A
+     * cost column that is uniformly zero reads as "AI is free" rather than as "not measured".
+     */
+    private static String modelOf(LlmOptions options, LlmPort provider) {
+        String override = options == null ? null : options.model();
+        return override == null || override.isBlank() ? provider.modelName() : override;
     }
 }

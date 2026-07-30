@@ -51,18 +51,29 @@ public interface LlmPort {
     /** Which provider answers — {@code "anthropic"}, {@code "openai"}, {@code "stub"}. For logs. */
     String providerName();
 
-    /** One turn of prose. */
-    String complete(Prompt prompt, LlmOptions options);
+    /**
+     * The model this implementation calls when {@link LlmOptions#model()} is unset.
+     *
+     * <p>Required, not optional, because it is a billing input. {@code ai_call_log.model} is what
+     * {@code AiCostEstimator} looks a price up by, and a caller almost never overrides the model —
+     * so an implementation that could not name its own default would leave the column blank on
+     * nearly every row, and every cost in the table would be zero while looking populated. Reading
+     * it back off the response is not an alternative: a failed call has no response and still costs
+     * a retry budget.
+     */
+    String modelName();
 
     /**
-     * Schema-bound output, bound to {@code type} and validated before it is returned (PLAN §6 item 3).
+     * One turn of prose.
      *
-     * @throws com.travelplanner.domain.exception.AiProviderException {@code ai_response_invalid} when
-     *     the model cannot produce a conforming object. A typed failure, never a partially populated
-     *     object — PLAN §4.1 requires "no confident result" to be a valid typed outcome rather than
-     *     something invented to fill the fields.
+     * <p>Structured output is deliberately absent from this port. It is composed one layer up by
+     * {@code ai/structured/StructuredOutputRunner} over this method, so the schema instruction, the
+     * JSON extraction, the bounded repair attempt, and the typed failure exist once for every
+     * provider — and so every attempt is an ordinary routed call that lands in {@code ai_call_log}
+     * with its own tokens. A {@code completeStructured} on the port would return a bare {@code T},
+     * which is a shape with nowhere to put usage.
      */
-    <T> T completeStructured(Prompt prompt, Class<T> type, LlmOptions options);
+    String complete(Prompt prompt, LlmOptions options);
 
     /**
      * One turn that may request tools.

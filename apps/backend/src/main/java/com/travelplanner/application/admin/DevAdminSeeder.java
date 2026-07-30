@@ -1,19 +1,9 @@
 package com.travelplanner.application.admin;
 
-import com.travelplanner.application.support.TransactionalWrite;
 import com.travelplanner.config.RequiresDatabase;
-import com.travelplanner.domain.enums.Role;
-import com.travelplanner.domain.model.User;
-import com.travelplanner.domain.port.PasswordHasherPort;
-import com.travelplanner.domain.port.UserRepositoryPort;
-import java.time.Instant;
-import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 /**
@@ -34,13 +24,13 @@ import org.springframework.stereotype.Component;
  * free of credentials for the same reason, which is also PLAN §4.0.6's "do not store the plaintext
  * seed password in migration output".
  *
- * <h2>Idempotence</h2>
+ * <h2>Why the write is somewhere else</h2>
  *
- * <p>Two layers, because one is not enough. The existence check skips the ordinary restart; the
- * caught {@link DataIntegrityViolationException} covers two instances starting simultaneously
- * against one database, where both checks pass and {@code ux_user_username_lower} arbitrates. It
- * also never <em>updates</em> an existing row: a developer who changed the seeded account's password
- * would otherwise find it reset on every restart.
+ * <p>This class is only the trigger. The insert lives in {@link DevAdminSeedWriter} because Spring's
+ * transaction support is proxy-based: an annotated method called from a sibling method of the same
+ * bean is reached through {@code this} and never through the wrapper, so the annotation does nothing.
+ * Holding a reference to another bean is what makes the transaction boundary real rather than merely
+ * declared. Idempotence and the credential rationale are documented there.
  *
  * <h2>The credentials</h2>
  *
@@ -54,8 +44,6 @@ import org.springframework.stereotype.Component;
 @Profile({"dev", "docker", "local"})
 @RequiresDatabase
 public class DevAdminSeeder implements ApplicationRunner {
-
-    private static final Logger log = LoggerFactory.getLogger(DevAdminSeeder.class);
 
     /** PLAN §4.0.6. Login is case-insensitive, so the stored casing is cosmetic. */
     static final String USERNAME = "ADMIN";
@@ -72,12 +60,10 @@ public class DevAdminSeeder implements ApplicationRunner {
      */
     static final String PASSWORD = "123456";
 
-    private final UserRepositoryPort users;
-    private final PasswordHasherPort hasher;
+    private final DevAdminSeedWriter writer;
 
-    public DevAdminSeeder(UserRepositoryPort users, PasswordHasherPort hasher) {
-        this.users = users;
-        this.hasher = hasher;
+    public DevAdminSeeder(DevAdminSeedWriter writer) {
+        this.writer = writer;
     }
 
     /**
@@ -87,43 +73,6 @@ public class DevAdminSeeder implements ApplicationRunner {
      */
     @Override
     public void run(ApplicationArguments arguments) {
-        seed();
-    }
-
-    /**
-     * @return {@code true} when this call created the account, {@code false} when it already existed
-     */
-    @TransactionalWrite
-    public boolean seed() {
-        if (users.existsByUsernameIgnoreCase(USERNAME)) {
-            log.debug("Development admin already present — leaving it untouched");
-            return false;
-        }
-        try {
-            users.save(newAdmin());
-            // No password, and no hash. The fact worth recording is that a privileged account
-            // exists in this environment; the credential is in PLAN §4.0.6 for anyone entitled
-            // to it, and in a log file for everyone who is not.
-            log.warn("Seeded the DEVELOPMENT admin account '{}'. This profile must never be "
-                    + "active in production.", USERNAME);
-            return true;
-        } catch (DataIntegrityViolationException concurrentSeed) {
-            // Two instances starting against one database. The unique index is the real arbiter,
-            // and the loser has nothing to do — the account it wanted now exists.
-            log.debug("Development admin created concurrently by another instance");
-            return false;
-        }
-    }
-
-    /**
-     * {@code emailVerified} is true so the seeded account can actually be used. UC-A08 gates the
-     * planner on a confirmed address, and a development admin that cannot get past its own
-     * verification banner — with no mailbox at {@code .local} to confirm from — would be a seed
-     * nobody can sign in with.
-     */
-    private User newAdmin() {
-        Instant now = Instant.now();
-        return new User(UUID.randomUUID(), USERNAME, EMAIL, hasher.hash(PASSWORD), true,
-                Role.ADMIN, true, 0, null, null, now, now);
+        writer.seed();
     }
 }

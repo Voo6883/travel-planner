@@ -26,6 +26,7 @@ function stubHistory(body: unknown) {
 function message(overrides: Record<string, unknown> = {}) {
   return {
     message_id: 'm1',
+    seq: 1,
     role: 'user',
     content: 'hello',
     status: 'complete',
@@ -65,9 +66,9 @@ describe('fetchChatHistory', () => {
       page_size: 30,
       total: 3,
       items: [
-        message({ message_id: 'm3', created_at: '2026-07-01T09:02:00Z' }),
-        message({ message_id: 'm1', created_at: '2026-07-01T09:00:00Z' }),
-        message({ message_id: 'm2', created_at: '2026-07-01T09:01:00Z' }),
+        message({ message_id: 'm3', seq: 3 }),
+        message({ message_id: 'm1', seq: 1 }),
+        message({ message_id: 'm2', seq: 2 }),
       ],
     });
 
@@ -76,22 +77,54 @@ describe('fetchChatHistory', () => {
     expect(history.items.map((item) => item.message_id)).toEqual(['m1', 'm2', 'm3']);
   });
 
-  it('keeps the server order for messages sharing a timestamp', async () => {
-    // A question and the answer it triggered can land in the same millisecond. Only the server
-    // knows which came first, so the sort must be stable rather than clever.
+  it('orders a turn correctly even though its rows share one timestamp', async () => {
+    // The regression. Postgres fixes now() for a whole transaction, so a turn's rows are stamped
+    // identically — the old comparator returned 0 for all of them and the order was whatever the
+    // response happened to contain. seq is the server's real order and disagrees with it here.
     stubHistory({
       page: 0,
       page_size: 30,
-      total: 2,
+      total: 3,
       items: [
-        message({ message_id: 'zzz', role: 'user', created_at: '2026-07-01T09:00:00Z' }),
-        message({ message_id: 'aaa', role: 'assistant', created_at: '2026-07-01T09:00:00Z' }),
+        message({ message_id: 'reply', seq: 12, role: 'assistant', created_at: '2026-07-01T09:00:00Z' }),
+        message({ message_id: 'question', seq: 10, role: 'user', created_at: '2026-07-01T09:00:00Z' }),
+        message({ message_id: 'lookup', seq: 11, role: 'tool_call', created_at: '2026-07-01T09:00:00Z' }),
       ],
     });
 
     const history = await fetchChatHistory({ target: PLANNER_CHAT_TARGET });
 
-    expect(history.items.map((item) => item.message_id)).toEqual(['zzz', 'aaa']);
+    expect(history.items.map((item) => item.message_id)).toEqual(['question', 'lookup', 'reply']);
+  });
+
+  it('parses every role the contract publishes rather than failing the whole page', async () => {
+    // The bug this replaced: roleSchema listed three of the six published roles, so one tool_call
+    // row anywhere in a page failed the array parse and the reader lost the entire conversation.
+    stubHistory({
+      page: 0,
+      page_size: 30,
+      total: 6,
+      items: [
+        message({ message_id: 'a', seq: 1, role: 'user' }),
+        message({ message_id: 'b', seq: 2, role: 'assistant' }),
+        message({ message_id: 'c', seq: 3, role: 'system' }),
+        message({ message_id: 'd', seq: 4, role: 'tool_call' }),
+        message({ message_id: 'e', seq: 5, role: 'tool_result' }),
+        message({ message_id: 'f', seq: 6, role: 'lifecycle_event' }),
+      ],
+    });
+
+    const history = await fetchChatHistory({ target: PLANNER_CHAT_TARGET });
+
+    expect(history.items).toHaveLength(6);
+    expect(history.items.map((item) => item.role)).toEqual([
+      'user',
+      'assistant',
+      'system',
+      'tool_call',
+      'tool_result',
+      'lifecycle_event',
+    ]);
   });
 
   it('carries the interrupted status and the client message id through', async () => {
@@ -101,8 +134,8 @@ describe('fetchChatHistory', () => {
       total: 40,
       conversation_id: 'conv-1',
       items: [
-        message({ message_id: 'm9', role: 'assistant', status: 'interrupted' }),
-        message({ message_id: 'm8', client_message_id: 'c8', created_at: '2026-07-01T08:59:00Z' }),
+        message({ message_id: 'm9', seq: 9, role: 'assistant', status: 'interrupted' }),
+        message({ message_id: 'm8', seq: 8, client_message_id: 'c8' }),
       ],
     });
 

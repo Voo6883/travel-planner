@@ -60,6 +60,28 @@ class RefreshTokenServiceTest {
     }
 
     @Test
+    void twoSimultaneousRefreshesOfOneTokenIssueExactlyOneSession() {
+        String raw = refreshTokens.issue(user.id());
+
+        // Both callers have already read the token and both saw it unspent — the interleaving a
+        // read-check-save rotation cannot survive. The second one rotates the row while the first is
+        // mid-flight, so the first's conditional claim has to come back empty.
+        tokens.beforeMarkRotated = () -> {
+            tokens.beforeMarkRotated = () -> {
+            };
+            assertThat(refreshTokens.rotate(raw)).isEqualTo(user.id());
+        };
+
+        assertThatThrownBy(() -> refreshTokens.rotate(raw)).isInstanceOf(UnauthorizedException.class);
+
+        // One rotation happened, not two, so there is no second live refresh token descending from
+        // this one. The loser is treated as a replay: indistinguishable from a thief refreshing a
+        // millisecond earlier, so the family goes.
+        assertThat(tokens.byId.values().stream().filter(RefreshToken::isRotated)).hasSize(1);
+        assertThat(users.revocations).isOne();
+    }
+
+    @Test
     void rejectsAnUnknownTokenWithoutRevokingAnything() {
         refreshTokens.issue(user.id());
 

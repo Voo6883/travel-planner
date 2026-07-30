@@ -34,9 +34,11 @@ import reactor.core.publisher.Flux;
 abstract class LangChain4jLlmAdapter implements LlmPort {
 
     private final String providerName;
+    private final String modelName;
 
-    protected LangChain4jLlmAdapter(String providerName) {
+    protected LangChain4jLlmAdapter(String providerName, String modelName) {
         this.providerName = providerName;
+        this.modelName = modelName;
     }
 
     /** The blocking model used by {@link #complete} and {@link #completeWithTools}. */
@@ -50,15 +52,18 @@ abstract class LangChain4jLlmAdapter implements LlmPort {
         return providerName;
     }
 
+    /**
+     * The model the two {@code ChatModel} instances were built with. Held as a field rather than read
+     * back off a response, because a failed call still has to be priced and has no response to read.
+     */
     @Override
-    public String complete(Prompt prompt, LlmOptions options) {
-        return completeWithTools(prompt, List.of(), options).text();
+    public final String modelName() {
+        return modelName;
     }
 
     @Override
-    public <T> T completeStructured(Prompt prompt, Class<T> type, LlmOptions options) {
-        throw new UnsupportedOperationException(
-                "Structured completion is composed by StructuredOutputRunner, not by the adapter");
+    public String complete(Prompt prompt, LlmOptions options) {
+        return completeWithTools(prompt, List.of(), options).text();
     }
 
     @Override

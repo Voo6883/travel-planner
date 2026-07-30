@@ -50,6 +50,16 @@ public record DestinationArea(
         if ((latitude == null) != (longitude == null)) {
             throw new IllegalArgumentException("latitude and longitude must be set together");
         }
+        // The same range checks Destination carries. Omitting them here was the more dangerous of
+        // the two gaps: a swapped lat/lng pair for a city is visibly in the wrong ocean, while a
+        // swapped pair for a neighbourhood produces a plausible-looking coordinate that C3 then
+        // measures walking distances against.
+        if (latitude != null && (latitude < -90 || latitude > 90)) {
+            throw new IllegalArgumentException("latitude out of range: " + latitude);
+        }
+        if (longitude != null && (longitude < -180 || longitude > 180)) {
+            throw new IllegalArgumentException("longitude out of range: " + longitude);
+        }
     }
 
     /** Present only when both coordinates were curated. */

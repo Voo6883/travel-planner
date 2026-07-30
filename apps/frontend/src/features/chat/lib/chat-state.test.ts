@@ -26,6 +26,7 @@ const send = (clientMessageId: string, text: string): ChatAction => ({
 
 const persisted = (overrides: Partial<ChatHistoryMessage> = {}): ChatHistoryMessage => ({
   message_id: 'm1',
+  seq: 1,
   role: 'user',
   content: 'hello',
   status: 'complete',
@@ -384,8 +385,8 @@ describe('history', () => {
         type: 'history_loaded',
         conversationId: 'conv-1',
         messages: [
-          persisted({ message_id: 'm2', role: 'assistant', content: 'hi there', created_at: '2026-07-01T09:01:00Z' }),
-          persisted({ message_id: 'm1', content: 'hello', created_at: '2026-07-01T09:00:00Z' }),
+          persisted({ message_id: 'm2', seq: 2, role: 'assistant', content: 'hi there' }),
+          persisted({ message_id: 'm1', seq: 1, content: 'hello' }),
         ],
       },
     ]);
@@ -411,16 +412,38 @@ describe('history', () => {
 
   it('merges an older page without duplicating the page already on screen', () => {
     const first = apply([
-      { type: 'history_loaded', conversationId: null, messages: [persisted({ message_id: 'm5' })] },
+      { type: 'history_loaded', conversationId: null, messages: [persisted({ message_id: 'm5', seq: 5 })] },
     ]);
 
     const merged = chatReducer(first, {
       type: 'history_loaded',
       conversationId: null,
-      messages: [persisted({ message_id: 'm4', created_at: '2026-07-01T08:00:00Z' }), persisted({ message_id: 'm5' })],
+      messages: [persisted({ message_id: 'm4', seq: 4 }), persisted({ message_id: 'm5', seq: 5 })],
     });
 
     expect(merged.messages.map((message) => message.messageId)).toEqual(['m4', 'm5']);
+  });
+
+  it('drops tool rows from the transcript while still accepting them off the wire', () => {
+    // §7.2 forbids showing internal tool identifiers or raw JSON, and the live stream already keeps
+    // only "a tool is running" — so a reload has to agree with it. Parsing them and then not
+    // rendering them is the split: a page containing one loads, and nothing leaks.
+    const state = apply([
+      {
+        type: 'history_loaded',
+        conversationId: 'conv-1',
+        messages: [
+          persisted({ message_id: 'q', seq: 1, role: 'user', content: 'How much is the JR pass?' }),
+          persisted({ message_id: 'call', seq: 2, role: 'tool_call', content: '{"tool":"price_lookup"}' }),
+          persisted({ message_id: 'result', seq: 3, role: 'tool_result', content: '{"jpy":50000}' }),
+          persisted({ message_id: 'a', seq: 4, role: 'assistant', content: 'About 50,000 yen.' }),
+          persisted({ message_id: 'trip', seq: 5, role: 'lifecycle_event', content: 'Trip created' }),
+        ],
+      },
+    ]);
+
+    expect(state.messages.map((message) => message.messageId)).toEqual(['q', 'a', 'trip']);
+    expect(state.messages.map((message) => message.text)).not.toContain('{"jpy":50000}');
   });
 
   it('keeps a message still in flight when history arrives', () => {

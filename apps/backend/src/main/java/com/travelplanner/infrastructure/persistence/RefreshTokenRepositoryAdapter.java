@@ -40,6 +40,13 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenPort {
     }
 
     @Override
+    public boolean markRotated(String tokenHash, Instant rotatedAt) {
+        // One statement, one row at most — `ux_refresh_token_hash` makes the predicate a unique
+        // index lookup, so "did I win the race" costs the same as the read it replaces.
+        return repository.markRotated(tokenHash, rotatedAt) == 1;
+    }
+
+    @Override
     public int revokeAllForUser(UUID userId, Instant revokedAt) {
         return repository.revokeAllForUser(userId, revokedAt);
     }

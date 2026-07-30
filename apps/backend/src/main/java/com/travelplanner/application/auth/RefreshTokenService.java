@@ -40,6 +40,14 @@ import org.springframework.stereotype.Service;
  * which party is which, so the only safe response is to distrust both — the whole family is
  * revoked through {@link SessionRevocationService}, which also bumps {@code token_version} and
  * kills the access tokens the thief already holds.
+ *
+ * <p><b>Two refreshes at once count as reuse too.</b> The rotation itself is a conditional
+ * {@code UPDATE} ({@link RefreshTokenPort#markRotated}), so of two simultaneous presentations of the
+ * same token exactly one can succeed. The loser is treated identically to a sequential replay:
+ * refusing to distinguish them is deliberate, because the only difference between "my client fired
+ * twice" and "the thief refreshed a millisecond before me" is timing, and timing is precisely what
+ * an attacker controls. The alternative — a grace window in which a second use is forgiven — is a
+ * window in which theft is undetectable by design.
  */
 @Service
 @RequiresDatabase
@@ -74,6 +82,12 @@ public class RefreshTokenService {
     /**
      * Validates and consumes a presented refresh token, rotating it.
      *
+     * <p>The read is for <em>diagnosis</em>, not for the decision. Whether this caller may rotate is
+     * settled by {@link RefreshTokenPort#markRotated}'s row count, because any precondition checked
+     * in Java and acted on afterwards leaves a gap, and a concurrent refresh fits in the gap. What
+     * the read is still needed for is telling an ordinary dead session apart from a replay: an
+     * expired or logged-out token must not sign the account out of every other device.
+     *
      * @return the owning user id, for which the caller mints a new access token
      * @throws UnauthorizedException for a missing, unknown, expired, revoked, or replayed token —
      *         uniformly, because a caller holding a bad refresh token learns nothing useful from
@@ -82,21 +96,17 @@ public class RefreshTokenService {
     @TransactionalWrite
     public UUID rotate(String rawToken) {
         RefreshToken presented = require(rawToken);
-        Instant now = Instant.now();
 
-        if (presented.isRotated()) {
-            // Replay of a superseded token. Distrust every session for this account.
+        if (!presented.isRotated() && refreshTokens.markRotated(presented.tokenHash(), Instant.now())) {
+            return presented.userId();
+        }
+        if (wasReplayed(presented)) {
             log.warn("Refresh token reuse detected for user {} — revoking the family",
                     presented.userId());
-            revocation.revokeAllSessions(presented.userId(), SessionRevocationReason.REFRESH_TOKEN_REUSE);
-            throw new UnauthorizedException();
+            revocation.revokeAllSessions(presented.userId(),
+                    SessionRevocationReason.REFRESH_TOKEN_REUSE);
         }
-        if (!presented.isUsableAt(now)) {
-            throw new UnauthorizedException();
-        }
-
-        refreshTokens.save(presented.rotatedAt(now));
-        return presented.userId();
+        throw new UnauthorizedException();
     }
 
     /**
@@ -120,6 +130,23 @@ public class RefreshTokenService {
      */
     public void revokeAllSessions(UUID userId, SessionRevocationReason reason) {
         revocation.revokeAllSessions(userId, reason);
+    }
+
+    /**
+     * Was the failed claim a replay, or just a dead session?
+     *
+     * <p>Only {@code rotated_at} distinguishes them, and it may have been set by the transaction
+     * that won the race a moment ago — after this request's first read. Hence the second read, which
+     * happens on the failure path only: the winning {@code UPDATE} had to commit before ours could
+     * re-evaluate its predicate and report zero rows, so by the time we get here the successor is
+     * visible. An expired or explicitly revoked token answers {@code false} and gets a plain 401,
+     * because a fortnight-old tab and a signed-out one are not incidents.
+     */
+    private boolean wasReplayed(RefreshToken presented) {
+        return presented.isRotated()
+                || refreshTokens.findByTokenHash(presented.tokenHash())
+                        .filter(RefreshToken::isRotated)
+                        .isPresent();
     }
 
     private RefreshToken require(String rawToken) {

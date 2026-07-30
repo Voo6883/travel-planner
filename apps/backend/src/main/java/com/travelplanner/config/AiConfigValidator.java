@@ -27,17 +27,59 @@ import java.util.Set;
  */
 final class AiConfigValidator {
 
+    /** Mirrors {@link KnowledgeConfigValidator#PROD_PROFILE} — one spelling of "this is real". */
+    static final String PROD_PROFILE = "prod";
+
     private AiConfigValidator() {
     }
 
-    /** @throws IllegalStateException with an actionable message; the context then fails to start */
-    static void validate(AiProperties properties) {
+    /**
+     * @param activeProfiles from {@code Environment.getActiveProfiles()}
+     * @throws IllegalStateException with an actionable message; the context then fails to start
+     */
+    static void validate(AiProperties properties, String[] activeProfiles) {
+        boolean production = isProduction(activeProfiles);
         Set<String> selected = selectedChatProviders(properties);
         for (String provider : selected) {
             requireKnownProvider(provider);
             requireCredential(properties, provider);
+            if (production) {
+                refuseStubInProduction(provider, "a chat provider");
+            }
         }
-        validateEmbeddings(properties);
+        validateEmbeddings(properties, production);
+    }
+
+    /**
+     * ADR 010 §3's rule for the knowledge base, applied to the model itself.
+     *
+     * <p>The stub is the right default everywhere else — it is what keeps live keys out of CI — but
+     * in production it converts a missing credential from a boot failure into a running application
+     * that answers every traveller with {@code [stub] no model configured}. Both are outages; only
+     * one of them is visible to whoever deployed it. The credential check above cannot catch this,
+     * because {@code stub} legitimately has no credential to be missing.
+     */
+    private static void refuseStubInProduction(String provider, String role) {
+        if (AiProperties.STUB_PROVIDER.equals(provider)) {
+            throw new IllegalStateException("The stub LLM is selected as " + role + " under the '"
+                    + PROD_PROFILE + "' profile. It returns placeholder text rather than model "
+                    + "output, so a deployment missing " + AiProperties.ANTHROPIC_PROVIDER + " or "
+                    + AiProperties.OPENAI_PROVIDER + " credentials would serve every traveller a "
+                    + "visible stub instead of failing at boot. Configure a real provider and its "
+                    + "API key; the stub is for test, dev, docker, and local only.");
+        }
+    }
+
+    private static boolean isProduction(String[] activeProfiles) {
+        if (activeProfiles == null) {
+            return false;
+        }
+        for (String profile : activeProfiles) {
+            if (PROD_PROFILE.equalsIgnoreCase(profile)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -88,10 +130,16 @@ final class AiConfigValidator {
      * <p>The dimension check is delegated to {@link EmbeddingModelRef}, so the rule lives with the
      * type that carries it and cannot be bypassed by constructing a reference some other way.
      */
-    private static void validateEmbeddings(AiProperties properties) {
+    private static void validateEmbeddings(AiProperties properties, boolean production) {
         AiProperties.Embeddings embeddings = properties.getEmbeddings();
         String provider = embeddings.getProvider();
         requireKnownProvider(provider);
+        if (production) {
+            // A stub embedding adapter is worse than a stub chat model, not better: its vectors are
+            // deterministic noise, so retrieval returns confidently ranked nonsense and nothing
+            // anywhere prints the word "stub".
+            refuseStubInProduction(provider, "the embedding provider");
+        }
         if (AiProperties.ANTHROPIC_PROVIDER.equals(provider)) {
             throw new IllegalStateException(
                     "travelplanner.ai.embeddings.provider=anthropic is not supported: Anthropic "
@@ -117,9 +165,16 @@ final class AiConfigValidator {
         }
     }
 
+    /**
+     * Deliberately does not offer the stub as a remedy. It used to, and describing it as "the
+     * default, which needs no credentials" is an instruction to disable the model — correct advice
+     * for a developer and exactly the wrong advice for whoever is reading this message off a
+     * production boot failure.
+     */
     private static String missingKey(String provider, String envVar) {
-        return "An AI provider is set to '" + provider + "' but " + envVar + " is not set. "
-                + "Set the key, or use travelplanner.ai.provider.default=" + AiProperties.STUB_PROVIDER
-                + " (the default, which needs no credentials).";
+        return "An AI provider is set to '" + provider + "' but " + envVar + " is not set. Set the "
+                + "key. Outside production, travelplanner.ai.provider.default="
+                + AiProperties.STUB_PROVIDER + " runs without credentials; under the '"
+                + PROD_PROFILE + "' profile that is refused.";
     }
 }

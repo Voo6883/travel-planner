@@ -385,9 +385,18 @@ class MigrationContractTest {
         return matcher.matches() ? Integer.parseInt(matcher.group(1)) : -1;
     }
 
+    /**
+     * Read with line endings normalised to LF.
+     *
+     * <p>{@code .gitattributes} declares {@code * text=auto}, so these {@code .sql} files arrive with
+     * CRLF in a Windows working tree and with LF in CI. Several markers below are multi-line literals
+     * written with {@code \n}, so without this normalisation they fail to match on a developer's
+     * machine and match in the pipeline. A suite that is red locally and green on merge is worse than
+     * one that is simply wrong: it teaches everyone to stop believing the local run.
+     */
     private static String read(String fileName) {
         try {
-            return Files.readString(MIGRATIONS.resolve(fileName));
+            return Files.readString(MIGRATIONS.resolve(fileName)).replace("\r\n", "\n");
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }

@@ -1,6 +1,7 @@
 package com.travelplanner.domain.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.travelplanner.domain.KnowledgeFixtures;
@@ -88,6 +89,25 @@ class DestinationAreaTest {
                 null, null, PROVENANCE)).isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> new DestinationArea(id, id, "shibuya", "Shibuya", null,
                 null, null, null)).isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void rejectsCoordinatesOutsideTheGlobeJustAsDestinationDoes() {
+        // The more dangerous of the two omissions: a city with swapped lat/lng is visibly in the
+        // wrong ocean, while a neighbourhood with swapped values looks like a coordinate and C3
+        // measures walking distances against it.
+        assertThatThrownBy(() -> area("shibuya", "Shibuya", null, 139.70, 35.66))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("latitude out of range");
+        assertThatThrownBy(() -> area("shibuya", "Shibuya", null, 35.66, -180.01))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("longitude out of range");
+    }
+
+    @Test
+    void acceptsTheExtremesBecauseTheyAreRealPlaces() {
+        assertThatCode(() -> area("north", "North", null, 90.0, 180.0)).doesNotThrowAnyException();
+        assertThatCode(() -> area("south", "South", null, -90.0, -180.0)).doesNotThrowAnyException();
     }
 
     private static DestinationArea area(String slug, String name, String description,

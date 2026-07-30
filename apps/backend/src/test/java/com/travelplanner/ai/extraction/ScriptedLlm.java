@@ -52,6 +52,11 @@ final class ScriptedLlm implements LlmPort {
     }
 
     @Override
+    public String modelName() {
+        return "scripted-model";
+    }
+
+    @Override
     public String complete(Prompt prompt, LlmOptions options) {
         prompts.add(prompt);
         if (failure != null) {
@@ -61,11 +66,6 @@ final class ScriptedLlm implements LlmPort {
             return "";
         }
         return replies.size() == 1 ? replies.peekFirst() : replies.removeFirst();
-    }
-
-    @Override
-    public <T> T completeStructured(Prompt prompt, Class<T> type, LlmOptions options) {
-        throw new UnsupportedOperationException("composed by StructuredOutputRunner");
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.travelplanner.domain.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.travelplanner.domain.enums.CoverageLevel;
@@ -159,6 +160,37 @@ class DestinationTest {
                             .containsExactly("tokyo-jp", "bangkok-th", "lisbon-pt");
                     assertThat(refusal.details()).containsEntry("requested", "osaka-jp");
                 });
+    }
+
+    @Test
+    void rejectsABlankNameThatTheNotNullColumnWouldHappilyStore() {
+        // `not null` does not catch '': PostgreSQL considers the empty string a fine non-null value,
+        // so it reaches the destination picker as an unclickable blank row.
+        assertThatThrownBy(() -> new Destination(UUID.randomUUID(), "tokyo-jp", "   ", "JP",
+                "Asia/Tokyo", null, null, CoverageLevel.FULL))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("name must not be blank");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Asia/Tokio", "Tokyo", "UTC+7", "GMT+09:00", "", "  "})
+    void rejectsATimezoneTheSchedulerCouldNotResolveLater(String timezone) {
+        // Every one of these is a string the schema accepts and ZoneId.of rejects — so without this
+        // check the failure lands in C3's scheduler, long after the seed file left the screen, and
+        // the fix is a data migration rather than an edit. `UTC+7` and `GMT+09:00` are the
+        // interesting cases: both parse, neither is a region, and a fixed offset ignores the DST an
+        // itinerary has to respect.
+        assertThatThrownBy(() -> new Destination(UUID.randomUUID(), "tokyo-jp", "Tokyo", "JP",
+                timezone, null, null, CoverageLevel.FULL))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("IANA zone");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Asia/Tokyo", "Europe/Lisbon", "America/New_York", "UTC"})
+    void acceptsTheZonesTheSeedFilesActuallyUse(String timezone) {
+        assertThatCode(() -> new Destination(UUID.randomUUID(), "somewhere", "Somewhere", "JP",
+                timezone, null, null, CoverageLevel.FULL)).doesNotThrowAnyException();
     }
 
     private static Destination destination(String slug, CoverageLevel coverage,

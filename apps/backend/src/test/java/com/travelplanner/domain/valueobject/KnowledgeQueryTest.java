@@ -146,4 +146,46 @@ class KnowledgeQueryTest {
         assertThatThrownBy(() -> new KnowledgeQuery(DESTINATION_ID, "temples", embedding, 20, 0.5, null))
                 .isInstanceOf(NullPointerException.class);
     }
+
+    // ---------------------------------------------------------------------------------------
+    // Value equality. Task 37 keys the semantic cache on this type, and a record's generated
+    // equals compares float[] by reference — so every lookup would miss and the cache would look
+    // present while never hitting.
+    // ---------------------------------------------------------------------------------------
+
+    @Test
+    void twoQueriesBuiltFromTheSameInputsAreEqualAndHashAlike() {
+        KnowledgeQuery first = KnowledgeQuery.of(DESTINATION_ID, "temples",
+                KnowledgeFixtures.embedding());
+        KnowledgeQuery second = KnowledgeQuery.of(DESTINATION_ID, "temples",
+                KnowledgeFixtures.embedding());
+
+        assertThat(first).isEqualTo(second).hasSameHashCodeAs(second);
+        assertThat(java.util.Map.of(first, "cached")).containsKey(second);
+    }
+
+    @Test
+    void aDifferentVectorIsADifferentQueryEvenWhenEveryOtherFieldMatches() {
+        float[] shifted = KnowledgeFixtures.embedding();
+        shifted[0] = shifted[0] + 1.0f;
+
+        assertThat(KnowledgeQuery.of(DESTINATION_ID, "temples", KnowledgeFixtures.embedding()))
+                .isNotEqualTo(KnowledgeQuery.of(DESTINATION_ID, "temples", shifted));
+    }
+
+    @Test
+    void aDifferentTextIsADifferentQuery() {
+        assertThat(KnowledgeQuery.of(DESTINATION_ID, "temples", KnowledgeFixtures.embedding()))
+                .isNotEqualTo(KnowledgeQuery.of(DESTINATION_ID, "street food",
+                        KnowledgeFixtures.embedding()));
+    }
+
+    /** A log line has no use for 1536 floats, and the generated form prints an array identity. */
+    @Test
+    void printsTheVectorsWidthRatherThanItsContents() {
+        String printed = KnowledgeQuery.of(DESTINATION_ID, "temples",
+                KnowledgeFixtures.embedding()).toString();
+
+        assertThat(printed).contains("1536d").doesNotContain("[F@");
+    }
 }
