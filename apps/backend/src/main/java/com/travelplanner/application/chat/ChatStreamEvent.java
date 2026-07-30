@@ -35,14 +35,18 @@ import java.util.UUID;
  * emitted only on the frames that open or close a <em>persisted</em> message, and its value is that
  * message's {@code seq} — the same counter {@code uq_message_conversation_seq} orders history by.
  *
- * <p>The alternative, an id on every frame, would be actively wrong today: token deltas are not
- * persisted individually, so an id on a delta would promise a resume position that nothing can
- * replay, and — because the frontend reducer drops any frame whose id is not ahead of the last one
- * applied — repeating a message's {@code seq} across its own deltas would silently discard every
- * token after the first. Ids at persisted positions are the subset that is both monotonic and
- * honest. Replay of frames after {@code Last-Event-ID} is not implemented in this slice; the header
- * is accepted and ignored, and a reconnect re-sends the same {@code client_message_id}, which the
- * idempotency key already makes safe.
+ * <p>The alternative, an id on every frame, would be actively wrong: token deltas are not persisted
+ * individually, so an id on a delta would promise a resume position that nothing can replay, and —
+ * because the frontend reducer drops any frame whose id is not ahead of the last one applied —
+ * repeating a message's {@code seq} across its own deltas would silently discard every token after the
+ * first. Ids at persisted positions are the subset that is both monotonic and honest.
+ *
+ * <p>ADR 007 was amended to match (F-39). {@code Last-Event-ID} is now honoured by
+ * {@link ChatTurnService#replay}, at message granularity, and only for a turn that already reached
+ * {@code COMPLETE} — the case where the answer is entirely in the database and regenerating it would
+ * bill a second provider call to show the user a different answer from the one they were reading. A
+ * turn cut mid-sentence still regenerates, because the half-sentence the client holds was assembled
+ * from deltas nothing stored.
  */
 public sealed interface ChatStreamEvent {
 

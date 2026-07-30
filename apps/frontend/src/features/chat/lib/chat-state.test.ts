@@ -347,6 +347,68 @@ describe('interruption, cancellation and failure', () => {
   });
 });
 
+describe('a server replay after a completed turn (ADR 007 resume, F-39)', () => {
+  // The shape `ChatTurnService.replay` produces: whole messages with their text already on the
+  // `message_start`, no deltas at all, and a `done` whose stop reason is not a provider one. The
+  // server can only send this because the turn had finished; the client has to render it as a
+  // finished exchange rather than as a turn that never produced any text.
+  const replayFrames = [
+    frame(
+      {
+        type: 'message_start',
+        messageId: 'u1',
+        role: 'user',
+        clientMessageId: 'c1',
+        content: 'Kyoto in spring?',
+        createdAt: '2026-07-01T09:00:00Z',
+      },
+      '1',
+    ),
+    frame(
+      {
+        type: 'message_start',
+        messageId: 'a1',
+        role: 'assistant',
+        clientMessageId: null,
+        content: 'Cherry blossom peaks in early April.',
+        createdAt: '2026-07-01T09:00:01Z',
+      },
+      '2',
+    ),
+    frame({ type: 'message_end', messageId: 'a1', status: 'complete' }, '2'),
+    frame({ type: 'done', stopReason: 'replay' }),
+  ];
+
+  it('renders the replayed answer, which arrives as content rather than as deltas', () => {
+    const state = apply([{ type: 'stream_opened' }, ...replayFrames]);
+
+    expect(state.messages.map((message) => message.text)).toEqual([
+      'Kyoto in spring?',
+      'Cherry blossom peaks in early April.',
+    ]);
+    expect(state.messages[1]?.status).toBe('complete');
+    expect(state.connection).toBe('closed');
+  });
+
+  it('reconciles the optimistic bubble instead of showing the question twice', () => {
+    // The reason the server replays the user echo too when the client kept no cursor: a reconnect
+    // that lost everything still has its own bubble on screen, and nothing else can adopt it.
+    const state = apply([send('c1', 'Kyoto in spring?'), { type: 'stream_opened' }, ...replayFrames]);
+
+    expect(state.messages).toHaveLength(2);
+    expect(state.messages[0]?.messageId).toBe('u1');
+    expect(state.messages[0]?.status).toBe('sent');
+  });
+
+  it('accepts a stop reason that is not a provider one', () => {
+    // `replay` is deliberately not `end_turn`; the client must not be checking against a closed set.
+    const state = apply([{ type: 'stream_opened' }, ...replayFrames]);
+
+    expect(state.error).toBeNull();
+    expect(state.connection).toBe('closed');
+  });
+});
+
 describe('replayed frames after a resume', () => {
   it('applies a frame once, however many times the server replays it', () => {
     const delta = frame({ type: 'text_delta', messageId: 'a1', text: 'Tokyo' }, '7');

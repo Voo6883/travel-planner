@@ -625,6 +625,7 @@
         "application": [
           "apps/backend/src/main/java/com/travelplanner/application/chat/ChatConversationService.java",
           "apps/backend/src/main/java/com/travelplanner/application/chat/ChatHistoryPage.java",
+          "apps/backend/src/main/java/com/travelplanner/application/chat/ChatReplay.java",
           "apps/backend/src/main/java/com/travelplanner/application/chat/ChatStreamEvent.java",
           "apps/backend/src/main/java/com/travelplanner/application/chat/ChatTarget.java",
           "apps/backend/src/main/java/com/travelplanner/application/chat/ChatTurn.java",

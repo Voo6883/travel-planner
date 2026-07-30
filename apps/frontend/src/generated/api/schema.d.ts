@@ -2103,9 +2103,14 @@ export interface components {
          *     **`id:`** carries the `seq` of the message a frame opens or closes, and appears on nothing
          *     else. An id on every frame would promise a resume position that nothing can replay — token
          *     deltas are not persisted individually — and repeating one message's `seq` across its own
-         *     deltas would make a client's duplicate filter discard every token after the first. Frames
-         *     after `Last-Event-ID` are not replayed yet; a reconnect re-sends the same
-         *     `client_message_id`, which the idempotency key already makes safe.
+         *     deltas would make a client's duplicate filter discard every token after the first.
+         *
+         *     **Resume.** Send `Last-Event-ID` on a reconnect, with the same `client_message_id`. If the
+         *     turn it names already finished, the server replays the persisted messages after that id and
+         *     closes with `done` carrying `stop_reason: replay` — no model call, and the same answer you
+         *     were reading. If the turn was cut mid-sentence it is regenerated instead, which the
+         *     idempotency key makes safe; the deltas you already hold were never persisted, so there is
+         *     nothing to resume from. An unparseable header is treated as absent, never as an error.
          *
          *     **Disconnecting is safe and is not a loss.** The server cancels the model call and marks the
          *     partial assistant message `interrupted`; whatever text arrived is kept and reloads labelled

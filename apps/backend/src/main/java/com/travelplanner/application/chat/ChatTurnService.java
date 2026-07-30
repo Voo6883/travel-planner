@@ -118,6 +118,15 @@ public class ChatTurnService {
 
     private static final String FALLBACK_ERROR_CODE = "internal_error";
     private static final String STREAM_ERROR_MESSAGE = "The conversation could not be completed.";
+    /**
+     * The {@code done} stop reason on a replayed turn.
+     *
+     * <p>Distinct from every provider stop reason on purpose: a client — or a log — reading
+     * {@code end_turn} on a replay would be told the model had just finished, when nothing was
+     * generated and no tokens were spent.
+     */
+    private static final String REPLAY_STOP_REASON = "replay";
+
     private static final String TRIP_CREATED = "trip_created";
     private static final String TRIP_ID_KEY = "trip_id";
 
@@ -145,6 +154,100 @@ public class ChatTurnService {
         this.conversations = conversations;
         this.llm = llm;
         this.heartbeatInterval = Duration.ofMillis(heartbeatIntervalMillis);
+    }
+
+    /**
+     * A reconnect that can be answered from the database, or empty when this is an ordinary send.
+     *
+     * <p><strong>ADR 007's resume, implemented at the granularity that actually exists</strong>
+     * (closes <b>F-39</b>). The ADR said "server replays persisted frames after that id". Frames are
+     * not persisted — messages are — so the promise as written was never achievable without storing
+     * every token delta, and the header was accepted and ignored while the frontend implemented its
+     * whole half of the protocol. The ADR's wording now matches this method.
+     *
+     * <p>Replay is offered exactly when <strong>the turn the client was watching has already
+     * finished</strong>:
+     *
+     * <ul>
+     *   <li>The {@code clientMessageId} names a user message this conversation already committed —
+     *       so this is a retry, not a new question.</li>
+     *   <li>Everything after it is settled: no message is still {@code STREAMING}, and the assistant
+     *       turn ended {@code COMPLETE} rather than {@code INTERRUPTED}.</li>
+     * </ul>
+     *
+     * <p>That is the case worth catching, and it is common: the socket dies after the model finished
+     * but before the browser processed {@code done}, and every byte is in the database. Regenerating
+     * it — which is what happened before this method existed — costs a second provider call, returns a
+     * <em>different</em> answer from the one the user had started reading, and leaves two assistant
+     * messages in history for one question. None of that is visible as a failure.
+     *
+     * <p>When the prior turn is {@code INTERRUPTED} or still {@code STREAMING} there is nothing honest
+     * to send: the client holds half a sentence the server cannot reproduce, because deltas were never
+     * persisted. Those reconnects fall through to a normal turn, as before, and the {@code INTERRUPTED}
+     * partial stays in history where ADR 007 requires it.
+     *
+     * <p>Read-only by construction — it calls nothing that writes. A resume that opened a planner
+     * session or allocated a sequence would leave a row behind for a client that only wanted what it
+     * had already been promised.
+     *
+     * @param lastEventId the client's {@code Last-Event-ID}, or {@code null}. Frames at or below it
+     *     are already applied, so they are not resent; a {@code null} means the client kept nothing and
+     *     the whole exchange is replayed
+     */
+    public Optional<ChatReplay> replay(SendChatMessageCommand command, UserContext user,
+            Long lastEventId) {
+
+        Optional<Conversation> existing =
+                conversations.findExisting(command.target(), command.conversationId(), user);
+        if (existing.isEmpty()) {
+            return Optional.empty();
+        }
+        UUID conversationId = existing.get().id();
+
+        Optional<Message> committed = conversations.findCommittedUserMessage(conversationId,
+                command.clientMessageId(), user);
+        if (committed.isEmpty()) {
+            // A first send. The header, if any, refers to frames from an earlier turn and the client
+            // is not asking for them back.
+            return Optional.empty();
+        }
+
+        Message userMessage = committed.get();
+        // From just before the user message when the client kept nothing, so a resume that lost even
+        // the echo still reconciles its optimistic bubble rather than orphaning it.
+        long afterSeq = lastEventId == null ? userMessage.seq() - 1 : lastEventId;
+        List<Message> missing = conversations.messagesAfter(conversationId, afterSeq, user);
+
+        List<Message> answer = conversations.messagesAfter(conversationId, userMessage.seq(), user);
+        if (!isSettledAndComplete(answer)) {
+            return Optional.empty();
+        }
+
+        List<ChatStreamEvent> frames = new ArrayList<>(missing.size() * 2 + 1);
+        for (Message message : missing) {
+            frames.add(ChatStreamEvent.MessageStart.complete(message));
+            frames.add(new ChatStreamEvent.MessageEnd(message.id(), message.status(), message.seq()));
+        }
+        // The terminal frame the client is waiting for. `replay` rather than a StopReason: the turn
+        // that produced this text ended for its own reason, which was not recorded per message, and
+        // inventing `end_turn` here would assert something the row does not say.
+        frames.add(new ChatStreamEvent.Done(REPLAY_STOP_REASON));
+
+        return Optional.of(new ChatReplay(conversationId, frames));
+    }
+
+    /**
+     * Whether the answer to a retried question is finished and reproducible.
+     *
+     * <p>Empty means the previous attempt committed the question and died before opening an assistant
+     * row — there is no answer to replay. {@code STREAMING} means a turn is live on another connection
+     * or died without settling. {@code INTERRUPTED} or {@code FAILED} means the client holds text the
+     * server cannot complete. Only an assistant turn that reached {@code COMPLETE} can be handed back
+     * whole, which is the entire condition for spending a query instead of a generation.
+     */
+    private static boolean isSettledAndComplete(List<Message> answer) {
+        return !answer.isEmpty()
+                && answer.stream().allMatch(message -> message.status() == ChatMessageStatus.COMPLETE);
     }
 
     /**

@@ -167,6 +167,55 @@ public class ChatConversationService {
         return conversations.saveMessage(settled);
     }
 
+    /**
+     * What a reconnecting client is missing, or empty when there is nothing to resume (ADR 007; F-39).
+     *
+     * <p>A resume is answerable only when the turn the client was watching has <strong>already
+     * finished</strong>. That is the case worth handling, and it is common: a socket dies after the
+     * model completed but before the browser processed {@code done}, and every byte of the answer is
+     * sitting in {@code message}. Today that reconnect regenerates the whole turn — a second provider
+     * call, billed, producing a <em>different</em> answer from the one the user had started reading,
+     * and leaving two assistant messages in history for one question.
+     *
+     * <p>When the turn is still {@code STREAMING} or was left {@code INTERRUPTED} there is nothing
+     * honest to replay: token deltas are not persisted individually, so the server cannot hand back
+     * the half-sentence the client already has. Those reconnects still regenerate, which is why
+     * ADR 007's wording had to change rather than be implemented as written — see the ADR's resume
+     * row and {@code ChatTurnService.replay}.
+     *
+     * @param afterSeq the client's {@code Last-Event-ID}. Frames at or below it are already applied
+     * @return every message after {@code afterSeq}, oldest first
+     */
+    @Transactional(readOnly = true)
+    public List<Message> messagesAfter(UUID conversationId, long afterSeq, UserContext user) {
+        return conversations.findMessagesAfter(conversationId, user.userId(), afterSeq, CONTEXT_WINDOW);
+    }
+
+    /**
+     * The message a previous attempt committed under this {@code clientMessageId}, if any.
+     *
+     * <p>Exposed separately from {@link #appendUserMessage} because the resume path has to ask the
+     * question <em>without</em> the side effect: appending is what makes a fresh send a turn, and a
+     * reconnect must be able to discover "you already sent this" before anything is written.
+     */
+    @Transactional(readOnly = true)
+    public Optional<Message> findCommittedUserMessage(UUID conversationId, String clientMessageId,
+            UserContext user) {
+        return conversations.findMessageByClientMessageId(conversationId, user.userId(), clientMessageId);
+    }
+
+    /**
+     * The conversation this target already has, without opening one.
+     *
+     * <p>{@link #resolveForAppend} would create a planner session for a caller who has none, which is
+     * right for a send and wrong for a resume: a reconnect that creates a conversation has resumed
+     * nothing and has made a row.
+     */
+    @Transactional(readOnly = true)
+    public Optional<Conversation> findExisting(ChatTarget target, UUID conversationId, UserContext user) {
+        return locate(target, conversationId, user);
+    }
+
     /** The model's view of the thread so far, oldest first and bounded by {@link #CONTEXT_WINDOW}. */
     @Transactional(readOnly = true)
     public List<Message> contextWindow(UUID conversationId, UserContext user) {

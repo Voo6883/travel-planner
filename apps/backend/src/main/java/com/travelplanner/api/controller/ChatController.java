@@ -6,14 +6,18 @@ import com.travelplanner.api.dto.chat.ChatHistoryPageResponse;
 import com.travelplanner.api.dto.chat.SendChatMessageRequest;
 import com.travelplanner.api.filter.RequestIdFilter;
 import com.travelplanner.application.chat.ChatConversationService;
+import com.travelplanner.application.chat.ChatReplay;
 import com.travelplanner.application.chat.ChatTarget;
 import com.travelplanner.application.chat.ChatTurn;
 import com.travelplanner.application.chat.ChatTurnService;
+import com.travelplanner.application.chat.SendChatMessageCommand;
 import com.travelplanner.application.page.PageQuery;
 import com.travelplanner.config.RequiresDatabase;
 import com.travelplanner.domain.valueobject.UserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.MDC;
 import org.springframework.http.HttpHeaders;
@@ -76,6 +80,16 @@ public class ChatController {
      */
     private static final String CONVERSATION_ID_HEADER = "X-Conversation-Id";
 
+    /**
+     * ADR 007's resume cursor: the {@code seq} of the last frame the client applied.
+     *
+     * <p>Read here rather than declared as a {@code @RequestHeader} parameter because it is optional
+     * <em>and</em> malformed input must not become a 400. A proxy or a buggy client can put anything in
+     * it, and a resume hint that cannot be parsed is not worth refusing a message over — it degrades to
+     * "replay everything the client is missing", which is correct and merely less efficient.
+     */
+    private static final String LAST_EVENT_ID_HEADER = "Last-Event-ID";
+
     private final ChatTurnService turns;
     private final ChatConversationService conversations;
     private final ObjectMapper objectMapper;
@@ -92,8 +106,9 @@ public class ChatController {
     public Flux<ServerSentEvent<String>> sendPlannerMessage(
             @Valid @RequestBody SendChatMessageRequest request,
             @AuthenticationPrincipal UserContext caller,
+            HttpServletRequest httpRequest,
             HttpServletResponse response) {
-        return stream(ChatTarget.planner(), request, caller, response);
+        return stream(ChatTarget.planner(), request, caller, httpRequest, response);
     }
 
     /** UC-C5-09 — a turn in the trip's one persistent conversation. */
@@ -101,8 +116,9 @@ public class ChatController {
     public Flux<ServerSentEvent<String>> sendTripMessage(@PathVariable UUID tripId,
             @Valid @RequestBody SendChatMessageRequest request,
             @AuthenticationPrincipal UserContext caller,
+            HttpServletRequest httpRequest,
             HttpServletResponse response) {
-        return stream(ChatTarget.trip(tripId), request, caller, response);
+        return stream(ChatTarget.trip(tripId), request, caller, httpRequest, response);
     }
 
     /** One page of planner history. Page 0 is the newest page; see {@link ChatHistoryPageResponse}. */
@@ -125,15 +141,57 @@ public class ChatController {
     }
 
     private Flux<ServerSentEvent<String>> stream(ChatTarget target, SendChatMessageRequest request,
-            UserContext caller, HttpServletResponse response) {
-        ChatTurn turn = turns.openTurn(request.toCommand(target), caller);
-        // Set before the body is returned: once the publisher is handed back, the response is
-        // committed and a header set afterwards is silently discarded.
+            UserContext caller, HttpServletRequest httpRequest, HttpServletResponse response) {
+
+        SendChatMessageCommand command = request.toCommand(target);
+
+        // Resume is tried first, and it is the only branch that does not write. A reconnect whose turn
+        // already finished is answered from the database — no provider call, and the same answer the
+        // user had started reading rather than a second, different one (ADR 007 resume; F-39).
+        Optional<ChatReplay> replay = turns.replay(command, caller, lastEventId(httpRequest));
+        if (replay.isPresent()) {
+            ChatEventEncoder encoder = openStream(response, replay.get().conversationId());
+            return Flux.fromIterable(replay.get().frames()).map(encoder::encode);
+        }
+
+        ChatTurn turn = turns.openTurn(command, caller);
+        ChatEventEncoder encoder = openStream(response, turn.conversationId());
+        return turns.stream(turn).map(encoder::encode);
+    }
+
+    /**
+     * The three headers every stream carries, set before the body is returned.
+     *
+     * <p>Once the publisher is handed back the response is committed and a header set afterwards is
+     * silently discarded — which is why this is a method rather than three lines repeated in two
+     * branches that must not drift.
+     */
+    private ChatEventEncoder openStream(HttpServletResponse response, UUID conversationId) {
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
         response.setHeader(ACCEL_BUFFERING_HEADER, "no");
-        response.setHeader(CONVERSATION_ID_HEADER, turn.conversationId().toString());
-        ChatEventEncoder encoder = new ChatEventEncoder(objectMapper, requestId(response));
-        return turns.stream(turn).map(encoder::encode);
+        response.setHeader(CONVERSATION_ID_HEADER, conversationId.toString());
+        return new ChatEventEncoder(objectMapper, requestId(response));
+    }
+
+    /**
+     * The resume cursor, or {@code null} when the header is absent or unusable.
+     *
+     * <p>Anything unparseable is treated as absent rather than as a 400. The header is a hint about
+     * what the client already has; getting it wrong costs a few duplicate frames, which the frontend
+     * reducer drops idempotently, and refusing the message instead would turn a proxy quirk into a
+     * chat that cannot be used at all.
+     */
+    private static Long lastEventId(HttpServletRequest request) {
+        String raw = request.getHeader(LAST_EVENT_ID_HEADER);
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            long parsed = Long.parseLong(raw.trim());
+            return parsed < 0 ? null : parsed;
+        } catch (NumberFormatException notANumber) {
+            return null;
+        }
     }
 
     private ChatHistoryPageResponse history(ChatTarget target, UUID conversationId, Integer page,
