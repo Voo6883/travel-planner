@@ -2,6 +2,7 @@ package com.travelplanner.application.chat;
 
 import com.travelplanner.domain.ai.Prompt;
 import com.travelplanner.domain.model.Message;
+import com.travelplanner.domain.valueobject.UserContext;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -19,14 +20,20 @@ import java.util.UUID;
  * status and the §6.1 envelope, rather than as an {@code event: error} on a response that has
  * already committed to {@code 200} for no reason.
  *
+ * @param target the surface this turn is running on: planner turns may create a trip; trip turns may
+ *        not use planner tools
+ * @param user the authenticated owner; retained so tool execution never trusts model-supplied ids
  * @param userMessage the committed user turn — the row the echo frame is built from, which on a
  *        retry is the row a previous attempt committed rather than a new one
  * @param assistantMessage the empty {@code STREAMING} row the answer will be written into
  */
-public record ChatTurn(UUID conversationId, Message userMessage, Message assistantMessage, Prompt prompt) {
+public record ChatTurn(UUID conversationId, ChatTarget target, UserContext user, Message userMessage,
+        Message assistantMessage, Prompt prompt) {
 
     public ChatTurn {
         Objects.requireNonNull(conversationId, "conversationId");
+        Objects.requireNonNull(target, "target");
+        Objects.requireNonNull(user, "user");
         Objects.requireNonNull(userMessage, "userMessage");
         Objects.requireNonNull(assistantMessage, "assistantMessage");
         Objects.requireNonNull(prompt, "prompt");

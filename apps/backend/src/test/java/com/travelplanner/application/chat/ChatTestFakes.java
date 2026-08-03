@@ -11,8 +11,10 @@ import com.travelplanner.domain.model.Conversation;
 import com.travelplanner.domain.model.Message;
 import com.travelplanner.domain.model.PlannerSession;
 import com.travelplanner.domain.model.Trip;
+import com.travelplanner.domain.model.TripBrief;
 import com.travelplanner.domain.port.ConversationRepositoryPort;
 import com.travelplanner.domain.port.LlmPort;
+import com.travelplanner.domain.port.TripBriefRepositoryPort;
 import com.travelplanner.domain.port.TripRepositoryPort;
 import com.travelplanner.domain.valueobject.UserContext;
 import java.time.Instant;
@@ -73,6 +75,14 @@ final class ChatTestFakes {
                     .filter(message -> message.conversationId().equals(conversationId))
                     .sorted(Comparator.comparingLong(Message::seq))
                     .toList();
+        }
+
+        Optional<Conversation> conversation(UUID conversationId, UUID userId) {
+            return findConversationByIdAndUserId(conversationId, userId);
+        }
+
+        Optional<PlannerSession> session(UUID sessionId) {
+            return Optional.ofNullable(sessions.get(sessionId));
         }
 
         @Override
@@ -211,6 +221,10 @@ final class ChatTestFakes {
 
         private final Map<UUID, Trip> trips = new LinkedHashMap<>();
 
+        int count() {
+            return trips.size();
+        }
+
         Trip add(Trip trip) {
             trips.put(trip.id(), trip);
             return trip;
@@ -237,6 +251,22 @@ final class ChatTestFakes {
         }
     }
 
+    static final class TripBriefRepositoryFake implements TripBriefRepositoryPort {
+
+        private final Map<UUID, TripBrief> briefs = new LinkedHashMap<>();
+
+        @Override
+        public TripBrief save(TripBrief brief) {
+            briefs.put(brief.tripId(), brief);
+            return brief;
+        }
+
+        @Override
+        public Optional<TripBrief> findByTripId(UUID tripId) {
+            return Optional.ofNullable(briefs.get(tripId));
+        }
+    }
+
     /**
      * A scriptable {@link LlmPort}.
      *
@@ -248,6 +278,7 @@ final class ChatTestFakes {
 
         private final Supplier<Flux<LlmEvent>> script;
         private final List<Prompt> prompts = new ArrayList<>();
+        private final List<List<ToolSpec>> offeredTools = new ArrayList<>();
 
         ScriptedLlm(Supplier<Flux<LlmEvent>> script) {
             this.script = script;
@@ -259,6 +290,10 @@ final class ChatTestFakes {
 
         List<Prompt> prompts() {
             return List.copyOf(prompts);
+        }
+
+        List<List<ToolSpec>> offeredTools() {
+            return List.copyOf(offeredTools);
         }
 
         @Override
@@ -289,6 +324,7 @@ final class ChatTestFakes {
         @Override
         public Flux<LlmEvent> stream(Prompt prompt, List<ToolSpec> tools, LlmOptions options) {
             prompts.add(prompt);
+            offeredTools.add(List.copyOf(tools));
             return Flux.defer(script::get);
         }
     }
