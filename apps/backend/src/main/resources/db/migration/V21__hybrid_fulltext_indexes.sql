@@ -6,6 +6,17 @@
 -- destination_guide had no GIN index at all; hybrid guide search would always seq-scan.
 --
 -- Expression indexes (not stored tsvector columns) keep a single copy of the text, matching V15.
+--
+-- `array_to_string` is STABLE in Postgres, so it cannot appear in an expression index (42P17).
+-- Wrap it in an IMMUTABLE SQL function so the GIN predicate stays indexable; the search SQL in
+-- KnowledgeVectorSearch must call the same function or the planner cannot match this index.
+
+CREATE OR REPLACE FUNCTION knowledge_tags_text(tags text[])
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+AS $$ SELECT array_to_string(tags, ' ') $$;
 
 DROP INDEX IF EXISTS ix_poi_fulltext;
 
@@ -13,7 +24,7 @@ CREATE INDEX ix_poi_fulltext ON poi
     USING gin (to_tsvector(
         'simple',
         coalesce(name, '') || ' ' || coalesce(description, '') || ' '
-            || coalesce(array_to_string(tags, ' '), '')
+            || coalesce(knowledge_tags_text(tags), '')
     ));
 
 CREATE INDEX ix_destination_guide_fulltext ON destination_guide

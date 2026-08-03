@@ -340,6 +340,25 @@ class MigrationContractTest {
                 .contains("create extension if not exists vector");
     }
 
+    @Test
+    void hybridFulltextIndexUsesAnImmutableTagsHelper() {
+        // Postgres rejects expression indexes that call STABLE functions (42P17). array_to_string
+        // is STABLE, so V21 must wrap it; the search SQL must call the same wrapper or the GIN
+        // index is silently unused.
+        String v21 = stripComments(read("V21__hybrid_fulltext_indexes.sql"));
+        assertThat(v21).contains("CREATE OR REPLACE FUNCTION knowledge_tags_text(tags text[])");
+        assertThat(v21.toLowerCase(Locale.ROOT)).contains("immutable");
+
+        String poiIndex = between(v21, "CREATE INDEX ix_poi_fulltext ON poi", ");");
+        assertThat(poiIndex).contains("knowledge_tags_text(tags)");
+        assertThat(poiIndex).doesNotContain("array_to_string");
+
+        String searchSql = readJava(
+                "src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeVectorSearch.java");
+        assertThat(searchSql).contains("knowledge_tags_text(p.tags)");
+        assertThat(searchSql).doesNotContain("array_to_string(p.tags");
+    }
+
     private static List<String> migrationFileNames() {
         try (Stream<Path> files = Files.list(MIGRATIONS)) {
             return files.map(path -> path.getFileName().toString()).sorted().toList();
@@ -388,6 +407,14 @@ class MigrationContractTest {
     private static String read(String fileName) {
         try {
             return Files.readString(MIGRATIONS.resolve(fileName));
+        } catch (IOException unreadable) {
+            throw new UncheckedIOException(unreadable);
+        }
+    }
+
+    private static String readJava(String relativePath) {
+        try {
+            return Files.readString(Path.of(relativePath));
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }

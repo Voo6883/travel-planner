@@ -62,10 +62,15 @@ public class KnowledgeVectorSearch {
      */
     private static final Pattern SAFE_SLUG = Pattern.compile("^[a-z0-9-]{1,120}$");
 
+    /**
+     * Must match {@code V21__hybrid_fulltext_indexes.sql}'s GIN expression, including the
+     * {@code knowledge_tags_text} wrapper — a bare {@code array_to_string} is not IMMUTABLE and
+     * cannot be indexed, and a mismatched expression silently disables the GIN half of fusion.
+     */
     private static final String POI_TSVECTOR = """
             to_tsvector('simple',
                 coalesce(p.name, '') || ' ' || coalesce(p.description, '') || ' '
-                    || coalesce(array_to_string(p.tags, ' '), ''))
+                    || coalesce(knowledge_tags_text(p.tags), ''))
             """;
 
     private static final String GUIDE_TSVECTOR = """
