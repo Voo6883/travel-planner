@@ -11,7 +11,10 @@
   "sender": {
     "user": "Anda",
     "assistant": "Pembantu",
-    "system": "Kemas kini"
+    "system": "Kemas kini",
+    "tool_call": "Alat",
+    "tool_result": "Hasil alat",
+    "lifecycle_event": "Kemas kini"
   },
   "status": {
     "pending": "Menghantar…",
@@ -24,7 +27,8 @@
     "trip_created": "Perjalanan dicipta — diteruskan dalam perancang anda"
   },
   "tools": {
-    "running": "Sedang mengusahakannya…"
+    "running": "Sedang mengusahakannya…",
+    "hidden_row": "Satu langkah perancangan dijalankan di belakang tabir."
   },
   "composer": {
     "label": "Mesej",

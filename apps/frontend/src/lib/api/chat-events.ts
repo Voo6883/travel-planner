@@ -32,7 +32,7 @@ export interface TextDeltaEvent {
   readonly text: string;
 }
 
-export type ChatRole = 'user' | 'assistant' | 'system';
+export type ChatRole = 'user' | 'assistant' | 'system' | 'tool_call' | 'tool_result' | 'lifecycle_event';
 
 /**
  * A message opened.
@@ -195,7 +195,14 @@ export interface ChatFrame {
  * decided; accepting both cases now would mean an upper-case regression reached a user as a working
  * conversation here and a broken one everywhere else.
  */
-const roleSchema = z.union([z.literal('user'), z.literal('assistant'), z.literal('system')]);
+const roleSchema = z.union([
+  z.literal('user'),
+  z.literal('assistant'),
+  z.literal('system'),
+  z.literal('tool_call'),
+  z.literal('tool_result'),
+  z.literal('lifecycle_event'),
+]);
 
 const textDeltaSchema = z.object({ text: z.string(), message_id: z.string().nullish() });
 
