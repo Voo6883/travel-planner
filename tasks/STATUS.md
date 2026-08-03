@@ -62,7 +62,7 @@
 | 18 | [Trip and TripBrief core](18-trip-brief-core.md) | 06, 07, 11, 15, 17 | `review` | Backend `50c2d68` (V20 brief columns, CRUD, clarification, ADR 008). Frontend remainder on `cursor/task-18-trip-brief-frontend-15b0`: `features/intake` trip list + brief editor with debounced autosave, clarification panel, 409 conflict merge + notice, archived read-only, `locales/{en,ms}/trip_brief.json` (7 clarify_* keys). Evidence: frontend lint/format/typecheck/test:coverage green (339 tests). Mark `done` after merge. New: **F-35**. |
 | 19 | [LLM TripBrief extraction](19-llm-trip-brief-extraction.md) | 14, 18 | `review` | Commit `1262401`. Versioned prompt `trip-brief-extract@v1` gated on the SHA of the **rendered** block. Structural prompt-injection separation (template variables cannot accept user text; fenced USER message; assertion that no user text reaches the system block). Domain validation authoritative — refused values are dropped so `forDetails()` asks about them. Retry hard-capped at one repair, then deterministic fallback. 11 golden fixtures incl. injection, multilingual `ms`, timeout, malformed. **Started while 18 was `in_progress`** — 18's backend, which it extracts into, was complete. **F-42 closed:** `surprise_me` is now on `TripBriefDetails`, `TripBrief`, OpenAPI, and `trip_brief.surprise_me` via migration **V22**. **Next free migration: `V23`.** Mark `done` after merge. |
 | 20 | [Conversation persistence and SSE](20-conversation-sse.md) | 06, 07, 11, 14, 15 | `review` | Persistence + SSE on `50c2d68`/`1262401`. Remainder on `cursor/task-20-sse-remainders-15b0` (**PR #16**): **F-39** ADR 007 amended; **F-40** six ChatRoles; **F-41** no created_at re-sort. Mark `done` after merge. |
-| 21 | [Planner chat and trip creation](21-planner-chat-trip-creation.md) | 18, 19, 20 | `not_started` | No `Validation` section. **First end-to-end product loop closes here.** |
+| 21 | [Planner chat and trip creation](21-planner-chat-trip-creation.md) | 18, 19, 20 | `in_progress` | Branch `cursor/task-21-planner-chat-15b0` (foundation includes 17–20 remainders). `PlannerChatOrchestrator` + `create_trip` only; transactional handoff; SSE `trip_created`; planner home + trip chat UI. Handoff: [`docs/PLANNER-CHAT-HANDOFF.md`](../docs/PLANNER-CHAT-HANDOFF.md). **Deps 18–20 still `review` pending merge of #14–#16.** |
 | 22 | [Trip chat intake tools](22-trip-chat-intake-tools.md) | 18, 19, 20, 21 | `not_started` | No `Validation` section. Tool args must be schema-validated. |
 | 23 | [Research job platform](23-research-job-platform.md) | 07, 18, 22 | `not_started` | |
 | 24 | [Deterministic destination ranking](24-destination-ranking.md) | 17, 18, 23 | `not_started` | No `Validation` section. LLM must not overwrite numeric fit score. |
@@ -106,10 +106,10 @@
 | Status | Count |
 |---|---|
 | `done` | **17** |
-| `in_progress` | 0 |
+| `in_progress` | 1 |
 | `blocked` | 0 |
 | `review` | 4 |
-| `not_started` | 21 |
+| `not_started` | 20 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*
 

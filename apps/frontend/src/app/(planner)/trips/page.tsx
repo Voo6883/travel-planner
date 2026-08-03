@@ -1,19 +1,23 @@
 import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/layout/page-header';
+import { PlannerHomePanel } from '@/features/chat';
 import { TripListPanel } from '@/features/intake';
 
 /**
- * `/trips` — the authenticated landing, and where every completed sign-in arrives.
+ * `/trips` — authenticated landing (PLAN §3.2, design system §8.3).
  *
- * Thin route composition only (PLAN §4.2). Task 21 adds the chat-first composer beside this list;
- * task 18 owns the manual fallback and user-scoped trip navigation.
+ * Chat is the primary first region; the trip list is the returning-user / manual fallback surface
+ * (UC-T01b). Route stays composition-only.
  */
 export default async function TripsPage() {
-  const t = await getTranslations('trip_brief');
+  const t = await getTranslations('chat');
 
   return (
-    <PageHeader title={t('list.page_title')} description={t('list.page_description')}>
-      <TripListPanel />
+    <PageHeader title={t('panel.planner_title')} description={t('home.intro')}>
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
+        <PlannerHomePanel />
+        <TripListPanel />
+      </div>
     </PageHeader>
   );
 }

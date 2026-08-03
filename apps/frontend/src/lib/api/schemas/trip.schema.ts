@@ -99,6 +99,7 @@ export const tripBriefSchema: z.ZodType<components['schemas']['TripBrief']> = z.
   trip_id: z.string().uuid(),
   status: tripStatusSchema,
   destinations: z.array(z.string()),
+  surprise_me: z.boolean(),
   dates: dateRangeSchema.nullish(),
   date_flexibility: dateFlexibilitySchema.nullish(),
   departure_city: z.string().nullish(),

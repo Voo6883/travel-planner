@@ -52,6 +52,7 @@ function brief(overrides: Partial<TripBrief> = {}): TripBrief {
     trip_id: tripId,
     status: 'CLARIFICATION_NEEDED',
     destinations: [],
+    surprise_me: false,
     dates: null,
     date_flexibility: null,
     departure_city: null,

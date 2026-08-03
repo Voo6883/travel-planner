@@ -13,6 +13,9 @@ export { ChatComposer, type ChatComposerProps } from './components/chat-composer
 export { ChatMessageList, type ChatMessageListProps } from './components/chat-message-list';
 export { ChatMessageItem, type ChatMessageItemProps } from './components/chat-message-item';
 export { ChatStreamingIndicator, type ChatStreamingIndicatorProps } from './components/chat-streaming-indicator';
+export { PlannerHomePanel } from './components/planner-home-panel';
+export { TripChatPanel, type TripChatPanelProps } from './components/trip-chat-panel';
+export { SuggestedPrompts, type SuggestedPromptsProps } from './components/suggested-prompts';
 export { useChatStream, type ChatStreamController, type UseChatStreamOptions } from './hooks/use-chat-stream';
 export {
   chatReducer,
