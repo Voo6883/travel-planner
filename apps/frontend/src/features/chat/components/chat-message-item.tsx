@@ -30,6 +30,8 @@ export interface ChatMessageItemProps {
 export function ChatMessageItem({ message, onRetry }: ChatMessageItemProps) {
   const t = useTranslations('chat');
   const isUser = message.role === 'user';
+  const isToolRow =
+    message.role === 'tool_call' || message.role === 'tool_result' || message.role === 'lifecycle_event';
   const status = visibleStatus(message.status);
 
   return (
@@ -41,11 +43,13 @@ export function ChatMessageItem({ message, onRetry }: ChatMessageItemProps) {
             ? 'bg-chat-user-surface text-chat-user-text'
             : 'max-w-[92%] bg-surface-subtle text-foreground md:max-w-[88%]',
           message.role === 'system' && 'border border-border-subtle bg-transparent text-foreground-muted',
+          isToolRow && 'border border-dashed border-border-subtle bg-transparent text-foreground-muted',
         )}
       >
         {/* Every bubble keeps an accessible sender label even when grouping hides it visually. */}
         <span className="sr-only">{t(`sender.${message.role}`)}</span>
-        <p className="m-0 whitespace-pre-wrap break-words">{message.text}</p>
+        {/* Tool / lifecycle rows must never dump raw JSON (§7.2); tasks 21/22 own richer chrome. */}
+        <p className="m-0 whitespace-pre-wrap break-words">{isToolRow ? t('tools.hidden_row') : message.text}</p>
       </div>
       {status === null ? null : (
         <p className="m-0 flex items-center gap-2 text-caption text-foreground-muted">

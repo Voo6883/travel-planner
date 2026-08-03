@@ -50,7 +50,7 @@ export function chatMessagesPath(target: ChatTarget): string {
  */
 export const CHAT_HISTORY_PAGE_SIZE = 30;
 
-export type ChatMessageRole = 'user' | 'assistant' | 'system';
+export type ChatMessageRole = 'user' | 'assistant' | 'system' | 'tool_call' | 'tool_result' | 'lifecycle_event';
 
 /**
  * A persisted message, as the UI needs to think about it.
@@ -90,7 +90,14 @@ export interface ChatHistoryPage {
  * Normalising here as well would mean an upper-case regression on the server passed silently on
  * this one surface and broke on every other.
  */
-const roleSchema = z.union([z.literal('user'), z.literal('assistant'), z.literal('system')]);
+const roleSchema = z.union([
+  z.literal('user'),
+  z.literal('assistant'),
+  z.literal('system'),
+  z.literal('tool_call'),
+  z.literal('tool_result'),
+  z.literal('lifecycle_event'),
+]);
 
 const historyMessageSchema = z.object({
   message_id: z.string(),
@@ -118,15 +125,11 @@ export interface ChatHistoryQuery {
 }
 
 /**
- * One page of history, oldest first.
+ * One page of history, oldest first within the page (`seq` ascending — contractual).
  *
- * <b>The sort is applied here, not trusted from the server.</b> "Durable chat messages reload in
- * order" is a Definition-of-Done item, and ordering that depends on a database's default row order
- * is the kind of thing that holds until an index changes.
- *
- * Ties keep the order the server sent them in — `Array.prototype.sort` is stable, and two messages
- * sharing a millisecond (a user turn and the reply it triggered can) have a real order that only
- * the server knows. Inventing one from the id would sometimes put the answer before the question.
+ * Ordering is the server's. V19's own header records that `created_at` is fixed per transaction
+ * and is not an ordering key; re-sorting by timestamp (F-41) would reorder a correctly sequenced
+ * turn under clock skew. Trust `seq`.
  */
 export async function fetchChatHistory(query: ChatHistoryQuery, signal?: AbortSignal): Promise<ChatHistoryPage> {
   const search = new URLSearchParams({
@@ -157,16 +160,14 @@ function historyPath(target: ChatTarget, search: URLSearchParams): ApiPath {
 
 function parseHistoryPage(payload: unknown): ChatHistoryPage {
   const parsed = historyPageSchema.parse(payload);
-  const items = parsed.items
-    .map((item) => ({
-      message_id: item.message_id,
-      role: item.role,
-      content: item.content,
-      status: persistedStatus(item.status),
-      client_message_id: item.client_message_id ?? null,
-      created_at: item.created_at,
-    }))
-    .sort(compareByCreatedAt);
+  const items = parsed.items.map((item) => ({
+    message_id: item.message_id,
+    role: item.role,
+    content: item.content,
+    status: persistedStatus(item.status),
+    client_message_id: item.client_message_id ?? null,
+    created_at: item.created_at,
+  }));
 
   return {
     page: parsed.page,
@@ -198,11 +199,4 @@ function persistedStatus(status: string | null | undefined): PersistedMessageSta
     return 'complete';
   }
   return status === 'complete' ? 'complete' : 'interrupted';
-}
-
-function compareByCreatedAt(left: ChatHistoryMessage, right: ChatHistoryMessage): number {
-  if (left.created_at === right.created_at) {
-    return 0;
-  }
-  return left.created_at < right.created_at ? -1 : 1;
 }

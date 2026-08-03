@@ -11,7 +11,10 @@
   "sender": {
     "user": "You",
     "assistant": "Assistant",
-    "system": "Update"
+    "system": "Update",
+    "tool_call": "Tool",
+    "tool_result": "Tool result",
+    "lifecycle_event": "Update"
   },
   "status": {
     "pending": "Sending…",
@@ -24,7 +27,8 @@
     "trip_created": "Trip created — continuing in your planner"
   },
   "tools": {
-    "running": "Working on that…"
+    "running": "Working on that…",
+    "hidden_row": "A planning step ran in the background."
   },
   "composer": {
     "label": "Message",

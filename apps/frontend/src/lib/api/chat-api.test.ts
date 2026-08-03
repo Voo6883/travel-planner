@@ -8,8 +8,8 @@ import {
 } from './chat-api';
 
 /**
- * "Durable chat messages reload in order" is a Definition-of-Done item, so ordering is asserted
- * against a deliberately shuffled payload rather than against a server that happens to be sorted.
+ * History ordering is contractual (`seq` ascending). These tests assert the client preserves the
+ * server's order rather than inventing one from timestamps (F-41).
  */
 
 function stubHistory(body: unknown) {
@@ -59,7 +59,7 @@ describe('fetchChatHistory', () => {
     expect(init.credentials).toBe('include');
   });
 
-  it('returns messages oldest first even when the server does not', async () => {
+  it('preserves the server order instead of re-sorting by created_at', async () => {
     stubHistory({
       page: 0,
       page_size: 30,
@@ -73,12 +73,27 @@ describe('fetchChatHistory', () => {
 
     const history = await fetchChatHistory({ target: tripChatTarget('trip-1'), page: 2, pageSize: 10 });
 
-    expect(history.items.map((item) => item.message_id)).toEqual(['m1', 'm2', 'm3']);
+    expect(history.items.map((item) => item.message_id)).toEqual(['m3', 'm1', 'm2']);
+  });
+
+  it('accepts the six published chat roles including tool rows', async () => {
+    stubHistory({
+      page: 0,
+      page_size: 30,
+      total: 3,
+      items: [
+        message({ message_id: 'm1', role: 'tool_call', content: '{"name":"create_trip"}' }),
+        message({ message_id: 'm2', role: 'tool_result', content: '{"trip_id":"t1"}' }),
+        message({ message_id: 'm3', role: 'lifecycle_event', content: 'trip_created' }),
+      ],
+    });
+
+    const history = await fetchChatHistory({ target: PLANNER_CHAT_TARGET });
+
+    expect(history.items.map((item) => item.role)).toEqual(['tool_call', 'tool_result', 'lifecycle_event']);
   });
 
   it('keeps the server order for messages sharing a timestamp', async () => {
-    // A question and the answer it triggered can land in the same millisecond. Only the server
-    // knows which came first, so the sort must be stable rather than clever.
     stubHistory({
       page: 0,
       page_size: 30,
@@ -109,8 +124,8 @@ describe('fetchChatHistory', () => {
     const history = await fetchChatHistory({ target: PLANNER_CHAT_TARGET, page: 1 });
 
     expect(history.conversation_id).toBe('conv-1');
-    expect(history.items[0]?.client_message_id).toBe('c8');
-    expect(history.items[1]?.status).toBe('interrupted');
+    expect(history.items[0]?.status).toBe('interrupted');
+    expect(history.items[1]?.client_message_id).toBe('c8');
   });
 
   it('defaults an absent status to complete rather than leaving it undefined', async () => {

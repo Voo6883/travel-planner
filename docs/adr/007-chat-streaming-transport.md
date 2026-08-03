@@ -57,21 +57,27 @@ tool commits — never parsed from assistant prose.
 
 ### Wire format
 
-Every frame carries a monotonic `id` (per conversation) so resume is possible:
+`id:` is emitted on `message_start` / `message_end` only (value = the message's `seq`), not on
+every frame. Token deltas are not persisted individually, so a per-delta id would invent a resume
+position nothing can serve, and repeating one `seq` across a message's deltas would make a client's
+duplicate filter drop every token after the first.
 
 ```
 id: 42
-event: text_delta
-data: {"text":"Tokyo in spring"}
+event: message_start
+data: {"message_id":"...","role":"assistant",...}
 ```
 
 | Concern | Rule |
 |---|---|
 | Terminal error | `event: error` carrying the §6.1 envelope `{ code, message, details, request_id }`, then close. Never a bare stream abort |
-| Resume | Client sends `Last-Event-ID`; server replays persisted frames after that id, then continues |
-| Persistence | Assistant messages are persisted incrementally so resume/reload is served from the DB, not from memory |
+| Resume | Client may send `Last-Event-ID`. **Frame replay is not implemented** — there is no per-delta event store. Reconnect safety is an idempotent re-POST of the same `client_message_id` (unique index): the user message is not duplicated; the prior assistant turn is already `interrupted`. Cost: the answer is regenerated rather than continued |
+| Persistence | Assistant messages are persisted incrementally so reload is served from the DB, not from memory |
 | Interrupted turn | Partial assistant message persisted with `status=interrupted`; never silently discarded |
 | Ordering | Client must handle out-of-order/duplicate frames idempotently after reconnect |
+
+True frame replay remains a future task if a persisted event log is introduced; until then do not
+reintroduce per-delta ids. (Amendment recorded as F-39, task 20.)
 
 ### OpenAPI representation
 
