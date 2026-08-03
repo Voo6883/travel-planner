@@ -1,0 +1,102 @@
+{
+  "list": {
+    "page_title": "Perjalanan",
+    "page_description": "Cipta perjalanan, buka draf, atau terus lengkapkan ringkasan yang disimpan.",
+    "title": "Perjalanan anda",
+    "open_action": "Buka perjalanan"
+  },
+  "create": {
+    "title": "Cipta perjalanan",
+    "name_label": "Nama perjalanan",
+    "name_placeholder": "Jepun pada musim bunga",
+    "name_required": "Masukkan nama perjalanan.",
+    "submit": "Cipta perjalanan"
+  },
+  "detail": {
+    "page_title": "Ringkasan perjalanan",
+    "page_description": "Isi ringkasan berstruktur. Ia disimpan automatik dan selari dengan kemas kini pembantu.",
+    "form_title": "Butiran ringkasan"
+  },
+  "field": {
+    "destinations": "Destinasi",
+    "destinations_help": "Gunakan slug destinasi. Tekan Enter selepas setiap satu, atau asingkan dengan koma.",
+    "destinations_placeholder": "kyoto, osaka",
+    "dates": "Tarikh perjalanan",
+    "date_flexibility": "Fleksibiliti tarikh",
+    "departure_city": "Bandar berlepas",
+    "departure_city_placeholder": "Kuala Lumpur",
+    "budget": "Bajet",
+    "budget_placeholder": "4000.00",
+    "party": "Pengembara",
+    "party_adults": "Dewasa",
+    "party_children": "Kanak-kanak",
+    "interests": "Minat",
+    "pace": "Rentak"
+  },
+  "enum": {
+    "date_flexibility": {
+      "fixed": "Tarikh tetap",
+      "flexible_week": "Fleksibel seminggu",
+      "flexible_month": "Fleksibel sebulan"
+    },
+    "travel_pace": {
+      "relaxed": "Santai",
+      "moderate": "Sederhana",
+      "packed": "Padat"
+    },
+    "travel_interest": {
+      "food": "Makanan",
+      "sightseeing": "Bersiar-siar",
+      "museums": "Muzium",
+      "nature": "Alam semula jadi",
+      "shopping": "Membeli-belah",
+      "nightlife": "Hiburan malam",
+      "experiences": "Pengalaman"
+    }
+  },
+  "status": {
+    "draft": "Membina ringkasan",
+    "brief_complete": "Sedia untuk kajian",
+    "clarification_needed": "Perlu input anda",
+    "research_queued": "Kajian dalam giliran",
+    "research_running": "Sedang mengkaji",
+    "research_ready": "Cadangan tersedia",
+    "destination_selected": "Destinasi dipilih",
+    "itinerary_ready": "Jadual tersedia",
+    "booking_in_progress": "Tempahan sedang berjalan",
+    "booked": "Ditempah",
+    "archived": "Diarkibkan"
+  },
+  "save": {
+    "idle": "Sedia",
+    "saving": "Menyimpan...",
+    "saved": "Disimpan",
+    "error": "Tidak dapat menyimpan"
+  },
+  "conflict": {
+    "notice": "Dikemas kini oleh pembantu. Suntingan anda yang belum disimpan dikekalkan jika selamat.",
+    "current_version": "Versi pelayan terkini ialah {version}."
+  },
+  "archived": {
+    "notice": "Perjalanan ini telah diarkibkan.",
+    "read_only": "Suntingan ringkasan dan jawapan penjelasan adalah baca sahaja untuk perjalanan diarkibkan."
+  },
+  "states": {
+    "loading": "Memuatkan butiran perjalanan",
+    "error": "Perjalanan tidak dapat dimuatkan.",
+    "empty_title": "Belum ada perjalanan",
+    "empty_body": "Cipta perjalanan kosong untuk mengisi ringkasan secara manual."
+  },
+  "clarification": {
+    "title": "Penjelasan diperlukan",
+    "submit": "Hantar jawapan",
+    "required": "Jawab soalan ini untuk teruskan."
+  },
+  "clarify_dates": "Bilakah anda mahu melancong?",
+  "clarify_date_flexibility": "Sejauh mana tarikh itu fleksibel?",
+  "clarify_departure": "Dari mana anda akan berlepas?",
+  "clarify_budget": "Berapakah bajet maksimum perjalanan anda?",
+  "clarify_party": "Berapa orang akan melancong?",
+  "clarify_interests": "Pengalaman apakah yang paling penting?",
+  "clarify_pace": "Apakah rentak perjalanan yang anda mahukan?"
+}
