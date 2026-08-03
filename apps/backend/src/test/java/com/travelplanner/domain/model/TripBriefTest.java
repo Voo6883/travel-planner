@@ -27,6 +27,7 @@ class TripBriefTest {
         assertThat(brief.version()).isZero();
         assertThat(brief.createdAt()).isEqualTo(NOW);
         assertThat(brief.destinations()).isEmpty();
+        assertThat(brief.surpriseMe()).isFalse();
         assertThat(brief.interests()).isEmpty();
         assertThat(brief.budgetIfPresent()).isEmpty();
         assertThat(brief.datesIfPresent()).isEmpty();
@@ -62,8 +63,8 @@ class TripBriefTest {
     void aWriteCarriesTheVersionThroughRatherThanGuessingTheIncrement() {
         // The increment belongs to the persistence provider's @Version handling. A domain method
         // that guessed it would produce an aggregate whose version matches no row.
-        TripBrief stored = new TripBrief(UUID.randomUUID(), TRIP, List.of(), null, null, null,
-                null, null, List.of(), null, 7, NOW, NOW);
+        TripBrief stored = new TripBrief(UUID.randomUUID(), TRIP, List.of(), false, null, null,
+                null, null, null, List.of(), null, 7, NOW, NOW);
 
         assertThat(stored.withDates(DateRange.singleDay(LocalDate.of(2026, 4, 3)), LATER).version())
                 .isEqualTo(7);
@@ -71,9 +72,21 @@ class TripBriefTest {
 
     @Test
     void aNegativeVersionIsRefused() {
-        assertThatThrownBy(() -> new TripBrief(UUID.randomUUID(), TRIP, List.of(), null, null,
-                null, null, null, List.of(), null, -1, NOW, NOW))
+        assertThatThrownBy(() -> new TripBrief(UUID.randomUUID(), TRIP, List.of(), false, null,
+                null, null, null, null, List.of(), null, -1, NOW, NOW))
                 .isInstanceOf(ValidationFailedException.class);
+    }
+
+    @Test
+    void surpriseMeOnTheAggregateAlsoClearsDestinations() {
+        TripBrief brief = TripBrief.createFor(TRIP, NOW)
+                .withDetails(TripBriefDetails.empty()
+                        .withDestinations(List.of("penang"))
+                        .withSurpriseMe(true), LATER);
+
+        assertThat(brief.surpriseMe()).isTrue();
+        assertThat(brief.destinations()).isEmpty();
+        assertThat(brief.details().surpriseMe()).isTrue();
     }
 
     @Test

@@ -127,15 +127,18 @@ class TripBriefExtractionServiceTest {
     }
 
     @Test
-    void surpriseMeReachesTheCallerEvenThoughNoColumnStoresIt() {
+    void surpriseMeRoundTripsThroughTheSameSavePathAsTheRestOfTheBrief() {
         Trip trip = newTrip();
-        extractor.returns(new TripBriefExtraction(complete(), true, List.of(),
+        extractor.returns(new TripBriefExtraction(complete().withSurpriseMe(true), List.of(),
                 TripBriefExtractionOutcome.EXTRACTED, null, VERSION));
 
         TripBriefExtractionResult result = service.extract(command(trip.id()), OWNER);
 
         assertThat(result.extraction().surpriseMe()).isTrue();
+        assertThat(result.extraction().details().surpriseMe()).isTrue();
+        assertThat(result.view().brief().surpriseMe()).isTrue();
         assertThat(result.view().brief().destinations()).isEmpty();
+        assertThat(briefs.stored(trip.id()).surpriseMe()).isTrue();
     }
 
     // -------------------------------------------------------------------------------------
@@ -286,7 +289,7 @@ class TripBriefExtractionServiceTest {
     }
 
     private static TripBriefExtraction extracted(TripBriefDetails details) {
-        return new TripBriefExtraction(details, false, List.of(),
+        return new TripBriefExtraction(details, List.of(),
                 TripBriefExtractionOutcome.EXTRACTED, null, VERSION);
     }
 

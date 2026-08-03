@@ -63,6 +63,9 @@ public class TripBriefEntity {
     @Column(name = "destinations", nullable = false)
     private List<String> destinations;
 
+    @Column(name = "surprise_me", nullable = false)
+    private boolean surpriseMe;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "date_flexibility", length = 32)
     private DateFlexibility dateFlexibility;
@@ -155,6 +158,14 @@ public class TripBriefEntity {
 
     public void setDestinations(List<String> destinations) {
         this.destinations = destinations;
+    }
+
+    public boolean isSurpriseMe() {
+        return surpriseMe;
+    }
+
+    public void setSurpriseMe(boolean surpriseMe) {
+        this.surpriseMe = surpriseMe;
     }
 
     public DateFlexibility getDateFlexibility() {

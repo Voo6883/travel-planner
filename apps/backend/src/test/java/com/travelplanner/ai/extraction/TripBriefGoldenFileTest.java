@@ -180,6 +180,7 @@ class TripBriefGoldenFileTest {
         Run run = run("surprise-me.json");
 
         assertThat(run.extraction().surpriseMe()).isTrue();
+        assertThat(run.extraction().details().surpriseMe()).isTrue();
         assertThat(run.extraction().details().destinations()).isEmpty();
         assertThat(run.extraction().isComplete()).isTrue();
     }

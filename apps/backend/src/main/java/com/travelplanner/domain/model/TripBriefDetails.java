@@ -28,10 +28,12 @@ import java.util.Objects;
  * range is rejected by the value object itself, because "I have not decided yet" and "I entered
  * something impossible" are different facts and only the first one may be stored.
  *
- * @param destinations candidate destination slugs, most-preferred first. Empty means "no
- *        preference" — a legitimate answer that lets C2 rank the whole covered set. Whether a slug
- *        is actually covered is checked in the application layer, which is the only layer that can
- *        see {@link com.travelplanner.domain.port.KnowledgePort}
+ * @param destinations candidate destination slugs, most-preferred first. Empty means either "no
+ *        preference" or UC-C1-05's open-destination answer when {@code surpriseMe} is true. Whether
+ *        a slug is actually covered is checked in the application layer, which is the only layer
+ *        that can see {@link com.travelplanner.domain.port.KnowledgePort}
+ * @param surpriseMe UC-C1-05. True means the traveller asked for an open destination; such a brief
+ *        always stores {@code destinations = []}, even if a model tried to name one anyway
  * @param departureCity free text. Not a slug: people depart from places the knowledge base has
  *        never curated, and forcing coverage on the origin would refuse a valid trip
  * @param budget the ceiling for the whole trip, not a per-day figure
@@ -40,6 +42,7 @@ import java.util.Objects;
  */
 public record TripBriefDetails(
         List<String> destinations,
+        boolean surpriseMe,
         DateRange dates,
         DateFlexibility dateFlexibility,
         String departureCity,
@@ -56,52 +59,60 @@ public record TripBriefDetails(
 
     public TripBriefDetails {
         destinations = normalisedDestinations(destinations);
+        if (surpriseMe) {
+            destinations = List.of();
+        }
         interests = normalisedInterests(interests);
         departureCity = normalisedDepartureCity(departureCity);
     }
 
     /** The starting point for a brand-new brief: nothing decided, nothing invalid. */
     public static TripBriefDetails empty() {
-        return new TripBriefDetails(List.of(), null, null, null, null, null, List.of(), null);
+        return new TripBriefDetails(List.of(), false, null, null, null, null, null, List.of(), null);
     }
 
     public TripBriefDetails withDestinations(List<String> newDestinations) {
-        return new TripBriefDetails(newDestinations, dates, dateFlexibility, departureCity,
+        return new TripBriefDetails(newDestinations, surpriseMe, dates, dateFlexibility, departureCity,
                 budget, party, interests, pace);
     }
 
+    public TripBriefDetails withSurpriseMe(boolean newSurpriseMe) {
+        return new TripBriefDetails(destinations, newSurpriseMe, dates, dateFlexibility,
+                departureCity, budget, party, interests, pace);
+    }
+
     public TripBriefDetails withDates(DateRange newDates) {
-        return new TripBriefDetails(destinations, newDates, dateFlexibility, departureCity,
+        return new TripBriefDetails(destinations, surpriseMe, newDates, dateFlexibility, departureCity,
                 budget, party, interests, pace);
     }
 
     public TripBriefDetails withDateFlexibility(DateFlexibility newFlexibility) {
-        return new TripBriefDetails(destinations, dates, newFlexibility, departureCity,
+        return new TripBriefDetails(destinations, surpriseMe, dates, newFlexibility, departureCity,
                 budget, party, interests, pace);
     }
 
     public TripBriefDetails withDepartureCity(String newDepartureCity) {
-        return new TripBriefDetails(destinations, dates, dateFlexibility, newDepartureCity,
+        return new TripBriefDetails(destinations, surpriseMe, dates, dateFlexibility, newDepartureCity,
                 budget, party, interests, pace);
     }
 
     public TripBriefDetails withBudget(Money newBudget) {
-        return new TripBriefDetails(destinations, dates, dateFlexibility, departureCity,
+        return new TripBriefDetails(destinations, surpriseMe, dates, dateFlexibility, departureCity,
                 newBudget, party, interests, pace);
     }
 
     public TripBriefDetails withParty(PartySize newParty) {
-        return new TripBriefDetails(destinations, dates, dateFlexibility, departureCity,
+        return new TripBriefDetails(destinations, surpriseMe, dates, dateFlexibility, departureCity,
                 budget, newParty, interests, pace);
     }
 
     public TripBriefDetails withInterests(List<TravelInterest> newInterests) {
-        return new TripBriefDetails(destinations, dates, dateFlexibility, departureCity,
+        return new TripBriefDetails(destinations, surpriseMe, dates, dateFlexibility, departureCity,
                 budget, party, newInterests, pace);
     }
 
     public TripBriefDetails withPace(TravelPace newPace) {
-        return new TripBriefDetails(destinations, dates, dateFlexibility, departureCity,
+        return new TripBriefDetails(destinations, surpriseMe, dates, dateFlexibility, departureCity,
                 budget, party, interests, newPace);
     }
 

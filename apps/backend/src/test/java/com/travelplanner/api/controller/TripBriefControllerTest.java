@@ -76,7 +76,7 @@ class TripBriefControllerTest {
 
     private static TripBriefView viewOf(TripBriefDetails details, TripStatus status, int version) {
         TripBrief brief = new TripBrief(UUID.randomUUID(), TRIP_ID, details.destinations(),
-                details.dates(), details.dateFlexibility(), details.departureCity(),
+                details.surpriseMe(), details.dates(), details.dateFlexibility(), details.departureCity(),
                 details.budget(), details.party(), details.interests(), details.pace(), version,
                 NOW, NOW);
         return new TripBriefView(brief, status, ClarificationNeeded.forDetails(details));
@@ -94,6 +94,7 @@ class TripBriefControllerTest {
                 .andExpect(jsonPath("$.trip_id").value(TRIP_ID.toString()))
                 .andExpect(jsonPath("$.status").value("BRIEF_COMPLETE"))
                 .andExpect(jsonPath("$.destinations[0]").value("penang"))
+                .andExpect(jsonPath("$.surprise_me").value(false))
                 .andExpect(jsonPath("$.dates.start_date").value("2026-04-03"))
                 .andExpect(jsonPath("$.date_flexibility").value("FLEXIBLE_WEEK"))
                 .andExpect(jsonPath("$.departure_city").value("Kuala Lumpur"))
@@ -150,6 +151,7 @@ class TripBriefControllerTest {
                                 {
                                   "expected_version": 7,
                                   "destinations": ["penang"],
+                                  "surprise_me": true,
                                   "dates": {"start_date": "2026-04-03", "end_date": "2026-04-12"},
                                   "date_flexibility": "FLEXIBLE_WEEK",
                                   "departure_city": "Kuala Lumpur",
@@ -162,7 +164,8 @@ class TripBriefControllerTest {
                 .andExpect(jsonPath("$.version").value(8))
                 .andExpect(jsonPath("$.status").value("BRIEF_COMPLETE"));
 
-        verify(briefs).save(new SaveTripBriefCommand(TRIP_ID, 7, complete()), null);
+        verify(briefs).save(new SaveTripBriefCommand(TRIP_ID, 7,
+                complete().withSurpriseMe(true)), null);
     }
 
     @Test

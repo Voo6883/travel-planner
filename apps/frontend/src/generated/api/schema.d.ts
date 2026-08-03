@@ -1890,6 +1890,12 @@ export interface components {
              *     ]
              */
             destinations: string[];
+            /**
+             * @description UC-C1-05's open-destination answer. When true, `destinations` is empty and C2 ranks the
+             *     whole covered set rather than treating the traveller as undecided.
+             * @default false
+             */
+            surprise_me: boolean;
             dates?: components["schemas"]["DateRange"] | null;
             date_flexibility?: components["schemas"]["DateFlexibility"] | null;
             /**
@@ -1919,6 +1925,11 @@ export interface components {
         };
         UpdateTripBriefRequest: components["schemas"]["ExpectedVersion"] & {
             destinations?: string[];
+            /**
+             * @description UC-C1-05's open-destination answer. When true, the server stores
+             *     `destinations = []` even if the body also names destinations.
+             */
+            surprise_me?: boolean;
             dates?: components["schemas"]["DateRange"] | null;
             date_flexibility?: components["schemas"]["DateFlexibility"] | null;
             departure_city?: string | null;
