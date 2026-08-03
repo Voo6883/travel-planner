@@ -90,6 +90,9 @@ travelplanner:
     # The FRONTEND origin, not the API's: a mailed link opens a page, which then calls the confirm
     # endpoint. Mailing an API URL would show a person who clicked a link a bare 204.
     app-base-url: ${FRONTEND_URL:http://localhost:3000}
+    # Local DX default: stub has no mailbox, so new accounts start verified. Integration tests set
+    # this to false so UC-A08 / account-lifecycle flows stay exercisable with StubMailerAdapter.
+    auto-verify-on-stub: true
     resend:
       # No default and no committed fallback. ResendMailerAdapter refuses to start without it, and
       # it cannot be constructed at all unless the provider above says `resend`.

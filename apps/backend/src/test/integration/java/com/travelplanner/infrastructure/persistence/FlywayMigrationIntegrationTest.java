@@ -59,11 +59,12 @@ class FlywayMigrationIntegrationTest extends AbstractPostgresIntegrationTest {
                         + "order by table_name");
 
         assertThat(tables).contains(
+                "conversation", "destination", "message", "poi", "planner_session",
                 "refresh_token", "trip", "trip_brief", "user", "user_identity");
-        // The brief forbids creating knowledge, chat, itinerary, and booking schemas early.
+        // Still-future feature schemas must not appear before their tasks land.
         assertThat(tables).doesNotContain(
-                "booking", "conversation", "destination", "itinerary_day", "itinerary_item",
-                "message", "poi", "ranked_recommendation", "research_job");
+                "booking", "itinerary_day", "itinerary_item",
+                "ranked_recommendation", "research_job");
     }
 
     @Test

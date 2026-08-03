@@ -37,10 +37,12 @@ import org.springframework.stereotype.Service;
  * {@code afterCommit}, so a rolled-back or retried registration cannot mail a verification link for
  * an account that does not exist.
  *
- * <p>New accounts start {@code email_verified=false} when a real mail provider is configured, which
- * UC-A08 turns into a login gate. With {@code MAILER_PROVIDER=stub} there is no mailbox to receive
- * the link, so they start verified instead — see {@code autoVerify()}.
- */
+     * <p>New accounts start {@code email_verified=false} when a real mail provider is configured, which
+     * UC-A08 turns into a login gate. With {@code MAILER_PROVIDER=stub} and
+     * {@code travelplanner.mail.auto-verify-on-stub=true} (the default) there is no mailbox to receive
+     * the link, so they start verified instead — see {@code autoVerify()}. Integration tests turn the
+     * flag off so the unverified path stays testable with the stub mailer.
+     */
 @Service
 @RequiresDatabase
 public class RegistrationService {
@@ -114,7 +116,7 @@ public class RegistrationService {
      * {@code RESEND_API_KEY} stops at boot rather than silently accepting unverified addresses.
      */
     private boolean autoVerify() {
-        return mail.isStub();
+        return mail.isStub() && mail.isAutoVerifyOnStub();
     }
 
     private static User newAccount(RegisterCommand command, String passwordHash, boolean emailVerified) {

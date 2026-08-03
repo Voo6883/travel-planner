@@ -14,6 +14,12 @@ spring:
     # otherwise; the suite is small enough that the noise cost is nil.
     show-sql: false
 
+# Keep StubMailerAdapter (no Resend key in CI) but do not auto-verify. Auth and account-lifecycle
+# ITs assert UC-A08's unverified gate, resend/confirm mail, and pre-hijack provider_link_required.
+travelplanner:
+  mail:
+    auto-verify-on-stub: false
+
 logging:
   level:
     root: WARN

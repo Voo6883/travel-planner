@@ -76,8 +76,9 @@ class RegistrationServiceTest {
      * account unverified would make sign-up impossible to complete: UC-A08 refuses the login and
      * the only way through is reading the link out of the log at DEBUG.
      *
-     * <p>This relaxation is confined to a stub mailer and cannot reach production —
-     * {@code MailConfig} fails startup when the provider is still the stub under {@code prod}.
+     * <p>This relaxation is confined to a stub mailer with {@code auto-verify-on-stub=true} (the
+     * default) and cannot reach production — {@code MailConfig} fails startup when the provider is
+     * still the stub under {@code prod}.
      */
     @Test
     void createsAnAlreadyVerifiedAccountWhenNoRealMailerIsConfigured() {
@@ -87,6 +88,27 @@ class RegistrationServiceTest {
 
         User created = users.byId.values().iterator().next();
         assertThat(created.emailVerified()).isTrue();
+    }
+
+    /**
+     * Integration tests keep the stub mailer (no Resend key) but turn auto-verify off so UC-A08 and
+     * account-lifecycle flows remain exercisable. The flag must win over {@code isStub()}.
+     */
+    @Test
+    void keepsAccountsUnverifiedWhenStubAutoVerifyIsDisabled() {
+        MailProperties mail = new MailProperties();
+        mail.setProvider(MailProperties.STUB_PROVIDER);
+        mail.setAutoVerifyOnStub(false);
+        RegistrationService subject = new RegistrationService(
+                users,
+                AccountTestFakes.passwordPolicy(),
+                new RegistrationOutcomes(identities, AccountTestFakes.tokenService(tokens),
+                        AccountTestFakes.lifecycleMailer(mailer, new FakeMailRateLimits(), identities)),
+                mail);
+
+        subject.register(new RegisterCommand("it@example.com", "ituser", "long-enough-pw"));
+
+        assertThat(users.byId.values().iterator().next().emailVerified()).isFalse();
     }
 
     @Test

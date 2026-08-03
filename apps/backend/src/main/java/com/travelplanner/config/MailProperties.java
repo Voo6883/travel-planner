@@ -37,6 +37,15 @@ public class MailProperties {
      */
     private String appBaseUrl = "http://localhost:3000";
 
+    /**
+     * When {@code provider=stub}, whether new local accounts start {@code email_verified=true}.
+     *
+     * <p>Defaults to {@code true} so local DX is not a dead end (no mailbox for the link). The
+     * integration-test profile sets this to {@code false} so UC-A08 and account-lifecycle ITs can
+     * exercise the unverified path while still using {@code StubMailerAdapter}.
+     */
+    private boolean autoVerifyOnStub = true;
+
     private final Resend resend = new Resend();
 
     public String getProvider() {
@@ -46,15 +55,25 @@ public class MailProperties {
     /**
      * True when no real mail provider is configured.
      *
-     * <p>Read by {@code RegistrationService} to decide whether a new account starts verified. With
-     * the stub there is no mailbox to receive a link, so requiring verification would make sign-up
-     * a dead end for anyone not reading the application log at {@code DEBUG}.
+     * <p>Read by {@code RegistrationService} (together with {@link #isAutoVerifyOnStub()}) to decide
+     * whether a new account starts verified. With the stub there is no mailbox to receive a link,
+     * so requiring verification would make sign-up a dead end for anyone not reading the
+     * application log at {@code DEBUG} — unless a profile explicitly opts out via
+     * {@code auto-verify-on-stub=false}.
      *
      * <p>{@code MailConfigValidator} refuses to start under the {@code prod} profile in this state,
      * so the relaxation cannot reach production.
      */
     public boolean isStub() {
         return STUB_PROVIDER.equals(provider);
+    }
+
+    public boolean isAutoVerifyOnStub() {
+        return autoVerifyOnStub;
+    }
+
+    public void setAutoVerifyOnStub(boolean autoVerifyOnStub) {
+        this.autoVerifyOnStub = autoVerifyOnStub;
     }
 
     public void setProvider(String provider) {
