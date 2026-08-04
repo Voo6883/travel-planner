@@ -30,7 +30,8 @@
       "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/ConversationRepositoryPort.java",
       "implementations": [
         "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/ConversationRepositoryAdapter.java",
-        "apps/backend/src/test/java/com/travelplanner/application/chat/ChatTestFakes.java"
+        "apps/backend/src/test/java/com/travelplanner/application/chat/ChatTestFakes.java",
+        "apps/backend/src/test/java/com/travelplanner/application/tripchat/TripChatOrchestratorTest.java"
       ]
     },
     "EmbeddingPort": {
@@ -117,7 +118,8 @@
       "implementations": [
         "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/TripBriefRepositoryAdapter.java",
         "apps/backend/src/test/java/com/travelplanner/application/chat/ChatTestFakes.java",
-        "apps/backend/src/test/java/com/travelplanner/application/trip/TripTestFakes.java"
+        "apps/backend/src/test/java/com/travelplanner/application/trip/TripTestFakes.java",
+        "apps/backend/src/test/java/com/travelplanner/application/tripchat/TripChatOrchestratorTest.java"
       ]
     },
     "TripRepositoryPort": {
@@ -125,7 +127,8 @@
       "implementations": [
         "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/TripRepositoryAdapter.java",
         "apps/backend/src/test/java/com/travelplanner/application/chat/ChatTestFakes.java",
-        "apps/backend/src/test/java/com/travelplanner/application/trip/TripTestFakes.java"
+        "apps/backend/src/test/java/com/travelplanner/application/trip/TripTestFakes.java",
+        "apps/backend/src/test/java/com/travelplanner/application/tripchat/TripChatOrchestratorTest.java"
       ]
     },
     "UserIdentityRepositoryPort": {
@@ -761,6 +764,19 @@
         ],
         "adapters": []
       },
+      "tripchat": {
+        "controllers": [],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/AnswerClarificationArgs.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/ToolArgsJson.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/TripChatOrchestrator.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/TripChatPrompt.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/TripChatToolService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/TripChatTools.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/UpdateTripBriefArgs.java"
+        ],
+        "adapters": []
+      },
       "persistence": {
         "controllers": [],
         "application": [],
@@ -1151,7 +1167,7 @@
     "18": {
       "title": "Trip and TripBrief core",
       "file": "tasks/18-trip-brief-core.md",
-      "status": "review",
+      "status": "done",
       "dependsOn": [
         "06",
         "07",
@@ -1176,14 +1192,12 @@
     "19": {
       "title": "LLM TripBrief extraction",
       "file": "tasks/19-llm-trip-brief-extraction.md",
-      "status": "review",
+      "status": "done",
       "dependsOn": [
         "14",
         "18"
       ],
-      "blockedBy": [
-        "18"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1199,7 +1213,7 @@
     "20": {
       "title": "Conversation persistence and SSE",
       "file": "tasks/20-conversation-sse.md",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "06",
         "07",
@@ -1222,17 +1236,13 @@
     "21": {
       "title": "Planner chat and trip creation",
       "file": "tasks/21-planner-chat-trip-creation.md",
-      "status": "review",
+      "status": "done",
       "dependsOn": [
         "18",
         "19",
         "20"
       ],
-      "blockedBy": [
-        "18",
-        "19",
-        "20"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1247,19 +1257,14 @@
     "22": {
       "title": "Trip chat intake tools",
       "file": "tasks/22-trip-chat-intake-tools.md",
-      "status": "not_started",
+      "status": "in_progress",
       "dependsOn": [
         "18",
         "19",
         "20",
         "21"
       ],
-      "blockedBy": [
-        "18",
-        "19",
-        "20",
-        "21"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1281,7 +1286,6 @@
         "22"
       ],
       "blockedBy": [
-        "18",
         "22"
       ],
       "hasSections": [
@@ -1307,7 +1311,6 @@
       ],
       "blockedBy": [
         "17",
-        "18",
         "23"
       ],
       "hasSections": [
@@ -1409,7 +1412,6 @@
       ],
       "blockedBy": [
         "17",
-        "18",
         "26"
       ],
       "hasSections": [
@@ -1605,8 +1607,6 @@
         "35"
       ],
       "blockedBy": [
-        "20",
-        "21",
         "22",
         "27",
         "31",
@@ -1700,10 +1700,6 @@
       ],
       "blockedBy": [
         "17",
-        "18",
-        "19",
-        "20",
-        "21",
         "22",
         "23",
         "24",
