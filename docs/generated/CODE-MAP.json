@@ -49,6 +49,12 @@
         "apps/backend/src/main/java/com/travelplanner/infrastructure/auth/local/LocalPasswordIdentityAdapter.java"
       ]
     },
+    "ItineraryAgentPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/ItineraryAgentPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/ai/agent/StubItineraryAgent.java"
+      ]
+    },
     "ItineraryLegRepositoryPort": {
       "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/ItineraryLegRepositoryPort.java",
       "implementations": [
@@ -846,7 +852,10 @@
       "itinerary": {
         "controllers": [],
         "application": [
-          "apps/backend/src/main/java/com/travelplanner/application/itinerary/ItineraryPersistenceService.java"
+          "apps/backend/src/main/java/com/travelplanner/application/itinerary/ItineraryGenerationOutcome.java",
+          "apps/backend/src/main/java/com/travelplanner/application/itinerary/ItineraryGenerationService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/itinerary/ItineraryPersistenceService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/itinerary/ItineraryStatusWriter.java"
         ],
         "adapters": []
       },
@@ -1598,7 +1607,7 @@
     "30": {
       "title": "Itinerary generation agent",
       "file": "tasks/30-itinerary-agent.md",
-      "status": "not_started",
+      "status": "in_progress",
       "dependsOn": [
         "14",
         "26",
