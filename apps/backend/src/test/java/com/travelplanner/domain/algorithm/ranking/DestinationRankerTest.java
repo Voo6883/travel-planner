@@ -1,6 +1,7 @@
 package com.travelplanner.domain.algorithm.ranking;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 import com.travelplanner.domain.enums.CoverageLevel;
