@@ -41,6 +41,7 @@ public record TripBrief(
         UUID id,
         UUID tripId,
         List<String> destinations,
+        boolean surpriseMe,
         DateRange dates,
         DateFlexibility dateFlexibility,
         String departureCity,
@@ -58,6 +59,9 @@ public record TripBrief(
         Objects.requireNonNull(createdAt, "createdAt");
         Objects.requireNonNull(updatedAt, "updatedAt");
         destinations = destinations == null ? List.of() : List.copyOf(destinations);
+        if (surpriseMe) {
+            destinations = List.of();
+        }
         interests = interests == null ? List.of() : List.copyOf(interests);
         if (version < 0) {
             throw ValidationFailedException.field("version", "must not be negative");
@@ -66,13 +70,13 @@ public record TripBrief(
 
     /** An empty brief for a freshly created trip. Version 0 means "never persisted". */
     public static TripBrief createFor(UUID tripId, Instant now) {
-        return new TripBrief(UUID.randomUUID(), tripId, List.of(), null, null, null, null, null,
+        return new TripBrief(UUID.randomUUID(), tripId, List.of(), false, null, null, null, null, null,
                 List.of(), null, 0, now, now);
     }
 
     /** The editable fields, as one value the clarification flow and the form save both operate on. */
     public TripBriefDetails details() {
-        return new TripBriefDetails(destinations, dates, dateFlexibility, departureCity, budget,
+        return new TripBriefDetails(destinations, surpriseMe, dates, dateFlexibility, departureCity, budget,
                 party, interests, pace);
     }
 
@@ -88,7 +92,7 @@ public record TripBrief(
      */
     public TripBrief withDetails(TripBriefDetails details, Instant now) {
         Objects.requireNonNull(details, "details");
-        return new TripBrief(id, tripId, details.destinations(), details.dates(),
+        return new TripBrief(id, tripId, details.destinations(), details.surpriseMe(), details.dates(),
                 details.dateFlexibility(), details.departureCity(), details.budget(),
                 details.party(), details.interests(), details.pace(), version, createdAt, now);
     }

@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 /**
- * Static checks on V20, the migration that finishes {@code trip_brief}.
+ * Static checks on the migrations that finish {@code trip_brief}.
  *
  * <p>Reads the SQL as text so it runs in the unit suite with no Docker and no database, exactly as
  * {@code MigrationContractTest} does — {@code FlywayMigrationIntegrationTest} proves the file
@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 class TripBriefSchemaContractTest {
 
     private static final String MIGRATION = read("V20__complete_trip_brief_columns.sql");
+    private static final String SURPRISE_ME = read("V23__add_trip_brief_surprise_me.sql");
 
     @Test
     void everyFieldTaskEighteenOwnsHasAColumn() {
@@ -40,6 +41,13 @@ class TripBriefSchemaContractTest {
                 .contains("party_children")
                 .contains("interests")
                 .contains("pace");
+    }
+
+    @Test
+    void surpriseMeHasAColumnBecauseUcC105IsNotJustAnExtractionResult() {
+        assertThat(SURPRISE_ME)
+                .contains("ADD COLUMN surprise_me boolean NOT NULL DEFAULT false")
+                .contains("UC-C1-05");
     }
 
     @Test

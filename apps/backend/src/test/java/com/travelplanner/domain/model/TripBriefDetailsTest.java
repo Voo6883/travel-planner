@@ -28,6 +28,7 @@ class TripBriefDetailsTest {
         TripBriefDetails empty = TripBriefDetails.empty();
 
         assertThat(empty.destinations()).isEmpty();
+        assertThat(empty.surpriseMe()).isFalse();
         assertThat(empty.interests()).isEmpty();
         assertThat(empty.dates()).isNull();
         assertThat(empty.dateFlexibility()).isNull();
@@ -39,7 +40,8 @@ class TripBriefDetailsTest {
 
     @Test
     void nullCollectionsBecomeEmptyRatherThanPropagating() {
-        TripBriefDetails details = new TripBriefDetails(null, null, null, null, null, null, null, null);
+        TripBriefDetails details = new TripBriefDetails(null, false, null, null, null, null, null,
+                null, null);
 
         assertThat(details.destinations()).isEmpty();
         assertThat(details.interests()).isEmpty();
@@ -62,6 +64,17 @@ class TripBriefDetailsTest {
                 .withDestinations(Arrays.asList("penang", "   ", null));
 
         assertThat(details.destinations()).containsExactly("penang");
+    }
+
+    @Test
+    void surpriseMeAlwaysStoresAnOpenDestination() {
+        TripBriefDetails details = TripBriefDetails.empty()
+                .withDestinations(List.of("penang"))
+                .withSurpriseMe(true);
+
+        assertThat(details.surpriseMe()).isTrue();
+        assertThat(details.destinations()).isEmpty();
+        assertThat(details.withDestinations(List.of("osaka")).destinations()).isEmpty();
     }
 
     @Test
@@ -113,6 +126,7 @@ class TripBriefDetailsTest {
                 .withPace(TravelPace.RELAXED);
 
         assertThat(details.destinations()).containsExactly("penang");
+        assertThat(details.surpriseMe()).isFalse();
         assertThat(details.dates()).isEqualTo(SPRING);
         assertThat(details.dateFlexibility()).isEqualTo(DateFlexibility.FLEXIBLE_WEEK);
         assertThat(details.departureCity()).isEqualTo("Kuala Lumpur");

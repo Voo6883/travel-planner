@@ -2669,6 +2669,7 @@ components:
         - trip_id
         - status
         - destinations
+        - surprise_me
         - interests
         - clarification
         - version
@@ -2695,6 +2696,12 @@ components:
           items:
             type: string
           example: [kuala-lumpur]
+        surprise_me:
+          type: boolean
+          description: |
+            UC-C1-05's open-destination answer. When true, `destinations` is empty and C2 ranks the
+            whole covered set rather than treating the traveller as undecided.
+          default: false
         dates:
           allOf:
             - $ref: '#/components/schemas/DateRange'
@@ -2761,6 +2768,11 @@ components:
               maxItems: 10
               items:
                 type: string
+            surprise_me:
+              type: boolean
+              description: |
+                UC-C1-05's open-destination answer. When true, the server stores
+                `destinations = []` even if the body also names destinations.
             dates:
               allOf:
                 - $ref: '#/components/schemas/DateRange'
