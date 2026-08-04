@@ -1578,7 +1578,7 @@
     "29": {
       "title": "Route and mobility planning",
       "file": "tasks/29-route-mobility.md",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "17",
         "28"
@@ -1605,9 +1605,7 @@
         "28",
         "29"
       ],
-      "blockedBy": [
-        "29"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1837,7 +1835,6 @@
         "41"
       ],
       "blockedBy": [
-        "29",
         "30",
         "31",
         "32",
