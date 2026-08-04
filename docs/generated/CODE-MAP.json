@@ -1346,7 +1346,7 @@
     "24": {
       "title": "Deterministic destination ranking",
       "file": "tasks/24-destination-ranking.md",
-      "status": "review",
+      "status": "done",
       "dependsOn": [
         "17",
         "18",
@@ -1374,9 +1374,7 @@
         "23",
         "24"
       ],
-      "blockedBy": [
-        "24"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1399,7 +1397,6 @@
         "25"
       ],
       "blockedBy": [
-        "24",
         "25"
       ],
       "hasSections": [
@@ -1730,7 +1727,6 @@
         "41"
       ],
       "blockedBy": [
-        "24",
         "25",
         "26",
         "27",

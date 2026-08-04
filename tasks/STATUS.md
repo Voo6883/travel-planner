@@ -147,11 +147,11 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 
 | Status | Count |
 |---|---|
-| `done` | **23** |
+| `done` | **24** |
 | `done_with_accepted_debt` | 1 |
 | `in_progress` | 0 |
 | `blocked` | 0 |
-| `review` | 1 |
+| `review` | 0 |
 | `not_started` | 17 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*

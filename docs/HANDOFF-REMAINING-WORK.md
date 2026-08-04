@@ -41,7 +41,7 @@ open-question register (`F-nn`). Update it in the same commit as the work, never
 |---|---|---|
 | **22** Trip chat intake tools | 18–21 `done` | **done** — merged to `dev` |
 | **23** Research job platform | 07, 18, 22 `done` | **done** — migration **V24** |
-| **24** Destination ranking | 17A/17B, 18, 23 | **review** — pure DSA; see [`DESTINATION-RANKING-HANDOFF.md`](DESTINATION-RANKING-HANDOFF.md) |
+| **24** Destination ranking | 17A/17B, 18, 23 | **done** — pure DSA; see [`DESTINATION-RANKING-HANDOFF.md`](DESTINATION-RANKING-HANDOFF.md) |
 | **25** Travel research agent | 14, 17, 23, 24 | Next — plugs into research job hooks; calls `DestinationRanker` |
 | **40** TKB refresh | 14–16 + gates **17A/17B** | Safe parallel while **17C**/F-34 remains open on **41** |
 
