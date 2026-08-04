@@ -1,6 +1,6 @@
 # Handoff — remaining work and how to execute it
 
-> Updated 2026-08-04 after task 29 merged to `dev` (@ `426b717`) and the ladder was re-run green
+> Updated 2026-08-04 after task 30 merged to `dev` (@ `5662f30`) and the ladder was re-run green
 > on the merge commit — see §1.
 >
 > This document does **not** replace [`AGENTS.md`](../AGENTS.md),
@@ -13,7 +13,7 @@
 
 `dev` is the working branch. **Next free migration: `V29`.**
 
-**Verified green on `dev` @ `426b717` (2026-08-04), the whole ladder:**
+**Verified green on `dev` @ `5662f30` (2026-08-04), the whole ladder:**
 
 | Stage | Result |
 |---|---|
@@ -21,7 +21,8 @@
 | `npm run test:integration` | **146 passed, 0 failed** against PostgreSQL 16.6 + pgvector 0.8.1, with **V27/V28** applied and `ddl-auto: validate` accepting the itinerary entities |
 | `npm run build` (frontend) | production build clean, 16 routes |
 
-Together these are `verify:full`, and **CI agrees — run 65, all six jobs green** on this tip.
+Together these are `verify:full`. **CI agreed on the previous tip (run 66, all six jobs green);
+check the run for this one before quoting it.**
 
 > **CI is reachable without `gh`.** The repository is public, so the unauthenticated REST API
 > answers directly — `curl -s "https://api.github.com/repos/Voo6883/travel-planner/actions/runs?branch=dev&per_page=5"`,
@@ -38,7 +39,7 @@ Together these are `verify:full`, and **CI agrees — run 65, all six jobs green
 |---|---|---|
 | 0A/0B — foundation + platform | 00–15 | `done` |
 | Phase 1 — knowledge, intake, chat | 16–24 `done` · 17 `done_with_accepted_debt` (F-34→41) | see §2
-| Phase 1 — research, itinerary | 25–29 `done` · 30–31 | not started — **30 next**
+| Phase 1 — research, itinerary | 25–30 `done` · 31 | not started — **31 next**
 | Phase 2 — booking, runtime | 32–37 | not started |
 | Knowledge ops | 40, 41 | not started |
 | Integration | 38, 39 | not started |
@@ -61,19 +62,20 @@ open-question register (`F-nn`). Update it in the same commit as the work, never
 
 | Task | Needs | Notes |
 |---|---|---|
-| **22–29** | — | **done** on `dev` |
+| **22–30** | — | **done** on `dev` |
 | **25** Travel research agent | 14, 17, 23, 24 | `done` — migration **V25**; see [`TRAVEL-RESEARCH-AGENT-HANDOFF.md`](TRAVEL-RESEARCH-AGENT-HANDOFF.md) |
 | **26** Research API + frontend | 11, 23–25 | `done` — see [`RESEARCH-EXPERIENCE-HANDOFF.md`](RESEARCH-EXPERIENCE-HANDOFF.md) |
 | **27** Research chat + evaluation | 22, 25, 26 | `done` — migration **V26**; see [`RESEARCH-CHAT-EVAL-HANDOFF.md`](RESEARCH-CHAT-EVAL-HANDOFF.md) |
 | **28** Itinerary domain + scheduling | 17, 18, 26 | `done` — migration **V27**; see [`ITINERARY-SCHEDULING-HANDOFF.md`](ITINERARY-SCHEDULING-HANDOFF.md). F-29 was already closed |
 | **29** Route and mobility | 17, 28 | `done` — migration **V28**; see [`ROUTE-MOBILITY-HANDOFF.md`](ROUTE-MOBILITY-HANDOFF.md) |
-| **30** Itinerary generation agent | 17, 25, 28, 29 | **Next** — narrates a plan the scheduler already proved feasible; may not label one ready |
+| **30** Itinerary generation agent | 14, 26, 28, 29 | `done` — no migration; see [`ITINERARY-AGENT-HANDOFF.md`](ITINERARY-AGENT-HANDOFF.md) |
+| **31** Itinerary UI + chat editing | 11, 28–30 | **Next** — also owns the two items task 30 deferred: approved-constraint preservation and `patch_itinerary`'s shape |
 | **40** TKB refresh | 14–16 + gates **17A/17B** | Safe parallel while **17C**/F-34 remains open on **41** |
 
 ### Still open on task 17
 
 Gate **17C** — real curation for the first three destinations (**F-34**). Owned by task **41**.
-Does not block 30 (gates **17A/17B** are `done`). Sample data stays PARTIAL — research correctly
+Does not block 31 (gates **17A/17B** are `done`). Sample data stays PARTIAL — research correctly
 persists typed `no_confident_result`, and most sample legs resolve to `SAME_AREA_WALK` or `UNKNOWN`
 for the same reason. That is F-34 showing through, not a defect in task 29.
 
