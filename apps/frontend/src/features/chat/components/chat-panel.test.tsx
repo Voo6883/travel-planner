@@ -160,6 +160,18 @@ describe('ChatPanel', () => {
     expect(onTripCreated).toHaveBeenCalledTimes(1);
   });
 
+  it('offers suggested prompts on the planner home that send through the composer', async () => {
+    stubChat(assistantTurn('Where would you like to go?'));
+    const user = userEvent.setup();
+
+    renderWithProviders(<ChatPanel target={PLANNER_CHAT_TARGET} showSuggestedPrompts />);
+
+    await user.click(screen.getByRole('button', { name: enChat.suggestions.prompts.plan_trip }));
+
+    expect(await screen.findByText('Where would you like to go?')).toBeInTheDocument();
+    expect(screen.getByText(enChat.suggestions.prompts.plan_trip)).toBeInTheDocument();
+  });
+
   it('translates the whole panel into Malay', async () => {
     stubChat([]);
 

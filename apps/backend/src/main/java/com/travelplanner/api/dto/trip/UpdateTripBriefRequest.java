@@ -31,6 +31,8 @@ public record UpdateTripBriefRequest(
         @Size(max = TripBriefDetails.MAX_DESTINATIONS)
         List<String> destinations,
 
+        boolean surpriseMe,
+
         @Valid DateRangePayload dates,
 
         DateFlexibility dateFlexibility,
@@ -56,6 +58,7 @@ public record UpdateTripBriefRequest(
     public TripBriefDetails toDetails() {
         return new TripBriefDetails(
                 destinations,
+                surpriseMe,
                 DateRangePayload.toDateRange(dates),
                 dateFlexibility,
                 departureCity,

@@ -96,8 +96,9 @@ final class TripTestFakes {
                 throw new VersionConflictException(stored.version());
             }
             TripBrief persisted = new TripBrief(brief.id(), brief.tripId(), brief.destinations(),
-                    brief.dates(), brief.dateFlexibility(), brief.departureCity(), brief.budget(),
-                    brief.party(), brief.interests(), brief.pace(), brief.version() + 1,
+                    brief.surpriseMe(), brief.dates(), brief.dateFlexibility(),
+                    brief.departureCity(), brief.budget(), brief.party(), brief.interests(),
+                    brief.pace(), brief.version() + 1,
                     brief.createdAt(), brief.updatedAt());
             byTripId.put(persisted.tripId(), persisted);
             return persisted;

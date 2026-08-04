@@ -27,9 +27,11 @@ import com.travelplanner.domain.ai.Prompt;
 import com.travelplanner.domain.ai.PromptMessage;
 import com.travelplanner.domain.enums.ChatMessageRole;
 import com.travelplanner.domain.enums.ChatMessageStatus;
+import com.travelplanner.domain.enums.Role;
 import com.travelplanner.domain.exception.ConversationNotFoundException;
 import com.travelplanner.domain.exception.TripNotFoundException;
 import com.travelplanner.domain.model.Message;
+import com.travelplanner.domain.valueobject.UserContext;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -62,6 +64,7 @@ class ChatControllerTest {
     private static final UUID CONVERSATION_ID = UUID.fromString("44444444-4444-4444-4444-444444444444");
     private static final UUID USER_MESSAGE_ID = UUID.fromString("55555555-5555-5555-5555-555555555555");
     private static final UUID ASSISTANT_MESSAGE_ID = UUID.fromString("66666666-6666-6666-6666-666666666666");
+    private static final UUID USER_ID = UUID.fromString("77777777-7777-7777-7777-777777777777");
     private static final Instant NOW = Instant.parse("2026-07-29T10:00:00Z");
     private static final String BODY =
             "{\"client_message_id\":\"cmid-1\",\"content\":\"Kyoto in spring?\"}";
@@ -286,8 +289,12 @@ class ChatControllerTest {
     }
 
     private static ChatTurn turn() {
-        return new ChatTurn(CONVERSATION_ID, userMessage(), assistantMessage(),
+        return new ChatTurn(CONVERSATION_ID, ChatTarget.planner(), user(), userMessage(), assistantMessage(),
                 Prompt.adHoc(List.of(PromptMessage.user("Kyoto in spring?"))));
+    }
+
+    private static UserContext user() {
+        return UserContext.of(USER_ID, "traveller@example.com", Role.USER);
     }
 
     private static Message userMessage() {

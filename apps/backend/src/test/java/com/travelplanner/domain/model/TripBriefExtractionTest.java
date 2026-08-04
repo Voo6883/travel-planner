@@ -248,6 +248,7 @@ class TripBriefExtractionTest {
                 complete().withSurpriseMe(true), null, VERSION);
 
         assertThat(extraction.surpriseMe()).isTrue();
+        assertThat(extraction.details().surpriseMe()).isTrue();
         assertThat(extraction.details().destinations()).isEmpty();
         assertThat(extraction.isComplete()).isTrue();
     }
@@ -259,6 +260,7 @@ class TripBriefExtractionTest {
         TripBriefExtraction extraction = TripBriefExtraction.from(
                 draft().withSurpriseMe(true), known, VERSION);
 
+        assertThat(extraction.details().surpriseMe()).isTrue();
         assertThat(extraction.details().destinations()).isEmpty();
     }
 
@@ -285,14 +287,16 @@ class TripBriefExtractionTest {
 
     @Test
     void theFallbackLeavesTheBriefAloneAndAsksForEverythingOutstanding() {
-        TripBriefDetails known = TripBriefDetails.empty().withDepartureCity("Ipoh");
+        TripBriefDetails known = TripBriefDetails.empty()
+                .withDepartureCity("Ipoh")
+                .withSurpriseMe(true);
 
         TripBriefExtraction extraction =
                 TripBriefExtraction.fallback(known, "ai_timeout", VERSION);
 
         assertThat(extraction.outcome()).isEqualTo(TripBriefExtractionOutcome.FALLBACK);
         assertThat(extraction.failureCode()).isEqualTo("ai_timeout");
-        assertThat(extraction.surpriseMe()).isFalse();
+        assertThat(extraction.surpriseMe()).isTrue();
         assertThat(extraction.details()).isEqualTo(known);
         assertThat(extraction.clarification().questions()).hasSize(6);
     }
@@ -311,18 +315,18 @@ class TripBriefExtractionTest {
 
     @Test
     void theRecordRefusesToExistWithoutDetailsOrAnOutcome() {
-        assertThatThrownBy(() -> new TripBriefExtraction(null, false, List.of(),
+        assertThatThrownBy(() -> new TripBriefExtraction(null, List.of(),
                 TripBriefExtractionOutcome.EXTRACTED, null, VERSION))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> new TripBriefExtraction(TripBriefDetails.empty(), false,
+        assertThatThrownBy(() -> new TripBriefExtraction(TripBriefDetails.empty(),
                 List.of(), null, null, VERSION))
                 .isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void nullListsAndVersionsAreNormalisedRatherThanLeftToBlowUpLater() {
-        TripBriefExtraction extraction = new TripBriefExtraction(TripBriefDetails.empty(), false,
-                null, TripBriefExtractionOutcome.EXTRACTED, null, null);
+        TripBriefExtraction extraction = new TripBriefExtraction(TripBriefDetails.empty(), null,
+                TripBriefExtractionOutcome.EXTRACTED, null, null);
 
         assertThat(extraction.unresolvedFields()).isEmpty();
         assertThat(extraction.promptVersion()).isEmpty();

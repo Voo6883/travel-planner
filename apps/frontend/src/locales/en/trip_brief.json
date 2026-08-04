@@ -1,0 +1,102 @@
+{
+  "list": {
+    "page_title": "Trips",
+    "page_description": "Create a trip, open a draft, or continue refining a saved brief.",
+    "title": "Your trips",
+    "open_action": "Open trip"
+  },
+  "create": {
+    "title": "Create a trip",
+    "name_label": "Trip name",
+    "name_placeholder": "Japan in spring",
+    "name_required": "Enter a trip name.",
+    "submit": "Create trip"
+  },
+  "detail": {
+    "page_title": "Trip brief",
+    "page_description": "Fill the structured brief. It saves automatically and stays in sync with assistant updates.",
+    "form_title": "Brief details"
+  },
+  "field": {
+    "destinations": "Destinations",
+    "destinations_help": "Use destination slugs. Press Enter after each one, or separate them with commas.",
+    "destinations_placeholder": "kyoto, osaka",
+    "dates": "Travel dates",
+    "date_flexibility": "Date flexibility",
+    "departure_city": "Departure city",
+    "departure_city_placeholder": "Kuala Lumpur",
+    "budget": "Budget",
+    "budget_placeholder": "4000.00",
+    "party": "Travellers",
+    "party_adults": "Adults",
+    "party_children": "Children",
+    "interests": "Interests",
+    "pace": "Pace"
+  },
+  "enum": {
+    "date_flexibility": {
+      "fixed": "Fixed dates",
+      "flexible_week": "Flexible by a week",
+      "flexible_month": "Flexible by a month"
+    },
+    "travel_pace": {
+      "relaxed": "Relaxed",
+      "moderate": "Moderate",
+      "packed": "Packed"
+    },
+    "travel_interest": {
+      "food": "Food",
+      "sightseeing": "Sightseeing",
+      "museums": "Museums",
+      "nature": "Nature",
+      "shopping": "Shopping",
+      "nightlife": "Nightlife",
+      "experiences": "Experiences"
+    }
+  },
+  "status": {
+    "draft": "Building brief",
+    "brief_complete": "Ready to research",
+    "clarification_needed": "Needs your input",
+    "research_queued": "Research queued",
+    "research_running": "Researching",
+    "research_ready": "Recommendations ready",
+    "destination_selected": "Destination selected",
+    "itinerary_ready": "Itinerary ready",
+    "booking_in_progress": "Booking in progress",
+    "booked": "Booked",
+    "archived": "Archived"
+  },
+  "save": {
+    "idle": "Idle",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "error": "Couldn't save"
+  },
+  "conflict": {
+    "notice": "Updated by assistant. Your unsaved edits were kept where safe.",
+    "current_version": "The latest server version is {version}."
+  },
+  "archived": {
+    "notice": "This trip is archived.",
+    "read_only": "Brief edits and clarification answers are read-only for archived trips."
+  },
+  "states": {
+    "loading": "Loading trip details",
+    "error": "The trip could not be loaded.",
+    "empty_title": "No trips yet",
+    "empty_body": "Create a blank trip to fill the brief manually."
+  },
+  "clarification": {
+    "title": "Clarification needed",
+    "submit": "Submit answers",
+    "required": "Answer this question to continue."
+  },
+  "clarify_dates": "When do you want to travel?",
+  "clarify_date_flexibility": "How flexible are those dates?",
+  "clarify_departure": "Where will you depart from?",
+  "clarify_budget": "What is your maximum trip budget?",
+  "clarify_party": "How many people are travelling?",
+  "clarify_interests": "What kind of experiences matter most?",
+  "clarify_pace": "What pace should the trip have?"
+}

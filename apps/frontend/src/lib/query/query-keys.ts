@@ -24,6 +24,17 @@ export const queryKeys = {
     userPage: (page: number) => ['admin', 'users', 'page', page] as const,
     user: (userId: string) => ['admin', 'users', 'detail', userId] as const,
   },
+  /**
+   * User-owned trips and C1 brief state (UC-T02, UC-C1-01). The brief key is under its trip so the
+   * task 20 SSE invalidation table can clear one trip's mutable planning state without touching the
+   * rest of the account.
+   */
+  trips: {
+    all: ['trips'] as const,
+    list: () => ['trips', 'list'] as const,
+    detail: (tripId: string) => ['trips', 'detail', tripId] as const,
+    brief: (tripId: string) => ['trips', 'detail', tripId, 'brief'] as const,
+  },
   platform: {
     all: ['platform'] as const,
     health: () => ['platform', 'health'] as const,

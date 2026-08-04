@@ -39,11 +39,9 @@ import java.util.function.Supplier;
  *
  * @param details the fields that survived validation, merged onto whatever the brief already held.
  *     A field the model did not mention keeps its stored value — an extraction is additive, so a
- *     follow-up message about the budget cannot silently erase the dates
- * @param surpriseMe UC-C1-05. True means the traveller asked for an open destination, which is
- *     {@code destinations = []} plus this flag. It is deliberately <em>not</em> folded into
- *     {@code details}: an empty destination list also means "has not said yet", and the two are
- *     different facts
+ *     follow-up message about the budget cannot silently erase the dates. UC-C1-05's
+ *     {@code surprise_me} flag lives here too, because the same {@code TripBriefDetails} is what the
+ *     existing save path persists
  * @param unresolvedFields question ids the extraction refused to fill, plus
  *     {@link #FIELD_DESTINATIONS} when a destination list failed its own bound. Informational — the
  *     authoritative list of what is still needed is {@link #clarification()}
@@ -55,7 +53,6 @@ import java.util.function.Supplier;
  */
 public record TripBriefExtraction(
         TripBriefDetails details,
-        boolean surpriseMe,
         List<String> unresolvedFields,
         TripBriefExtractionOutcome outcome,
         String failureCode,
@@ -101,7 +98,8 @@ public record TripBriefExtraction(
         details = applyDates(details, draft, refusals);
         details = applyParty(details, draft, refusals);
         details = applyPreferences(details, draft, refusals);
-        return new TripBriefExtraction(details, draft.surpriseMe(), refusals.rejected,
+        details = details.withSurpriseMe(draft.surpriseMe());
+        return new TripBriefExtraction(details, refusals.rejected,
                 TripBriefExtractionOutcome.EXTRACTED, null, promptVersion);
     }
 
@@ -115,8 +113,13 @@ public record TripBriefExtraction(
      */
     public static TripBriefExtraction fallback(TripBriefDetails known, String failureCode,
             String promptVersion) {
-        return new TripBriefExtraction(known == null ? TripBriefDetails.empty() : known, false,
+        return new TripBriefExtraction(known == null ? TripBriefDetails.empty() : known,
                 List.of(), TripBriefExtractionOutcome.FALLBACK, failureCode, promptVersion);
+    }
+
+    /** UC-C1-05 flag, exposed from the same details object that is persisted. */
+    public boolean surpriseMe() {
+        return details.surpriseMe();
     }
 
     /** What the brief still needs — task 18's rule, unchanged and unduplicated. */
@@ -144,7 +147,7 @@ public record TripBriefExtraction(
         List<String> kept = details.destinations().stream()
                 .filter(slug -> !removed.contains(slug))
                 .toList();
-        return new TripBriefExtraction(details.withDestinations(kept), surpriseMe, unresolvedFields,
+        return new TripBriefExtraction(details.withDestinations(kept), unresolvedFields,
                 outcome, failureCode, promptVersion);
     }
 
