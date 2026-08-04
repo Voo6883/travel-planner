@@ -1482,7 +1482,7 @@
     "27": {
       "title": "Research chat tools and evaluation",
       "file": "tasks/27-research-chat-evaluation.md",
-      "status": "review",
+      "status": "done",
       "dependsOn": [
         "22",
         "25",
@@ -1578,7 +1578,6 @@
         "30"
       ],
       "blockedBy": [
-        "27",
         "30"
       ],
       "hasSections": [
@@ -1671,7 +1670,6 @@
         "33"
       ],
       "blockedBy": [
-        "27",
         "31",
         "32",
         "33"
@@ -1700,7 +1698,6 @@
         "35"
       ],
       "blockedBy": [
-        "27",
         "31",
         "35"
       ],
@@ -1789,7 +1786,6 @@
         "41"
       ],
       "blockedBy": [
-        "27",
         "28",
         "29",
         "30",
