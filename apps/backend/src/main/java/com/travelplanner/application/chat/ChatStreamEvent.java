@@ -201,6 +201,28 @@ public sealed interface ChatStreamEvent {
         }
     }
 
+    /**
+     * A trip brief was written by an intake tool (task 22, UC-C5-09). The trip already exists, so
+     * unlike {@link TripCreated} this is not a navigation cue — it tells the client the brief and
+     * the trip status it is showing are now stale, and the frontend re-fetches
+     * {@code queryKeys.trips.brief(tripId)} and {@code queryKeys.trips.detail(tripId)}.
+     *
+     * <p>Emitted by the orchestrator only after {@code update_trip_brief} or
+     * {@code answer_clarification} has committed (ADR 007: a domain event follows the write, it is
+     * never inferred from prose).
+     */
+    record BriefUpdated(UUID tripId) implements ChatStreamEvent {
+
+        public BriefUpdated {
+            Objects.requireNonNull(tripId, "tripId");
+        }
+
+        @Override
+        public String eventName() {
+            return "brief_updated";
+        }
+    }
+
     /** Token accounting, normalised across providers. Nothing in the UI renders it. */
     record Usage(int inputTokens, int outputTokens, int cachedTokens) implements ChatStreamEvent {
 

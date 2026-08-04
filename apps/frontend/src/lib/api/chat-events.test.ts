@@ -111,6 +111,18 @@ describe('parseChatFrame — every event the contract defines', () => {
     expect(parsed.event).toEqual({ type: 'trip_created', tripId: 'trip-9' });
   });
 
+  it('parses brief_updated as its own frame carrying the trip id (task 22, UC-C5-09)', () => {
+    const parsed = parseChatFrame('event: brief_updated\ndata: {"trip_id":"trip-7"}');
+
+    expect(parsed.event).toEqual({ type: 'brief_updated', tripId: 'trip-7' });
+  });
+
+  it('ignores a brief_updated frame missing its trip id rather than treating it as text', () => {
+    const parsed = parseChatFrame('event: brief_updated\ndata: {}');
+
+    expect(parsed.event).toEqual({ type: 'ignored', reason: 'invalid_payload', eventName: 'brief_updated' });
+  });
+
   it('parses usage and completion', () => {
     const usage = parseChatFrame('event: usage\ndata: {"input_tokens":10,"output_tokens":20}');
     const done = parseChatFrame('event: done\ndata: {"stop_reason":"end_turn"}');

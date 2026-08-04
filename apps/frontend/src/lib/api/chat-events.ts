@@ -104,6 +104,17 @@ export interface TripCreatedEvent {
   readonly tripId: string;
 }
 
+/**
+ * The trip's brief was written by an intake tool (task 22, UC-C5-09). Unlike `trip_created` this is
+ * not a navigation cue — the trip already exists — it tells the client the brief and status it is
+ * showing are stale. Emitted by the orchestrator only after `update_trip_brief` or
+ * `answer_clarification` commits, never parsed out of prose.
+ */
+export interface BriefUpdatedEvent {
+  readonly type: 'brief_updated';
+  readonly tripId: string;
+}
+
 export interface UsageEvent {
   readonly type: 'usage';
   readonly inputTokens: number;
@@ -175,6 +186,7 @@ export type ChatStreamEvent =
   | ToolUseEndEvent
   | ToolResultEvent
   | TripCreatedEvent
+  | BriefUpdatedEvent
   | UsageEvent
   | DoneEvent
   | StreamErrorEvent
@@ -230,6 +242,7 @@ const toolInputDeltaSchema = z.object({ tool_call_id: z.string(), json_chunk: z.
 const toolUseEndSchema = z.object({ tool_call_id: z.string() });
 const toolResultSchema = z.object({ tool_call_id: z.string(), payload: z.unknown() });
 const tripCreatedSchema = z.object({ trip_id: z.string() });
+const briefUpdatedSchema = z.object({ trip_id: z.string() });
 
 const usageSchema = z.object({
   input_tokens: z.number(),
@@ -307,6 +320,10 @@ const EVENT_PARSERS: Record<string, (data: unknown) => ChatStreamEvent | null> =
   trip_created: (data) => {
     const parsed = tripCreatedSchema.safeParse(data);
     return parsed.success ? { type: 'trip_created', tripId: parsed.data.trip_id } : null;
+  },
+  brief_updated: (data) => {
+    const parsed = briefUpdatedSchema.safeParse(data);
+    return parsed.success ? { type: 'brief_updated', tripId: parsed.data.trip_id } : null;
   },
   usage: (data) => {
     const parsed = usageSchema.safeParse(data);

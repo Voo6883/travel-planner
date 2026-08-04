@@ -203,6 +203,25 @@ describe('streaming an assistant turn', () => {
     expect(state.tripCreatedId).toBe('trip-9');
   });
 
+  it('records brief_updated so the trip shell can re-fetch the edited brief (task 22)', () => {
+    const state = apply([{ type: 'stream_opened' }, frame({ type: 'brief_updated', tripId: 'trip-7' })]);
+
+    expect(state.briefUpdatedTripId).toBe('trip-7');
+  });
+
+  it('re-fires brief_updated across turns by clearing the signal when the next stream opens', () => {
+    // Same trip edited in two consecutive turns: the panel effect keys on briefUpdatedTripId, so an
+    // unchanged value would be swallowed. stream_opened resets it to null between turns.
+    const firstTurn = apply([{ type: 'stream_opened' }, frame({ type: 'brief_updated', tripId: 'trip-7' })]);
+    expect(firstTurn.briefUpdatedTripId).toBe('trip-7');
+
+    const cleared = chatReducer(firstTurn, { type: 'stream_opened' });
+    expect(cleared.briefUpdatedTripId).toBeNull();
+
+    const secondTurn = chatReducer(cleared, frame({ type: 'brief_updated', tripId: 'trip-7' }));
+    expect(secondTurn.briefUpdatedTripId).toBe('trip-7');
+  });
+
   it('ignores heartbeats, usage and unparsed frames without disturbing the conversation', () => {
     const before = apply([
       { type: 'stream_opened' },

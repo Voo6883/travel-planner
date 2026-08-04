@@ -54,6 +54,7 @@ public final class ChatEventPayloads {
             case ChatStreamEvent.ToolUseEnd end -> new ToolUseEnd(end.toolCallId());
             case ChatStreamEvent.ToolResult result -> new ToolResult(result.toolCallId(), result.payload());
             case ChatStreamEvent.TripCreated created -> new TripCreated(created.tripId());
+            case ChatStreamEvent.BriefUpdated updated -> new BriefUpdated(updated.tripId());
             case ChatStreamEvent.Usage usage ->
                     new Usage(usage.inputTokens(), usage.outputTokens(), usage.cachedTokens());
             case ChatStreamEvent.Done done -> new Done(done.stopReason());
@@ -105,6 +106,9 @@ public final class ChatEventPayloads {
     }
 
     public record TripCreated(@JsonProperty("trip_id") UUID tripId) {
+    }
+
+    public record BriefUpdated(@JsonProperty("trip_id") UUID tripId) {
     }
 
     public record Usage(

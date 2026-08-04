@@ -97,6 +97,13 @@ export interface ChatState {
   readonly error: ChatStreamErrorPayload | null;
   /** Set once by `trip_created`, so the route layer can hand off (PLAN §3.2). */
   readonly tripCreatedId: string | null;
+  /**
+   * Set by `brief_updated` (task 22, UC-C5-09) so the trip shell can re-fetch the brief and detail.
+   * Unlike `tripCreatedId` this is a per-turn signal, not a one-off: it is cleared on `stream_opened`
+   * so a second turn that edits the same trip re-fires the invalidation instead of being swallowed
+   * by an unchanged value.
+   */
+  readonly briefUpdatedTripId: string | null;
   readonly tools: readonly ChatToolActivity[];
   readonly historyLoaded: boolean;
 }
@@ -108,6 +115,7 @@ export const initialChatState: ChatState = {
   lastEventId: null,
   error: null,
   tripCreatedId: null,
+  briefUpdatedTripId: null,
   tools: [],
   historyLoaded: false,
 };
@@ -139,7 +147,9 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'user_message_sent':
       return sendUserMessage(state, action.clientMessageId, action.text, action.createdAt);
     case 'stream_opened':
-      return { ...state, connection: 'streaming', error: null };
+      // `briefUpdatedTripId` is cleared here so a brief_updated in this turn is a fresh null→id
+      // transition the panel's effect will act on, even when the same trip was edited last turn.
+      return { ...state, connection: 'streaming', error: null, briefUpdatedTripId: null };
     case 'stream_reconnecting':
       return { ...state, connection: 'reconnecting' };
     case 'frame':
@@ -377,6 +387,9 @@ function applyEvent(state: ChatState, frame: ChatFrame): ChatState {
       return state;
     case 'trip_created':
       return { ...state, tripCreatedId: event.tripId };
+    case 'brief_updated':
+      // The brief the trip shell is showing is now stale; the panel re-fetches on this transition.
+      return { ...state, briefUpdatedTripId: event.tripId };
     case 'usage':
       // Token accounting is a server-side concern (`ai_call_log`, PLAN §5.3). Nothing in the chat
       // UI renders it, so it is not kept.
