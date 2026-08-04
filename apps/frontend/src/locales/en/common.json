@@ -91,6 +91,7 @@
     "provider_link_required": "An account already uses this email address. Sign in to it, then connect this provider.",
     "provider_unavailable": "The sign-in provider is unavailable right now. Please try again.",
     "rate_limited": "Too many requests. Please wait a while before trying again.",
+    "research_not_ready": "Destination recommendations are not ready yet. Start research or wait for it to finish.",
     "unauthorized": "Please sign in to continue.",
     "user_not_found": "There is no account with that identifier.",
     "validation_failed": "Some details are not valid. Please check the highlighted fields.",

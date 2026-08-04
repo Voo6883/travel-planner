@@ -183,6 +183,9 @@ public enum ApiErrorCode {
      */
     RATE_LIMITED("rate_limited", HttpStatus.TOO_MANY_REQUESTS),
 
+    /** Research results are not ready for this trip yet (UC-C2-03). */
+    RESEARCH_NOT_READY("research_not_ready", HttpStatus.CONFLICT),
+
     /** No valid session; the caller must sign in. */
     UNAUTHORIZED("unauthorized", HttpStatus.UNAUTHORIZED),
 

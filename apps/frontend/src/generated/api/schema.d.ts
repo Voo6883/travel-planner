@@ -674,6 +674,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/destinations/{destinationId}/guide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Destination guide detail (areas, POIs, apps)
+         * @description Full knowledge-backed guide for a destination — overview/food/practical narrative, areas,
+         *     top POIs, transport modes, and the locale app pack (PLAN §4.1). Used by the research detail
+         *     drawer and as chat context.
+         *
+         *     Requires a session. An unknown `destinationId` is `404 not_found`. Missing narrative
+         *     sections are omitted (null) rather than fabricated.
+         */
+        get: operations["getDestinationGuide"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips": {
         parameters: {
             query?: never;
@@ -948,6 +973,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{tripId}/ranked-recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List ranked destination recommendations (UC-C2-03)
+         * @description Returns the latest durable research outcome for the trip when `trip.status` is
+         *     `RESEARCH_READY`, or `DESTINATION_SELECTED` with a persisted selection (UC-C2-03/05).
+         *
+         *     Each recommendation carries rationale, estimated cost, score breakdown, traveler guide,
+         *     risks, freshness/confidence terms, and `source_refs` — never recomputed in the client.
+         *
+         *     When the DSA produced no confident match, `no_confident_result` is `true` and
+         *     `recommendations` is empty (typed empty — never a hallucinated apology).
+         *
+         *     Otherwise: `409 research_not_ready`. Ownership failures are `404 not_found`.
+         */
+        get: operations["listRankedRecommendations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}/selected-recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Select a destination recommendation (UC-C2-06)
+         * @description Persists `selected_recommendation_id` and moves the trip
+         *     `RESEARCH_READY → DESTINATION_SELECTED` atomically.
+         *
+         *     The recommendation must belong to the trip's latest research run. Selecting when the trip
+         *     is not `RESEARCH_READY` is `400 validation_failed` on `status`. A concurrent writer may
+         *     receive `409 version_conflict`.
+         *
+         *     **No optimistic UI.** The client waits for this response before showing the selected state.
+         */
+        post: operations["selectRecommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/planner/chat/messages": {
         parameters: {
             query?: never;
@@ -1122,13 +1203,14 @@ export interface components {
          *     | `provider_link_required` | 409 | An account already holds this email but auto-linking is not permitted. Sign in to that account and confirm the link (ADR 009 §4 — the pre-hijack rule) |
          *     | `provider_unavailable` | 503 | The identity provider could not be reached or answered with a fault. Nothing was changed; the caller may retry |
          *     | `rate_limited` | 429 | Too many requests for this mail action from this address or for this email (ADR 009 §6). `details.retry_after_seconds` carries the wait |
+         *     | `research_not_ready` | 409 | Research results are not ready for this trip yet (UC-C2-03) |
          *     | `unauthorized` | 401 | No valid session; the caller must sign in |
          *     | `user_not_found` | 404 | No account with this id (PLAN §4.0.6). Only ever returned to an administrator, who is already entitled to know which accounts exist — every other surface uses `not_found` |
          *     | `validation_failed` | 400 | Request failed schema or constraint validation. `details.fields` maps field name → message |
          *     | `version_conflict` | 409 | Optimistic-lock mismatch (ADR 008). `details.current_version` carries the server's version |
          * @enum {string}
          */
-        ErrorCode: "account_closed" | "account_disabled" | "account_locked" | "ai_rate_limited" | "ai_response_invalid" | "ai_timeout" | "ai_unavailable" | "destination_not_covered" | "email_not_verified" | "firebase_email_not_verified" | "forbidden" | "identity_already_linked" | "internal_error" | "invalid_credentials" | "invalid_firebase_token" | "invalid_oauth_state" | "invalid_token" | "last_sign_in_method" | "not_found" | "provider_email_unavailable" | "provider_link_required" | "provider_unavailable" | "rate_limited" | "unauthorized" | "user_not_found" | "validation_failed" | "version_conflict";
+        ErrorCode: "account_closed" | "account_disabled" | "account_locked" | "ai_rate_limited" | "ai_response_invalid" | "ai_timeout" | "ai_unavailable" | "destination_not_covered" | "email_not_verified" | "firebase_email_not_verified" | "forbidden" | "identity_already_linked" | "internal_error" | "invalid_credentials" | "invalid_firebase_token" | "invalid_oauth_state" | "invalid_token" | "last_sign_in_method" | "not_found" | "provider_email_unavailable" | "provider_link_required" | "provider_unavailable" | "rate_limited" | "research_not_ready" | "unauthorized" | "user_not_found" | "validation_failed" | "version_conflict";
         /**
          * @description Shape of `ApiErrorResponse.details` when `code` is `validation_failed`. Documented
          *     separately because it is the only `details` payload with a fixed structure that
@@ -1780,6 +1862,126 @@ export interface components {
              * @description When the run reached a terminal state; absent while active.
              */
             completed_at?: string | null;
+        };
+        /** @description Body of `POST .../selected-recommendation` (UC-C2-06). */
+        SelectRecommendationRequest: {
+            /** Format: uuid */
+            recommendation_id: string;
+        };
+        /**
+         * @description Latest C2 research outcome for a trip (UC-C2-03/04/05/10). When
+         *     `no_confident_result` is true, `recommendations` is empty.
+         */
+        RankedRecommendations: {
+            /** Format: uuid */
+            trip_id: string;
+            /** Format: uuid */
+            research_run_id: string;
+            no_confident_result: boolean;
+            algorithm_version: string;
+            /** Format: uuid */
+            selected_recommendation_id?: string | null;
+            recommendations: components["schemas"]["RankedRecommendation"][];
+        };
+        /** @description One scored destination proposal from a research run. */
+        RankedRecommendation: {
+            /** Format: uuid */
+            recommendation_id: string;
+            /** Format: uuid */
+            destination_id: string;
+            destination_slug: string;
+            country_code: string;
+            rank: number;
+            /** Format: double */
+            fit_score: number;
+            score_breakdown: components["schemas"]["ScoreBreakdown"];
+            est_cost?: components["schemas"]["Money"] | null;
+            rationale: string;
+            traveler_guide: components["schemas"]["TravelerGuide"];
+            risks: string[];
+            best_window?: string | null;
+            source_refs: components["schemas"]["RecommendationSourceRef"][];
+            algorithm_version: string;
+        };
+        /** @description DSA score terms (never LLM-authored). */
+        ScoreBreakdown: {
+            /** Format: double */
+            interest_match: number;
+            /** Format: double */
+            seasonality_fit: number;
+            /** Format: double */
+            price_fit: number;
+            /** Format: double */
+            area_coverage: number;
+            /** Format: double */
+            freshness_factor: number;
+            /** Format: double */
+            confidence: number;
+            /** Format: double */
+            fit_score: number;
+        };
+        /** @description Per-recommendation traveler guide sections (PLAN §4.1). */
+        TravelerGuide: {
+            overview: string;
+            why_now?: string | null;
+            areas: string[];
+            food?: string | null;
+            highlights: string[];
+            mobility?: string | null;
+            practical?: string | null;
+            local_app_pack: components["schemas"]["LocalAppPackEntry"][];
+            source_refs: components["schemas"]["RecommendationSourceRef"][];
+        };
+        LocalAppPackEntry: {
+            usage: string;
+            name: string;
+            slug?: string | null;
+        };
+        RecommendationSourceRef: {
+            source_ref: string;
+            source_url?: string | null;
+            field_group: string;
+        };
+        /** @description Knowledge-backed destination guide for drawers / chat context. */
+        DestinationGuideDetail: {
+            /** Format: uuid */
+            destination_id: string;
+            slug: string;
+            name: string;
+            country_code: string;
+            locale: string;
+            overview?: string | null;
+            food?: string | null;
+            practical?: string | null;
+            areas: components["schemas"]["DestinationAreaSummary"][];
+            top_pois: components["schemas"]["DestinationPoiSummary"][];
+            transport_modes: components["schemas"]["DestinationTransportMode"][];
+            local_app_pack: components["schemas"]["DestinationTravelApp"][];
+            source_refs: components["schemas"]["RecommendationSourceRef"][];
+        };
+        DestinationAreaSummary: {
+            slug: string;
+            name: string;
+            description?: string | null;
+        };
+        DestinationPoiSummary: {
+            /** Format: uuid */
+            poi_id: string;
+            slug: string;
+            name: string;
+            category: string;
+            description?: string | null;
+        };
+        DestinationTransportMode: {
+            mode: string;
+            display_name: string;
+            description?: string | null;
+        };
+        DestinationTravelApp: {
+            slug: string;
+            name: string;
+            category: string;
+            description?: string | null;
         };
         /**
          * @description An amount and its currency (PLAN §4.0.2-A).
@@ -2440,6 +2642,26 @@ export interface components {
             };
             content: {
                 "application/json": components["schemas"]["ResearchJob"];
+            };
+        };
+        /**
+         * @description Ranked recommendations are not available yet (UC-C2-03). The trip is not
+         *     `RESEARCH_READY` (or `DESTINATION_SELECTED` with a selection). Poll the research job.
+         */
+        ResearchNotReady: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "code": "research_not_ready",
+                 *       "message": "Research results are not ready for this trip yet.",
+                 *       "details": {}
+                 *     }
+                 */
+                "application/json": components["schemas"]["ApiErrorResponse"];
             };
         };
         /**
@@ -3518,6 +3740,34 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    getDestinationGuide: {
+        parameters: {
+            query?: {
+                locale?: "en" | "ms";
+            };
+            header?: never;
+            path: {
+                destinationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Destination guide detail. */
+            200: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DestinationGuideDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     listTrips: {
         parameters: {
             query?: never;
@@ -3814,6 +4064,75 @@ export interface operations {
             200: components["responses"]["ResearchJobState"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listRankedRecommendations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Latest research outcome for the trip. */
+            200: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RankedRecommendations"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ResearchNotReady"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    selectRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SelectRecommendationRequest"];
+            };
+        };
+        responses: {
+            /** @description Trip after selection. */
+            200: {
+                headers: {
+                    "X-Request-Id": components["headers"]["XRequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Trip"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
             500: components["responses"]["InternalError"];
         };
     };

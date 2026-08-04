@@ -83,6 +83,12 @@ public class RankedRecommendationRepositoryAdapter implements RankedRecommendati
                 .toList();
     }
 
+    @Override
+    public Optional<RankedRecommendation> findByIdAndUserId(UUID recommendationId, UUID userId) {
+        return recommendations.findByIdAndUserId(recommendationId, userId)
+                .map(mapper::toRecommendation);
+    }
+
     private ResearchRunResult toDomain(ResearchRunResultEntity entity) {
         List<RankedRecommendation> rows = findByResearchRunId(entity.getResearchRunId(), entity.getUserId());
         return new ResearchRunResult(

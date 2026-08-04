@@ -3,8 +3,11 @@ package com.travelplanner.application.research;
 import com.travelplanner.domain.enums.ResearchJobStatus;
 import com.travelplanner.domain.exception.ValidationFailedException;
 import com.travelplanner.domain.exception.VersionConflictException;
+import com.travelplanner.domain.model.RankedRecommendation;
 import com.travelplanner.domain.model.ResearchJob;
+import com.travelplanner.domain.model.ResearchRunResult;
 import com.travelplanner.domain.model.Trip;
+import com.travelplanner.domain.port.RankedRecommendationRepositoryPort;
 import com.travelplanner.domain.port.ResearchJobRepositoryPort;
 import com.travelplanner.domain.port.TripRepositoryPort;
 import java.util.ArrayList;
@@ -170,6 +173,54 @@ final class ResearchTestFakes {
 
         List<UUID> completed() {
             return completed;
+        }
+    }
+
+    /** {@link RankedRecommendationRepositoryPort} over maps for list/select tests. */
+    static final class InMemoryRecommendations implements RankedRecommendationRepositoryPort {
+
+        private final Map<UUID, ResearchRunResult> runsById = new LinkedHashMap<>();
+        private final Map<UUID, RankedRecommendation> recommendationsById = new LinkedHashMap<>();
+
+        @Override
+        public ResearchRunResult save(ResearchRunResult result) {
+            runsById.put(result.researchRunId(), result);
+            for (RankedRecommendation row : result.recommendations()) {
+                recommendationsById.put(row.id(), row);
+            }
+            return result;
+        }
+
+        @Override
+        public Optional<ResearchRunResult> findRunByResearchRunId(UUID researchRunId, UUID userId) {
+            return Optional.ofNullable(runsById.get(researchRunId))
+                    .filter(run -> run.userId().equals(userId));
+        }
+
+        @Override
+        public Optional<ResearchRunResult> findLatestRunByTripId(UUID tripId, UUID userId) {
+            return runsById.values().stream()
+                    .filter(run -> run.tripId().equals(tripId) && run.userId().equals(userId))
+                    .max(Comparator.comparing(ResearchRunResult::createdAt));
+        }
+
+        @Override
+        public List<RankedRecommendation> findByResearchRunId(UUID researchRunId, UUID userId) {
+            return recommendationsById.values().stream()
+                    .filter(row -> row.researchRunId().equals(researchRunId))
+                    .filter(row -> row.userId().equals(userId))
+                    .sorted(Comparator.comparingInt(RankedRecommendation::rank))
+                    .toList();
+        }
+
+        @Override
+        public Optional<RankedRecommendation> findByIdAndUserId(UUID recommendationId, UUID userId) {
+            return Optional.ofNullable(recommendationsById.get(recommendationId))
+                    .filter(row -> row.userId().equals(userId));
+        }
+
+        void seed(ResearchRunResult result) {
+            save(result);
         }
     }
 }

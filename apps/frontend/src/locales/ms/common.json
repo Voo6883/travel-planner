@@ -91,6 +91,7 @@
     "provider_link_required": "Sudah ada akaun yang menggunakan alamat e-mel ini. Log masuk ke akaun itu, kemudian sambungkan pembekal ini.",
     "provider_unavailable": "Pembekal log masuk tidak tersedia buat masa ini. Sila cuba lagi.",
     "rate_limited": "Terlalu banyak permintaan. Sila tunggu sebentar sebelum mencuba lagi.",
+    "research_not_ready": "Cadangan destinasi belum sedia. Mulakan penyelidikan atau tunggu ia selesai.",
     "unauthorized": "Sila log masuk untuk meneruskan.",
     "user_not_found": "Tiada akaun dengan pengenal pasti itu.",
     "validation_failed": "Sebahagian maklumat tidak sah. Sila semak medan yang ditanda.",
