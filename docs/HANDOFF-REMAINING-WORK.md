@@ -21,8 +21,18 @@
 | `npm run test:integration` | **146 passed, 0 failed** against PostgreSQL 16.6 + pgvector 0.8.1, with **V27/V28** applied and `ddl-auto: validate` accepting the itinerary entities |
 | `npm run build` (frontend) | production build clean, 16 routes |
 
-Together these are `verify:full`. **CI has not been consulted on any of it** — `gh` is
-unauthenticated on this machine (**B-3**), so every claim above is local command output.
+Together these are `verify:full`, and **CI agrees — run 65, all six jobs green** on this tip.
+
+> **CI is reachable without `gh`.** The repository is public, so the unauthenticated REST API
+> answers directly — `curl -s "https://api.github.com/repos/Voo6883/travel-planner/actions/runs?branch=dev&per_page=5"`,
+> then `.../actions/runs/<id>/jobs` for the failing job's steps. B-3 covers `gh` needing auth, not
+> GitHub being unreachable; several rows were marked `done` with "CI not consulted" attached when it
+> was consultable all along, and the first check found a real red run. **Check CI before claiming a
+> task is done.**
+>
+> **The trap it caught:** `CODE-MAP.json` indexes task status out of `STATUS.md`, so the
+> `docs(status): mark task NN done` commit makes the map stale *after* the ladder has been run.
+> Run the ladder **after** the status commit, not before, and regenerate the map in it.
 
 | Phase | Tasks | State |
 |---|---|---|

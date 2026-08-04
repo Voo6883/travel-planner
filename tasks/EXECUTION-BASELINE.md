@@ -324,6 +324,19 @@ owner applies directly; it does not affect local execution.
 with the exhaustive remote-branch comparison in §2, which found no ref ahead of `master` other than
 the stale `main`. **Resolution:** authenticate `gh`, or confirm no PRs are open.
 
+**Narrowed 2026-08-04.** B-3 is about `gh`, not about GitHub. The repository is **public**, so the
+unauthenticated REST API answers CI questions perfectly well:
+
+```bash
+curl -s "https://api.github.com/repos/Voo6883/travel-planner/actions/runs?branch=dev&per_page=5"
+curl -s "https://api.github.com/repos/Voo6883/travel-planner/actions/runs/<id>/jobs"
+```
+
+This matters because several task rows were marked `done` with "CI not consulted" attached, when CI
+was reachable the whole time — and the first check found a genuine red run (see task 28's row).
+**Consult CI before claiming a task is done.** B-3 still stands for anything needing auth: opening
+PRs, reading private data, writing.
+
 ## 8. Follow-ups (non-blocking)
 
 | ID | Item |
