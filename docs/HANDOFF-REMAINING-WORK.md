@@ -1,6 +1,6 @@
 # Handoff — remaining work and how to execute it
 
-> Updated 2026-08-04 after gates 18B/19B and task 21 merged to `dev` (`0c6f343`).
+> Updated 2026-08-04 after task 24 ranking DSA (branch `cursor/task-24-destination-ranking-15b0`).
 >
 > This document does **not** replace [`AGENTS.md`](../AGENTS.md),
 > [`docs/AGENT-HARNESS.md`](AGENT-HARNESS.md), [`docs/AI-AGENT-WORKFLOW.md`](AI-AGENT-WORKFLOW.md)
@@ -10,13 +10,13 @@
 
 ## 1. Where the project is
 
-`dev` is the working branch. **Next free migration: `V24`.**
+`dev` is the working branch. **Next free migration: `V25`.**
 
 | Phase | Tasks | State |
 |---|---|---|
 | 0A/0B — foundation + platform | 00–15 | `done` |
-| Phase 1 — knowledge, intake, chat | 16 `done` · 17 `in_progress` (17C only) · 18–21 `done` · **22–23 done** · **17 done_with_accepted_debt (F-34→41)** · **24 next** | see §2 |
-| Phase 1 — research, itinerary | 23–31 | not started |
+| Phase 1 — knowledge, intake, chat | 16–23 `done` · 17 `done_with_accepted_debt` (F-34→41) · **24 `review`** | see §2 |
+| Phase 1 — research, itinerary | 25–31 | not started — **25 next** |
 | Phase 2 — booking, runtime | 32–37 | not started |
 | Knowledge ops | 40, 41 | not started |
 | Integration | 38, 39 | not started |
@@ -40,26 +40,27 @@ open-question register (`F-nn`). Update it in the same commit as the work, never
 | Task | Needs | Notes |
 |---|---|---|
 | **22** Trip chat intake tools | 18–21 `done` | **done** — merged to `dev` |
-| **23** Research job platform | 07, 18, 22 `done` | **done** |
-| **24** Destination ranking | 17A/17B, 18, 23 | Pure DSA fitScore; no LLM scores |
-| **40** TKB refresh | 14–16 + gates **17A/17B** | Safe parallel with 22–26 while **17C** remains open |
+| **23** Research job platform | 07, 18, 22 `done` | **done** — migration **V24** |
+| **24** Destination ranking | 17A/17B, 18, 23 | **review** — pure DSA; see [`DESTINATION-RANKING-HANDOFF.md`](DESTINATION-RANKING-HANDOFF.md) |
+| **25** Travel research agent | 14, 17, 23, 24 | Next — plugs into research job hooks; calls `DestinationRanker` |
+| **40** TKB refresh | 14–16 + gates **17A/17B** | Safe parallel while **17C**/F-34 remains open on **41** |
 
 ### Still open on task 17
 
-Gate **17C** — real curation for the first three destinations (**F-34**). Does not block 22.
+Gate **17C** — real curation for the first three destinations (**F-34**). Owned by task **41**.
+Does not block 24–26 (gates **17A/17B** are `done`).
 
 ---
 
 ## 3. Traps that already cost time
 
-- Migration numbers: `dev` owns **V21** (`travel_app_replacement`) and **V22** (POI fulltext
-  `english`). `surprise_me` is **V23**. Next is **V24**.
+- Migration numbers: `surprise_me` is **V23**; `research_job` is **V24**. **Next is V25.**
 - Streaming AI: use `application.ai.LlmStreamPort`, not `domain.port.LlmPort` for Flux.
 - Do not replace `ChatReplay` / gate 20C with an ADR-only “no replay” shortcut.
-- Chat tests must wire `PlannerChatOrchestrator` (and soon `TripChatOrchestrator`) via
-  `ChatTestFakes` / constructors — bare `LlmStreamPort` is not enough after task 21.
-- Frontend navigates only on typed SSE `trip_created`; brief form sync must invalidate
-  `queryKeys.trips.brief(tripId)`.
+- Research no-op hooks: register via `ResearchExecutionConfig` `@Bean` +
+  `@ConditionalOnMissingBean` — not scanned `@Component` + `@ConditionalOnMissingBean`.
+- Ranking is pure domain DSA — application loads bounded `DestinationCandidate`s; never ask an
+  LLM for `fitScore`.
 - No Docker in some Cloud VMs — unit build with `DOCKER_HOST=tcp://127.0.0.1:1`; IT via
   `npm run test:integration` when Postgres is local.
 

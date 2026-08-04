@@ -1222,9 +1222,7 @@
         "15",
         "17"
       ],
-      "blockedBy": [
-        "17"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1348,15 +1346,13 @@
     "24": {
       "title": "Deterministic destination ranking",
       "file": "tasks/24-destination-ranking.md",
-      "status": "in_progress",
+      "status": "review",
       "dependsOn": [
         "17",
         "18",
         "23"
       ],
-      "blockedBy": [
-        "17"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1379,7 +1375,6 @@
         "24"
       ],
       "blockedBy": [
-        "17",
         "24"
       ],
       "hasSections": [
@@ -1452,7 +1447,6 @@
         "26"
       ],
       "blockedBy": [
-        "17",
         "26"
       ],
       "hasSections": [
@@ -1475,7 +1469,6 @@
         "28"
       ],
       "blockedBy": [
-        "17",
         "28"
       ],
       "hasSections": [
@@ -1675,7 +1668,6 @@
         "36"
       ],
       "blockedBy": [
-        "17",
         "25",
         "30",
         "35",
@@ -1738,7 +1730,6 @@
         "41"
       ],
       "blockedBy": [
-        "17",
         "24",
         "25",
         "26",
@@ -1798,9 +1789,7 @@
         "16",
         "17"
       ],
-      "blockedBy": [
-        "17"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1824,7 +1813,6 @@
         "40"
       ],
       "blockedBy": [
-        "17",
         "40"
       ],
       "hasSections": [

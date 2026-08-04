@@ -117,9 +117,17 @@ function renderGate(id, row, byId) {
     lines.push('');
   }
 
-  const open = dependencies.filter((dependency) => byId.get(dependency)?.status !== 'done');
+  // `done_with_accepted_debt` is merged + gated with an owned follow-up (STATUS.md status values).
+  // Dependents may proceed; the debt task owns closing the named F-NN.
+  const open = dependencies.filter((dependency) => {
+    const status = byId.get(dependency)?.status;
+    return status !== 'done' && status !== 'done_with_accepted_debt';
+  });
   if (open.length === 0) {
-    lines.push('**Verdict: clear.** Every dependency is `done`.', '');
+    lines.push(
+      '**Verdict: clear.** Every dependency is `done` or `done_with_accepted_debt`.',
+      '',
+    );
   } else {
     lines.push(
       `**Verdict: blocked by ${open.join(', ')}.** \`docs/AGENT-HARNESS.md\` §2 requires every`,
