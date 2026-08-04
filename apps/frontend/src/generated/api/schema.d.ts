@@ -2101,8 +2101,9 @@ export interface components {
          *     |---|---|
          *     | `message_start` | A message opened. The first is the server's echo of your own message and carries `client_message_id` — that field is how an optimistic bubble is reconciled instead of duplicated. The second opens the assistant turn. |
          *     | `text_delta` | A chunk of the answer. Rendered as plain text while streaming (ADR 007). |
-         *     | `tool_use_start`, `tool_input_delta`, `tool_use_end`, `tool_result` | Tool lifecycle. Representable; nothing emits them until tasks 21/22. |
-         *     | `trip_created` | The handoff (PLAN §3.2). Emitted after the tool commits, never parsed from prose. Nothing emits it yet. |
+         *     | `tool_use_start`, `tool_input_delta`, `tool_use_end`, `tool_result` | Tool lifecycle. Emitted by the planner `create_trip` handoff (task 21) and the trip intake tools `update_trip_brief` / `answer_clarification` (task 22). |
+         *     | `trip_created` | The handoff (PLAN §3.2). Emitted after the `create_trip` tool commits, never parsed from prose. |
+         *     | `brief_updated` | A trip's brief was written by an intake tool (task 22, UC-C5-09). Carries `trip_id`. Emitted only after `update_trip_brief` or `answer_clarification` commits, never parsed from prose; the client re-fetches the brief and trip detail. |
          *     | `usage` | Token accounting. Nothing in the UI renders it. |
          *     | `message_end` | How the message finished: `complete`, `interrupted`, or `failed`. |
          *     | `done` | The turn finished normally. The server closes after this. |
