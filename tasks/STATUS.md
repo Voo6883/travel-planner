@@ -105,7 +105,7 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 | 19 | [LLM TripBrief extraction](19-llm-trip-brief-extraction.md) | 14, 18 | `done` | Gates **19A** + **19B**. `surprise_me` on details/entity/OpenAPI/extraction save path via merge `0c6f343`. CI green `30877086309`. |
 | 20 | [Conversation persistence and SSE](20-conversation-sse.md) | 06, 07, 11, 14, 15 | `done` | Gates **20A** + **20B** + **20C**. Replay + ADR 007 amend (**F-39**) landed `8f2890a`. **F-31**/**F-36**/**F-40** (wire roles) closed earlier. |
 | 21 | [Planner chat and trip creation](21-planner-chat-trip-creation.md) | 18, 19, 20 | `done` | Merged `0c6f343` — `PlannerTools`/`create_trip`/`CreateTripHandoffService`/`PlannerHomePanel`/`trip_created` navigation. Handoff: [`docs/PLANNER-CHAT-HANDOFF.md`](../docs/PLANNER-CHAT-HANDOFF.md). CI green `30877086309`. |
-| 22 | [Trip chat intake tools](22-trip-chat-intake-tools.md) | 18, 19, 20, 21 | `in_progress` | Branch `cursor/task-22-trip-chat-intake-15b0`. Deps 18–21 `done`. No `Validation` section — harness §6 applies. Tool args must be schema-validated. |
+| 22 | [Trip chat intake tools](22-trip-chat-intake-tools.md) | 18, 19, 20, 21 | `review` | PR [#20](https://github.com/Voo6883/travel-planner/pull/20). `TripChatOrchestrator` + status-gated `update_trip_brief` / `answer_clarification`; SSE `brief_updated` invalidates brief form query. Handoff: [`docs/TRIP-CHAT-HANDOFF.md`](../docs/TRIP-CHAT-HANDOFF.md). CI all green (run `30882022128`). Mark `done` once merged. |
 | 23 | [Research job platform](23-research-job-platform.md) | 07, 18, 22 | `not_started` | |
 | 24 | [Deterministic destination ranking](24-destination-ranking.md) | 17, 18, 23 | `not_started` | No `Validation` section. LLM must not overwrite numeric fit score. |
 | 25 | [Travel research agent](25-travel-research-agent.md) | 14, 17, 23, 24 | `not_started` | No `Validation` section. |
@@ -148,9 +148,9 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 | Status | Count |
 |---|---|
 | `done` | **21** |
-| `in_progress` | 2 |
+| `in_progress` | 1 |
 | `blocked` | 0 |
-| `review` | 0 |
+| `review` | 1 |
 | `not_started` | 19 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*
