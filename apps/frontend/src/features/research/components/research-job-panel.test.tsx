@@ -30,9 +30,7 @@ describe('ResearchJobPanel', () => {
     await user.click(startButton);
 
     await waitFor(() => {
-      expect(
-        mock.calls.some((call) => call.method === 'POST' && call.url.includes('/research/run')),
-      ).toBe(true);
+      expect(mock.calls.some((call) => call.method === 'POST' && call.url.includes('/research/run'))).toBe(true);
     });
   });
 

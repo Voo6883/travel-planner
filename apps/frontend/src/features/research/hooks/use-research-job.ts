@@ -7,12 +7,7 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import {
-  fetchResearchJob,
-  startResearch,
-  type ResearchJob,
-  type StartResearchCommand,
-} from '@/lib/api/research-api';
+import { fetchResearchJob, startResearch, type ResearchJob, type StartResearchCommand } from '@/lib/api/research-api';
 import { fetchTrip, type Trip } from '@/lib/api/trip-api';
 import { queryKeys } from '@/lib/query/query-keys';
 
@@ -49,17 +44,11 @@ export function useStartResearch(): UseMutationResult<ResearchJob, unknown, Star
   });
 }
 
-export function useResearchJob(
-  tripId: string,
-  jobId: string | null,
-): UseQueryResult<ResearchJob, unknown> {
+export function useResearchJob(tripId: string, jobId: string | null): UseQueryResult<ResearchJob, unknown> {
   const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey:
-      jobId === null
-        ? [...queryKeys.research.all, 'idle']
-        : queryKeys.research.job(tripId, jobId),
+    queryKey: jobId === null ? [...queryKeys.research.all, 'idle'] : queryKeys.research.job(tripId, jobId),
     queryFn: async ({ signal }) => {
       const job = await fetchResearchJob({ tripId, jobId: jobId as string }, signal);
       if (job.status === 'completed' || job.status === 'failed') {

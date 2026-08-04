@@ -5,8 +5,4 @@
  * layer remains routing-only. Recommendations (task 25) will add their own surface here.
  */
 export { ResearchJobPanel, type ResearchJobPanelProps } from './components/research-job-panel';
-export {
-  useStartResearch,
-  useResearchJob,
-  useResearchTrip,
-} from './hooks/use-research-job';
+export { useStartResearch, useResearchJob, useResearchTrip } from './hooks/use-research-job';

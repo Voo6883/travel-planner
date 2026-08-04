@@ -14,11 +14,7 @@ export interface ResearchJobPanelProps {
 }
 
 /** The failure reasons the platform writes; anything else falls back to a generic message. */
-const KNOWN_ERROR_CODES = new Set([
-  'research_timeout',
-  'research_failed',
-  'research_interrupted',
-]);
+const KNOWN_ERROR_CODES = new Set(['research_timeout', 'research_failed', 'research_interrupted']);
 
 type Translate = ReturnType<typeof useTranslations<'research'>>;
 

@@ -31,13 +31,9 @@ export async function startResearch(command: StartResearchCommand): Promise<Rese
 }
 
 /** UC-C2-02. Polled while the job is queued or running. */
-export async function fetchResearchJob(
-  command: ResearchJobCommand,
-  signal?: AbortSignal,
-): Promise<ResearchJob> {
+export async function fetchResearchJob(command: ResearchJobCommand, signal?: AbortSignal): Promise<ResearchJob> {
   return apiRequest({
-    path:
-      `/trips/${command.tripId}/research/jobs/${command.jobId}` as '/trips/{tripId}/research/jobs/{jobId}',
+    path: `/trips/${command.tripId}/research/jobs/${command.jobId}` as '/trips/{tripId}/research/jobs/{jobId}',
     signal,
     validate: (payload) => researchJobSchema.parse(payload),
   });
