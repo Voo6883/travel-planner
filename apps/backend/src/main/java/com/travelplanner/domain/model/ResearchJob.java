@@ -20,13 +20,15 @@ import java.util.UUID;
  * one, reporting progress on a job that is not running — is a {@link ValidationFailedException},
  * because a background caller acting on a stale view is a bug to surface, not to absorb.
  *
- * <p>The column invariants in {@code V24__create_research_job.sql} are mirrored here so a job that
- * would violate the schema cannot be constructed in the first place: an {@code error_code} exists
- * exactly on a {@link ResearchJobStatus#FAILED} job, {@code startedAt} exactly once the run has
- * begun, and {@code completedAt} exactly once it is terminal.
+ * <p>The column invariants in {@code V24__create_research_job.sql} / {@code V26} are mirrored here so
+ * a job that would violate the schema cannot be constructed in the first place: an {@code error_code}
+ * exists exactly on a {@link ResearchJobStatus#FAILED} job, {@code startedAt} exactly once the run
+ * has begun, {@code completedAt} exactly once it is terminal, and
+ * {@code completionMailSentAt} only on a {@link ResearchJobStatus#COMPLETED} job.
  *
  * @param researchRunId the identity of this run, handed to task 25 so persisted recommendations can
  *        be attributed to it. Equal to {@link #id()} for a one-row-one-run job.
+ * @param completionMailSentAt when the research-complete mail was claimed (task 27); null until then
  */
 public record ResearchJob(
         UUID id,
@@ -39,6 +41,7 @@ public record ResearchJob(
         int attempts,
         Instant startedAt,
         Instant completedAt,
+        Instant completionMailSentAt,
         int version,
         Instant createdAt,
         Instant updatedAt) implements Versioned {
@@ -77,6 +80,11 @@ public record ResearchJob(
             throw ValidationFailedException.field("completed_at",
                     "must be present exactly when the job is terminal");
         }
+        // Mirrors ck_research_job_completion_mail_only_when_completed (V26).
+        if (completionMailSentAt != null && status != ResearchJobStatus.COMPLETED) {
+            throw ValidationFailedException.field("completion_mail_sent_at",
+                    "must be absent unless the job has completed");
+        }
     }
 
     /**
@@ -86,7 +94,7 @@ public record ResearchJob(
     public static ResearchJob queue(UUID tripId, UUID userId, Instant now) {
         UUID id = UUID.randomUUID();
         return new ResearchJob(id, tripId, userId, id, ResearchJobStatus.QUEUED, 0, null, 0,
-                null, null, 0, now, now);
+                null, null, null, 0, now, now);
     }
 
     /**
@@ -97,7 +105,7 @@ public record ResearchJob(
     public ResearchJob markRunning(Instant now) {
         requireStatus(ResearchJobStatus.QUEUED, "start");
         return new ResearchJob(id, tripId, userId, researchRunId, ResearchJobStatus.RUNNING,
-                progressPct, null, attempts + 1, now, null, version, createdAt, now);
+                progressPct, null, attempts + 1, now, null, null, version, createdAt, now);
     }
 
     /**
@@ -108,7 +116,7 @@ public record ResearchJob(
     public ResearchJob markProgress(int newProgressPct, Instant now) {
         requireStatus(ResearchJobStatus.RUNNING, "report progress on");
         return new ResearchJob(id, tripId, userId, researchRunId, ResearchJobStatus.RUNNING,
-                newProgressPct, null, attempts, startedAt, null, version, createdAt, now);
+                newProgressPct, null, attempts, startedAt, null, null, version, createdAt, now);
     }
 
     /**
@@ -119,7 +127,7 @@ public record ResearchJob(
     public ResearchJob complete(Instant now) {
         requireStatus(ResearchJobStatus.RUNNING, "complete");
         return new ResearchJob(id, tripId, userId, researchRunId, ResearchJobStatus.COMPLETED,
-                MAX_PROGRESS, null, attempts, startedAt, now, version, createdAt, now);
+                MAX_PROGRESS, null, attempts, startedAt, now, null, version, createdAt, now);
     }
 
     /**
@@ -136,7 +144,24 @@ public record ResearchJob(
             throw ValidationFailedException.field("error_code", "must not be blank on a failed job");
         }
         return new ResearchJob(id, tripId, userId, researchRunId, ResearchJobStatus.FAILED,
-                progressPct, failureErrorCode.trim(), attempts, startedAt, now, version, createdAt, now);
+                progressPct, failureErrorCode.trim(), attempts, startedAt, now, null, version,
+                createdAt, now);
+    }
+
+    /**
+     * Claims the research-complete mail slot for this completed job (task 27, UC-N04).
+     *
+     * @return empty when the slot was already claimed; otherwise the stamped job to persist
+     * @throws ValidationFailedException when the job is not completed
+     */
+    public Optional<ResearchJob> claimCompletionMail(Instant now) {
+        requireStatus(ResearchJobStatus.COMPLETED, "claim completion mail for");
+        if (completionMailSentAt != null) {
+            return Optional.empty();
+        }
+        return Optional.of(new ResearchJob(id, tripId, userId, researchRunId,
+                ResearchJobStatus.COMPLETED, progressPct, null, attempts, startedAt, completedAt,
+                now, version, createdAt, now));
     }
 
     /** Ownership check for the user-scoping rule (PLAN §4.0.2-L). */
@@ -155,6 +180,10 @@ public record ResearchJob(
 
     public Optional<Instant> completedAtIfPresent() {
         return Optional.ofNullable(completedAt);
+    }
+
+    public Optional<Instant> completionMailSentAtIfPresent() {
+        return Optional.ofNullable(completionMailSentAt);
     }
 
     private void requireStatus(ResearchJobStatus required, String action) {

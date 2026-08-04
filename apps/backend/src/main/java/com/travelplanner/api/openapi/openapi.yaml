@@ -3557,6 +3557,8 @@ components:
         | `tool_use_start`, `tool_input_delta`, `tool_use_end`, `tool_result` | Tool lifecycle. Emitted by the planner `create_trip` handoff (task 21) and the trip intake tools `update_trip_brief` / `answer_clarification` (task 22). |
         | `trip_created` | The handoff (PLAN §3.2). Emitted after the `create_trip` tool commits, never parsed from prose. |
         | `brief_updated` | A trip's brief was written by an intake tool (task 22, UC-C5-09). Carries `trip_id`. Emitted only after `update_trip_brief` or `answer_clarification` commits, never parsed from prose; the client re-fetches the brief and trip detail. |
+        | `research_started` | Research was started from chat (task 27, UC-C5-03). Carries `trip_id` and `job_id`. Emitted only after `start_research` commits; the client invalidates trip detail and polls the job. |
+        | `destination_selected` | A destination was selected from chat (task 27, UC-C5-05). Carries `trip_id`. Emitted only after `select_recommendation` commits; the client invalidates trip detail and recommendations. |
         | `usage` | Token accounting. Nothing in the UI renders it. |
         | `message_end` | How the message finished: `complete`, `interrupted`, or `failed`. |
         | `done` | The turn finished normally. The server closes after this. |

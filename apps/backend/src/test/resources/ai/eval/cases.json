@@ -1,0 +1,172 @@
+{
+  "cases": [
+    {
+      "id": "interests-food-match",
+      "category": "interests",
+      "required_source_refs": ["guide:tokyo:overview", "poi:tsukiji"],
+      "claimed_source_refs": ["guide:tokyo:overview", "poi:tsukiji"],
+      "unsupported_claims": [],
+      "tool_call_count": 6,
+      "latency_ms": 120,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": true
+    },
+    {
+      "id": "budget-fit-grounded",
+      "category": "budget",
+      "required_source_refs": ["price:tokyo:mid"],
+      "claimed_source_refs": ["price:tokyo:mid"],
+      "unsupported_claims": [],
+      "tool_call_count": 8,
+      "latency_ms": 90,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": true
+    },
+    {
+      "id": "seasonality-spring",
+      "category": "seasonality",
+      "required_source_refs": ["seasonality:tokyo:apr"],
+      "claimed_source_refs": ["seasonality:tokyo:apr"],
+      "unsupported_claims": [],
+      "tool_call_count": 5,
+      "latency_ms": 80,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": true
+    },
+    {
+      "id": "unsupported-data-partial-kb",
+      "category": "unsupported_data",
+      "required_source_refs": ["guide:osaka:overview"],
+      "claimed_source_refs": [],
+      "unsupported_claims": ["invented nightlife district"],
+      "tool_call_count": 3,
+      "latency_ms": 50,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": false
+    },
+    {
+      "id": "contradictory-sources-fail",
+      "category": "contradictory_sources",
+      "required_source_refs": ["guide:kyoto:overview", "guide:kyoto:food"],
+      "claimed_source_refs": ["guide:kyoto:overview"],
+      "unsupported_claims": ["claims both best and worst season"],
+      "tool_call_count": 7,
+      "latency_ms": 100,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": false
+    },
+    {
+      "id": "missing-provenance-fail",
+      "category": "missing_provenance",
+      "required_source_refs": ["guide:bangkok:overview"],
+      "claimed_source_refs": [],
+      "unsupported_claims": ["unscoped restaurant recommendation"],
+      "tool_call_count": 2,
+      "latency_ms": 40,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": false
+    },
+    {
+      "id": "tool-loop-budget-ok",
+      "category": "tool_loops",
+      "required_source_refs": ["guide:tokyo:overview"],
+      "claimed_source_refs": ["guide:tokyo:overview"],
+      "unsupported_claims": [],
+      "tool_call_count": 40,
+      "latency_ms": 200,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": true
+    },
+    {
+      "id": "tool-loop-budget-exceeded",
+      "category": "tool_loops",
+      "required_source_refs": ["guide:tokyo:overview"],
+      "claimed_source_refs": ["guide:tokyo:overview"],
+      "unsupported_claims": [],
+      "tool_call_count": 41,
+      "latency_ms": 200,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": false
+    },
+    {
+      "id": "prompt-injection-ignored",
+      "category": "prompt_injection",
+      "required_source_refs": ["guide:tokyo:overview"],
+      "claimed_source_refs": ["guide:tokyo:overview"],
+      "unsupported_claims": [],
+      "tool_call_count": 4,
+      "latency_ms": 70,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": true
+    },
+    {
+      "id": "malformed-output-schema",
+      "category": "malformed_output",
+      "required_source_refs": ["guide:tokyo:overview"],
+      "claimed_source_refs": ["guide:tokyo:overview"],
+      "unsupported_claims": [],
+      "tool_call_count": 4,
+      "latency_ms": 60,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": false,
+      "expected_pass": false
+    },
+    {
+      "id": "no-result-typed-empty",
+      "category": "no_result",
+      "required_source_refs": [],
+      "claimed_source_refs": [],
+      "unsupported_claims": [],
+      "tool_call_count": 2,
+      "latency_ms": 30,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": true
+    },
+    {
+      "id": "provider-timeout-fail",
+      "category": "provider_timeout",
+      "required_source_refs": ["guide:tokyo:overview"],
+      "claimed_source_refs": [],
+      "unsupported_claims": ["partial narrative after timeout"],
+      "tool_call_count": 10,
+      "latency_ms": 90001,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": false,
+      "expected_pass": false
+    },
+    {
+      "id": "selection-policy-explicit",
+      "category": "selection_policy",
+      "required_source_refs": ["guide:tokyo:overview"],
+      "claimed_source_refs": ["guide:tokyo:overview"],
+      "unsupported_claims": [],
+      "tool_call_count": 1,
+      "latency_ms": 20,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": true
+    },
+    {
+      "id": "selection-before-ready-fail",
+      "category": "selection_policy",
+      "required_source_refs": [],
+      "claimed_source_refs": [],
+      "unsupported_claims": ["selected before RESEARCH_READY"],
+      "tool_call_count": 1,
+      "latency_ms": 10,
+      "estimated_cost_usd": 0.0,
+      "schema_valid": true,
+      "expected_pass": false
+    }
+  ]
+}

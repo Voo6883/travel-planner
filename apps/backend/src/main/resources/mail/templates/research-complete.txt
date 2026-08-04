@@ -1,0 +1,9 @@
+Your research for {{trip_name}} is ready
+
+Destination recommendations are available for your trip. Open Travel Planner to review the
+ranked options and pick one to continue planning.
+
+View recommendations: {{trip_url}}
+
+--
+You are receiving this because research finished for a trip on your Travel Planner account.

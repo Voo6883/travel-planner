@@ -400,7 +400,7 @@
     }
   },
   "migrations": {
-    "nextFreeVersion": "V26",
+    "nextFreeVersion": "V27",
     "gaps": [],
     "applied": [
       {
@@ -609,6 +609,14 @@
         "altersTables": [
           "trip"
         ]
+      },
+      {
+        "version": 26,
+        "file": "apps/backend/src/main/resources/db/migration/V26__add_research_job_completion_mail_sent_at.sql",
+        "createsTables": [],
+        "altersTables": [
+          "research_job"
+        ]
       }
     ]
   },
@@ -757,6 +765,7 @@
           "apps/backend/src/main/java/com/travelplanner/application/research/NoOpResearchJobHandler.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/PendingResearchOutcomeStore.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchCompletionHook.java",
+          "apps/backend/src/main/java/com/travelplanner/application/research/ResearchCompletionMailService.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobContext.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobExecutor.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobHandler.java",
@@ -764,6 +773,7 @@
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobRunner.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobService.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobView.java",
+          "apps/backend/src/main/java/com/travelplanner/application/research/ResearchReadyEvent.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchRecommendationCompletionHook.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchRecommendationService.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchRecommendationsView.java",
@@ -850,9 +860,15 @@
         "controllers": [],
         "application": [
           "apps/backend/src/main/java/com/travelplanner/application/tripchat/AnswerClarificationArgs.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/EmptyToolArgs.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/GetDestinationGuideArgs.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/GetTravelAppsArgs.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/SelectRecommendationArgs.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/StartResearchArgs.java",
           "apps/backend/src/main/java/com/travelplanner/application/tripchat/ToolArgsJson.java",
           "apps/backend/src/main/java/com/travelplanner/application/tripchat/TripChatOrchestrator.java",
           "apps/backend/src/main/java/com/travelplanner/application/tripchat/TripChatPrompt.java",
+          "apps/backend/src/main/java/com/travelplanner/application/tripchat/TripChatResearchToolService.java",
           "apps/backend/src/main/java/com/travelplanner/application/tripchat/TripChatToolService.java",
           "apps/backend/src/main/java/com/travelplanner/application/tripchat/TripChatTools.java",
           "apps/backend/src/main/java/com/travelplanner/application/tripchat/UpdateTripBriefArgs.java"
@@ -1466,7 +1482,7 @@
     "27": {
       "title": "Research chat tools and evaluation",
       "file": "tasks/27-research-chat-evaluation.md",
-      "status": "in_progress",
+      "status": "review",
       "dependsOn": [
         "22",
         "25",

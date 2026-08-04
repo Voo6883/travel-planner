@@ -104,6 +104,13 @@ export interface ChatState {
    * by an unchanged value.
    */
   readonly briefUpdatedTripId: string | null;
+  /**
+   * Set by `research_started` (task 27) so the trip shell can invalidate detail and poll the job.
+   * Cleared on `stream_opened` like `briefUpdatedTripId`.
+   */
+  readonly researchStarted: { readonly tripId: string; readonly jobId: string } | null;
+  /** Set by `destination_selected` (task 27); cleared on `stream_opened`. */
+  readonly destinationSelectedTripId: string | null;
   readonly tools: readonly ChatToolActivity[];
   readonly historyLoaded: boolean;
 }
@@ -116,6 +123,8 @@ export const initialChatState: ChatState = {
   error: null,
   tripCreatedId: null,
   briefUpdatedTripId: null,
+  researchStarted: null,
+  destinationSelectedTripId: null,
   tools: [],
   historyLoaded: false,
 };
@@ -147,9 +156,15 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'user_message_sent':
       return sendUserMessage(state, action.clientMessageId, action.text, action.createdAt);
     case 'stream_opened':
-      // `briefUpdatedTripId` is cleared here so a brief_updated in this turn is a fresh null→id
-      // transition the panel's effect will act on, even when the same trip was edited last turn.
-      return { ...state, connection: 'streaming', error: null, briefUpdatedTripId: null };
+      // Per-turn signals are cleared here so the same trip id re-fires invalidation next turn.
+      return {
+        ...state,
+        connection: 'streaming',
+        error: null,
+        briefUpdatedTripId: null,
+        researchStarted: null,
+        destinationSelectedTripId: null,
+      };
     case 'stream_reconnecting':
       return { ...state, connection: 'reconnecting' };
     case 'frame':
@@ -390,6 +405,13 @@ function applyEvent(state: ChatState, frame: ChatFrame): ChatState {
     case 'brief_updated':
       // The brief the trip shell is showing is now stale; the panel re-fetches on this transition.
       return { ...state, briefUpdatedTripId: event.tripId };
+    case 'research_started':
+      return {
+        ...state,
+        researchStarted: { tripId: event.tripId, jobId: event.jobId },
+      };
+    case 'destination_selected':
+      return { ...state, destinationSelectedTripId: event.tripId };
     case 'usage':
       // Token accounting is a server-side concern (`ai_call_log`, PLAN §5.3). Nothing in the chat
       // UI renders it, so it is not kept.

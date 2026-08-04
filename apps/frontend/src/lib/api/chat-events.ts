@@ -115,6 +115,19 @@ export interface BriefUpdatedEvent {
   readonly tripId: string;
 }
 
+/** Research started from chat (task 27, UC-C5-03). */
+export interface ResearchStartedEvent {
+  readonly type: 'research_started';
+  readonly tripId: string;
+  readonly jobId: string;
+}
+
+/** Destination selected from chat (task 27, UC-C5-05). */
+export interface DestinationSelectedEvent {
+  readonly type: 'destination_selected';
+  readonly tripId: string;
+}
+
 export interface UsageEvent {
   readonly type: 'usage';
   readonly inputTokens: number;
@@ -187,6 +200,8 @@ export type ChatStreamEvent =
   | ToolResultEvent
   | TripCreatedEvent
   | BriefUpdatedEvent
+  | ResearchStartedEvent
+  | DestinationSelectedEvent
   | UsageEvent
   | DoneEvent
   | StreamErrorEvent
@@ -243,6 +258,8 @@ const toolUseEndSchema = z.object({ tool_call_id: z.string() });
 const toolResultSchema = z.object({ tool_call_id: z.string(), payload: z.unknown() });
 const tripCreatedSchema = z.object({ trip_id: z.string() });
 const briefUpdatedSchema = z.object({ trip_id: z.string() });
+const researchStartedSchema = z.object({ trip_id: z.string(), job_id: z.string() });
+const destinationSelectedSchema = z.object({ trip_id: z.string() });
 
 const usageSchema = z.object({
   input_tokens: z.number(),
@@ -324,6 +341,18 @@ const EVENT_PARSERS: Record<string, (data: unknown) => ChatStreamEvent | null> =
   brief_updated: (data) => {
     const parsed = briefUpdatedSchema.safeParse(data);
     return parsed.success ? { type: 'brief_updated', tripId: parsed.data.trip_id } : null;
+  },
+  research_started: (data) => {
+    const parsed = researchStartedSchema.safeParse(data);
+    return parsed.success
+      ? { type: 'research_started', tripId: parsed.data.trip_id, jobId: parsed.data.job_id }
+      : null;
+  },
+  destination_selected: (data) => {
+    const parsed = destinationSelectedSchema.safeParse(data);
+    return parsed.success
+      ? { type: 'destination_selected', tripId: parsed.data.trip_id }
+      : null;
   },
   usage: (data) => {
     const parsed = usageSchema.safeParse(data);

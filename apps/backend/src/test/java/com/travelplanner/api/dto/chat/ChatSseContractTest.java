@@ -135,6 +135,8 @@ class ChatSseContractTest {
                 new ChatStreamEvent.ToolResult("call-1", "{}"),
                 new ChatStreamEvent.TripCreated(UUID.randomUUID()),
                 new ChatStreamEvent.BriefUpdated(UUID.randomUUID()),
+                new ChatStreamEvent.ResearchStarted(UUID.randomUUID(), UUID.randomUUID()),
+                new ChatStreamEvent.DestinationSelected(UUID.randomUUID()),
                 new ChatStreamEvent.Usage(1, 2, 3),
                 new ChatStreamEvent.Done("end_turn"),
                 new ChatStreamEvent.StreamError("internal_error", "no"));
@@ -142,7 +144,8 @@ class ChatSseContractTest {
         assertThat(events.stream().map(this::render).map(Frame::event).toList())
                 .containsExactly("message_start", "text_delta", "message_end", "tool_use_start",
                         "tool_input_delta", "tool_use_end", "tool_result", "trip_created",
-                        "brief_updated", "usage", "done", "error");
+                        "brief_updated", "research_started", "destination_selected", "usage", "done",
+                        "error");
     }
 
     @Test
@@ -153,6 +156,10 @@ class ChatSseContractTest {
                 .isTrue();
         assertThat(render(new ChatStreamEvent.TripCreated(USER_MESSAGE)).data().has("trip_id")).isTrue();
         assertThat(render(new ChatStreamEvent.BriefUpdated(USER_MESSAGE)).data().has("trip_id")).isTrue();
+        assertThat(render(new ChatStreamEvent.ResearchStarted(USER_MESSAGE, ASSISTANT_MESSAGE)).data()
+                .has("job_id")).isTrue();
+        assertThat(render(new ChatStreamEvent.DestinationSelected(USER_MESSAGE)).data().has("trip_id"))
+                .isTrue();
         JsonNode usage = render(new ChatStreamEvent.Usage(1, 2, 3)).data();
         assertThat(usage.has("input_tokens")).isTrue();
         assertThat(usage.has("output_tokens")).isTrue();
@@ -175,6 +182,8 @@ class ChatSseContractTest {
                 new ChatStreamEvent.ToolResult("call-1", "{}"),
                 new ChatStreamEvent.TripCreated(UUID.randomUUID()),
                 new ChatStreamEvent.BriefUpdated(UUID.randomUUID()),
+                new ChatStreamEvent.ResearchStarted(UUID.randomUUID(), UUID.randomUUID()),
+                new ChatStreamEvent.DestinationSelected(UUID.randomUUID()),
                 new ChatStreamEvent.Usage(1, 2, 3),
                 new ChatStreamEvent.Done("end_turn"),
                 new ChatStreamEvent.StreamError("internal_error", "no"),

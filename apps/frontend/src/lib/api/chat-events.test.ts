@@ -117,6 +117,22 @@ describe('parseChatFrame — every event the contract defines', () => {
     expect(parsed.event).toEqual({ type: 'brief_updated', tripId: 'trip-7' });
   });
 
+  it('parses research_started with trip and job ids (task 27)', () => {
+    const parsed = parseChatFrame(
+      'event: research_started\ndata: {"trip_id":"trip-7","job_id":"job-1"}',
+    );
+    expect(parsed.event).toEqual({
+      type: 'research_started',
+      tripId: 'trip-7',
+      jobId: 'job-1',
+    });
+  });
+
+  it('parses destination_selected with trip id (task 27)', () => {
+    const parsed = parseChatFrame('event: destination_selected\ndata: {"trip_id":"trip-7"}');
+    expect(parsed.event).toEqual({ type: 'destination_selected', tripId: 'trip-7' });
+  });
+
   it('ignores a brief_updated frame missing its trip id rather than treating it as text', () => {
     const parsed = parseChatFrame('event: brief_updated\ndata: {}');
 

@@ -223,6 +223,39 @@ public sealed interface ChatStreamEvent {
         }
     }
 
+    /**
+     * Research was started from chat (task 27, UC-C5-03). Carries {@code trip_id} and
+     * {@code job_id} so the client can invalidate trip detail and begin polling the job.
+     */
+    record ResearchStarted(UUID tripId, UUID jobId) implements ChatStreamEvent {
+
+        public ResearchStarted {
+            Objects.requireNonNull(tripId, "tripId");
+            Objects.requireNonNull(jobId, "jobId");
+        }
+
+        @Override
+        public String eventName() {
+            return "research_started";
+        }
+    }
+
+    /**
+     * A destination was selected from chat (task 27, UC-C5-05). The client re-fetches trip detail
+     * and ranked recommendations.
+     */
+    record DestinationSelected(UUID tripId) implements ChatStreamEvent {
+
+        public DestinationSelected {
+            Objects.requireNonNull(tripId, "tripId");
+        }
+
+        @Override
+        public String eventName() {
+            return "destination_selected";
+        }
+    }
+
     /** Token accounting, normalised across providers. Nothing in the UI renders it. */
     record Usage(int inputTokens, int outputTokens, int cachedTokens) implements ChatStreamEvent {
 

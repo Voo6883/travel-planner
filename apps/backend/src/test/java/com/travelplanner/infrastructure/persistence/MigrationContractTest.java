@@ -95,6 +95,14 @@ class MigrationContractTest {
     }
 
     @Test
+    void theResearchJobCompletionMailStampIsOnlyValidOnCompletedJobs() {
+        String migration = read("V26__add_research_job_completion_mail_sent_at.sql");
+
+        assertThat(migration).contains("completion_mail_sent_at timestamptz");
+        assertThat(migration).contains("ck_research_job_completion_mail_only_when_completed");
+    }
+
+    @Test
     void theRankedRecommendationTablesAttributeRunsAndRequireProvenance() {
         String migration = read("V25__create_ranked_recommendation.sql");
 

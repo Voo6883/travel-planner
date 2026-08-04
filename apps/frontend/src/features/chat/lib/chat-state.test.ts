@@ -191,7 +191,8 @@ describe('streaming an assistant turn', () => {
 
     expect(running.tools).toEqual([{ toolCallId: 't1', name: 'create_trip', running: true }]);
     // §7.2 forbids showing raw tool JSON. The safest guarantee is to hold none of it.
-    expect(JSON.stringify(running)).not.toContain('destination');
+    expect(JSON.stringify(running)).not.toContain('"destination":"Japan"');
+    expect(JSON.stringify(running)).not.toContain('tool_input_delta');
 
     const finished = chatReducer(running, frame({ type: 'tool_result', toolCallId: 't1', payload: { ok: true } }));
     expect(finished.tools[0]?.running).toBe(false);
@@ -220,6 +221,20 @@ describe('streaming an assistant turn', () => {
 
     const secondTurn = chatReducer(cleared, frame({ type: 'brief_updated', tripId: 'trip-7' }));
     expect(secondTurn.briefUpdatedTripId).toBe('trip-7');
+  });
+
+  it('records research_started and destination_selected for query invalidation (task 27)', () => {
+    const started = apply([
+      { type: 'stream_opened' },
+      frame({ type: 'research_started', tripId: 'trip-7', jobId: 'job-9' }),
+    ]);
+    expect(started.researchStarted).toEqual({ tripId: 'trip-7', jobId: 'job-9' });
+
+    const selected = apply([
+      { type: 'stream_opened' },
+      frame({ type: 'destination_selected', tripId: 'trip-7' }),
+    ]);
+    expect(selected.destinationSelectedTripId).toBe('trip-7');
   });
 
   it('ignores heartbeats, usage and unparsed frames without disturbing the conversation', () => {
