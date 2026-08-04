@@ -1070,6 +1070,51 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /destinations/{destinationId}/guide:
+    get:
+      tags: [destinations]
+      operationId: getDestinationGuide
+      summary: Destination guide detail (areas, POIs, apps)
+      description: |
+        Full knowledge-backed guide for a destination — overview/food/practical narrative, areas,
+        top POIs, transport modes, and the locale app pack (PLAN §4.1). Used by the research detail
+        drawer and as chat context.
+
+        Requires a session. An unknown `destinationId` is `404 not_found`. Missing narrative
+        sections are omitted (null) rather than fabricated.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: locale
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en
+            enum: [en, ms]
+      responses:
+        '200':
+          description: Destination guide detail.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DestinationGuideDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /trips:
     get:
       tags: [trips]
@@ -1481,6 +1526,90 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /trips/{tripId}/ranked-recommendations:
+    get:
+      tags: [trips]
+      operationId: listRankedRecommendations
+      summary: List ranked destination recommendations (UC-C2-03)
+      description: |
+        Returns the latest durable research outcome for the trip when `trip.status` is
+        `RESEARCH_READY`, or `DESTINATION_SELECTED` with a persisted selection (UC-C2-03/05).
+
+        Each recommendation carries rationale, estimated cost, score breakdown, traveler guide,
+        risks, freshness/confidence terms, and `source_refs` — never recomputed in the client.
+
+        When the DSA produced no confident match, `no_confident_result` is `true` and
+        `recommendations` is empty (typed empty — never a hallucinated apology).
+
+        Otherwise: `409 research_not_ready`. Ownership failures are `404 not_found`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TripIdParam'
+      responses:
+        '200':
+          description: Latest research outcome for the trip.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RankedRecommendations'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ResearchNotReady'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /trips/{tripId}/selected-recommendation:
+    post:
+      tags: [trips]
+      operationId: selectRecommendation
+      summary: Select a destination recommendation (UC-C2-06)
+      description: |
+        Persists `selected_recommendation_id` and moves the trip
+        `RESEARCH_READY → DESTINATION_SELECTED` atomically.
+
+        The recommendation must belong to the trip's latest research run. Selecting when the trip
+        is not `RESEARCH_READY` is `400 validation_failed` on `status`. A concurrent writer may
+        receive `409 version_conflict`.
+
+        **No optimistic UI.** The client waits for this response before showing the selected state.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TripIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectRecommendationRequest'
+      responses:
+        '200':
+          description: Trip after selection.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -2561,6 +2690,276 @@ components:
           nullable: true
           description: When the run reached a terminal state; absent while active.
 
+    SelectRecommendationRequest:
+      type: object
+      description: Body of `POST .../selected-recommendation` (UC-C2-06).
+      required: [recommendation_id]
+      properties:
+        recommendation_id:
+          type: string
+          format: uuid
+
+    RankedRecommendations:
+      type: object
+      description: |
+        Latest C2 research outcome for a trip (UC-C2-03/04/05/10). When
+        `no_confident_result` is true, `recommendations` is empty.
+      required:
+        - trip_id
+        - research_run_id
+        - no_confident_result
+        - algorithm_version
+        - recommendations
+      properties:
+        trip_id:
+          type: string
+          format: uuid
+        research_run_id:
+          type: string
+          format: uuid
+        no_confident_result:
+          type: boolean
+        algorithm_version:
+          type: string
+        selected_recommendation_id:
+          type: string
+          format: uuid
+          nullable: true
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedRecommendation'
+
+    RankedRecommendation:
+      type: object
+      description: One scored destination proposal from a research run.
+      required:
+        - recommendation_id
+        - destination_id
+        - destination_slug
+        - country_code
+        - rank
+        - fit_score
+        - score_breakdown
+        - rationale
+        - traveler_guide
+        - risks
+        - source_refs
+        - algorithm_version
+      properties:
+        recommendation_id:
+          type: string
+          format: uuid
+        destination_id:
+          type: string
+          format: uuid
+        destination_slug:
+          type: string
+        country_code:
+          type: string
+          minLength: 2
+          maxLength: 2
+        rank:
+          type: integer
+          minimum: 1
+        fit_score:
+          type: number
+          format: double
+        score_breakdown:
+          $ref: '#/components/schemas/ScoreBreakdown'
+        est_cost:
+          allOf:
+            - $ref: '#/components/schemas/Money'
+          nullable: true
+        rationale:
+          type: string
+        traveler_guide:
+          $ref: '#/components/schemas/TravelerGuide'
+        risks:
+          type: array
+          items:
+            type: string
+        best_window:
+          type: string
+          nullable: true
+        source_refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendationSourceRef'
+        algorithm_version:
+          type: string
+
+    ScoreBreakdown:
+      type: object
+      description: DSA score terms (never LLM-authored).
+      required:
+        - interest_match
+        - seasonality_fit
+        - price_fit
+        - area_coverage
+        - freshness_factor
+        - confidence
+        - fit_score
+      properties:
+        interest_match: { type: number, format: double }
+        seasonality_fit: { type: number, format: double }
+        price_fit: { type: number, format: double }
+        area_coverage: { type: number, format: double }
+        freshness_factor: { type: number, format: double }
+        confidence: { type: number, format: double }
+        fit_score: { type: number, format: double }
+
+    TravelerGuide:
+      type: object
+      description: Per-recommendation traveler guide sections (PLAN §4.1).
+      required: [overview, areas, highlights, local_app_pack, source_refs]
+      properties:
+        overview:
+          type: string
+        why_now:
+          type: string
+          nullable: true
+        areas:
+          type: array
+          items:
+            type: string
+        food:
+          type: string
+          nullable: true
+        highlights:
+          type: array
+          items:
+            type: string
+        mobility:
+          type: string
+          nullable: true
+        practical:
+          type: string
+          nullable: true
+        local_app_pack:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalAppPackEntry'
+        source_refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendationSourceRef'
+
+    LocalAppPackEntry:
+      type: object
+      required: [usage, name]
+      properties:
+        usage:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+          nullable: true
+
+    RecommendationSourceRef:
+      type: object
+      required: [source_ref, field_group]
+      properties:
+        source_ref:
+          type: string
+        source_url:
+          type: string
+          nullable: true
+        field_group:
+          type: string
+
+    DestinationGuideDetail:
+      type: object
+      description: Knowledge-backed destination guide for drawers / chat context.
+      required:
+        - destination_id
+        - slug
+        - name
+        - country_code
+        - locale
+        - areas
+        - top_pois
+        - transport_modes
+        - local_app_pack
+        - source_refs
+      properties:
+        destination_id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        country_code:
+          type: string
+        locale:
+          type: string
+        overview:
+          type: string
+          nullable: true
+        food:
+          type: string
+          nullable: true
+        practical:
+          type: string
+          nullable: true
+        areas:
+          type: array
+          items:
+            $ref: '#/components/schemas/DestinationAreaSummary'
+        top_pois:
+          type: array
+          items:
+            $ref: '#/components/schemas/DestinationPoiSummary'
+        transport_modes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DestinationTransportMode'
+        local_app_pack:
+          type: array
+          items:
+            $ref: '#/components/schemas/DestinationTravelApp'
+        source_refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendationSourceRef'
+
+    DestinationAreaSummary:
+      type: object
+      required: [slug, name]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+
+    DestinationPoiSummary:
+      type: object
+      required: [poi_id, slug, name, category]
+      properties:
+        poi_id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        category: { type: string }
+        description: { type: string, nullable: true }
+
+    DestinationTransportMode:
+      type: object
+      required: [mode, display_name]
+      properties:
+        mode: { type: string }
+        display_name: { type: string }
+        description: { type: string, nullable: true }
+
+    DestinationTravelApp:
+      type: object
+      required: [slug, name, category]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        category: { type: string }
+        description: { type: string, nullable: true }
+
     Money:
       type: object
       description: |
@@ -3348,6 +3747,22 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ResearchJob'
+
+    ResearchNotReady:
+      description: |
+        Ranked recommendations are not available yet (UC-C2-03). The trip is not
+        `RESEARCH_READY` (or `DESTINATION_SELECTED` with a selection). Poll the research job.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            code: research_not_ready
+            message: Research results are not ready for this trip yet.
+            details: {}
 
     TripBriefNotFound:
       description: |

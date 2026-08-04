@@ -11,8 +11,40 @@
     "running_help": "Ini boleh mengambil masa sehingga seminit setengah. Anda boleh meninggalkan halaman ini dan kembali — ia terus berjalan.",
     "progress": "{percent}% selesai",
     "ready_title": "Cadangan sedia",
-    "ready_help": "Penyelidikan selesai untuk perjalanan ini.",
+    "ready_help": "Penyelidikan selesai untuk perjalanan ini. Semak pilihan di bawah dan pilih satu untuk merancang.",
     "in_progress_generic": "Penyelidikan sedang dijalankan untuk perjalanan ini."
+  },
+  "results": {
+    "title": "Destinasi disyorkan",
+    "loading": "Memuatkan cadangan",
+    "load_failed": "Cadangan tidak dapat dimuatkan.",
+    "empty_title": "Tiada cadangan yang yakin",
+    "empty_help": "Kami tidak menjumpai destinasi yang cukup yakin untuk taklimat ini. Laraskan taklimat dan jalankan penyelidikan semula.",
+    "plan_cta": "Rancang perjalanan ini",
+    "selected": "Dipilih",
+    "selected_help": "Destinasi ini telah disahkan untuk perjalanan anda. Perancangan jadual perjalanan dibuka seterusnya.",
+    "select_failed": "Destinasi itu tidak dapat dipilih. Sila cuba lagi.",
+    "fit_score": "Padanan {score}",
+    "est_cost": "Anggaran {amount} {currency}",
+    "confidence": "Keyakinan {value}%",
+    "freshness": "Kesegaran {value}%",
+    "best_window": "Tempoh terbaik: {window}",
+    "risks": "Perkara yang perlu diperhatikan"
+  },
+  "guide": {
+    "overview": "Gambaran keseluruhan",
+    "why_now": "Mengapa sekarang",
+    "areas": "Kawasan terbaik",
+    "food": "Makanan",
+    "highlights": "Sorotan",
+    "practical": "Praktikal",
+    "mobility": "Bergerak di situ",
+    "apps": "Aplikasi tempatan untuk dimuat turun",
+    "sources": "Sumber"
+  },
+  "offline": {
+    "title": "Anda berada di luar talian",
+    "body": "Penyelidikan dan pemilihan memerlukan sambungan. Anda masih boleh membaca apa yang sudah ada di halaman ini."
   },
   "error": {
     "title": "Penyelidikan tidak dapat diselesaikan",

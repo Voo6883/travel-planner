@@ -104,7 +104,8 @@
     "RankedRecommendationRepositoryPort": {
       "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/RankedRecommendationRepositoryPort.java",
       "implementations": [
-        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/RankedRecommendationRepositoryAdapter.java"
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/RankedRecommendationRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/research/ResearchTestFakes.java"
       ]
     },
     "RefreshTokenPort": {
@@ -351,6 +352,14 @@
       "rate_limited": {
         "constant": "RATE_LIMITED",
         "httpStatus": "TOO_MANY_REQUESTS",
+        "translated": [
+          "apps/frontend/src/locales/en/common.json",
+          "apps/frontend/src/locales/ms/common.json"
+        ]
+      },
+      "research_not_ready": {
+        "constant": "RESEARCH_NOT_READY",
+        "httpStatus": "CONFLICT",
         "translated": [
           "apps/frontend/src/locales/en/common.json",
           "apps/frontend/src/locales/ms/common.json"
@@ -690,7 +699,8 @@
       },
       "destination": {
         "controllers": [
-          "apps/backend/src/main/java/com/travelplanner/api/controller/DestinationController.java"
+          "apps/backend/src/main/java/com/travelplanner/api/controller/DestinationController.java",
+          "apps/backend/src/main/java/com/travelplanner/api/controller/DestinationGuideController.java"
         ],
         "application": [],
         "adapters": []
@@ -737,7 +747,8 @@
       },
       "research": {
         "controllers": [
-          "apps/backend/src/main/java/com/travelplanner/api/controller/ResearchController.java"
+          "apps/backend/src/main/java/com/travelplanner/api/controller/ResearchController.java",
+          "apps/backend/src/main/java/com/travelplanner/api/controller/ResearchResultsController.java"
         ],
         "application": [
           "apps/backend/src/main/java/com/travelplanner/application/research/DestinationCandidateBuilder.java",
@@ -754,7 +765,10 @@
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobService.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobView.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchRecommendationCompletionHook.java",
+          "apps/backend/src/main/java/com/travelplanner/application/research/ResearchRecommendationService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/research/ResearchRecommendationsView.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchStaleJobReconciler.java",
+          "apps/backend/src/main/java/com/travelplanner/application/research/SelectRecommendationCommand.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/StartResearchCommand.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/TravelResearchJobHandler.java"
         ],
@@ -791,6 +805,7 @@
       "knowledge": {
         "controllers": [],
         "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/knowledge/DestinationGuideService.java",
           "apps/backend/src/main/java/com/travelplanner/application/knowledge/SupportedDestinationService.java"
         ],
         "adapters": []
@@ -1048,8 +1063,12 @@
         "apps/frontend/src/features/marketing/index.ts"
       ],
       "research": [
+        "apps/frontend/src/features/research/components/recommendation-card.tsx",
         "apps/frontend/src/features/research/components/research-job-panel.tsx",
+        "apps/frontend/src/features/research/components/research-panel.tsx",
+        "apps/frontend/src/features/research/components/traveler-guide-sections.tsx",
         "apps/frontend/src/features/research/hooks/use-research-job.ts",
+        "apps/frontend/src/features/research/hooks/use-research-recommendations.ts",
         "apps/frontend/src/features/research/index.ts"
       ]
     },
@@ -1425,7 +1444,7 @@
     "26": {
       "title": "Research API and frontend",
       "file": "tasks/26-research-api-frontend.md",
-      "status": "not_started",
+      "status": "in_progress",
       "dependsOn": [
         "11",
         "23",

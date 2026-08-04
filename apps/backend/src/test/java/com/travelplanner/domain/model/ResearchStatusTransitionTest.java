@@ -48,4 +48,25 @@ class ResearchStatusTransitionTest {
         assertThatThrownBy(() -> ResearchStatusTransition.recover(TripStatus.RESEARCH_READY))
                 .isInstanceOf(ValidationFailedException.class);
     }
+
+    @Test
+    void selectionMovesReadyToDestinationSelected() {
+        assertThat(ResearchStatusTransition.requireSelect(TripStatus.RESEARCH_READY))
+                .isEqualTo(TripStatus.DESTINATION_SELECTED);
+        assertThat(ResearchStatusTransition.canListRecommendations(TripStatus.RESEARCH_READY))
+                .isTrue();
+        assertThat(ResearchStatusTransition.canListRecommendations(TripStatus.DESTINATION_SELECTED))
+                .isTrue();
+        assertThat(ResearchStatusTransition.canListRecommendations(TripStatus.BRIEF_COMPLETE))
+                .isFalse();
+    }
+
+    @Test
+    void selectingFromAnyOtherStatusIsRefused() {
+        assertThatThrownBy(() -> ResearchStatusTransition.requireSelect(TripStatus.BRIEF_COMPLETE))
+                .isInstanceOf(ValidationFailedException.class);
+        assertThatThrownBy(
+                () -> ResearchStatusTransition.requireSelect(TripStatus.DESTINATION_SELECTED))
+                .isInstanceOf(ValidationFailedException.class);
+    }
 }

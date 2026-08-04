@@ -64,6 +64,29 @@ public final class ResearchStatusTransition {
         return from == TripStatus.RESEARCH_RUNNING;
     }
 
+    /**
+     * Destination selection (UC-C2-06). Only from {@link TripStatus#RESEARCH_READY}.
+     *
+     * @return {@link TripStatus#DESTINATION_SELECTED}
+     * @throws ValidationFailedException when the trip is not ready for selection
+     */
+    public static TripStatus requireSelect(TripStatus from) {
+        if (from != TripStatus.RESEARCH_READY) {
+            throw ValidationFailedException.field("status",
+                    "a destination can be selected only from RESEARCH_READY, not " + from);
+        }
+        return TripStatus.DESTINATION_SELECTED;
+    }
+
+    /**
+     * Whether ranked recommendations may be listed for this trip status (UC-C2-03).
+     *
+     * <p>{@code DESTINATION_SELECTED} is allowed so the selected card stays readable after confirm.
+     */
+    public static boolean canListRecommendations(TripStatus from) {
+        return from == TripStatus.RESEARCH_READY || from == TripStatus.DESTINATION_SELECTED;
+    }
+
     /** True when a failed or cancelled run may return the trip to a re-runnable state. */
     public static boolean canRecover(TripStatus from) {
         return from == TripStatus.RESEARCH_QUEUED || from == TripStatus.RESEARCH_RUNNING;

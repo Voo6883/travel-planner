@@ -109,7 +109,7 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 | 23 | [Research job platform](23-research-job-platform.md) | 07, 18, 22 | `done` | Merged `4b0f6fa` (PR [#21](https://github.com/Voo6883/travel-planner/pull/21)). Migration **V24** `research_job`. Durable slice `application/research/` (202 start, poll, local executor, 90s timeout, stale reconciler, handler/completion hooks for task 25). On fail: job `FAILED`+`error_code`, trip → `BRIEF_COMPLETE`. Handoff: [`docs/RESEARCH-JOB-HANDOFF.md`](../docs/RESEARCH-JOB-HANDOFF.md). CI green on PR before merge. |
 | 24 | [Deterministic destination ranking](24-destination-ranking.md) | 17, 18, 23 | `done` | Merged `e7f1816`. Pure `domain/algorithm/ranking/` (`DestinationRanker`, weights, exclusions, top-K). Deps: gates **17A/17B** + 17 `done_with_accepted_debt` / 18+23 `done`. Handoff: [`docs/DESTINATION-RANKING-HANDOFF.md`](../docs/DESTINATION-RANKING-HANDOFF.md). Local `./gradlew build -x integrationTest` green after checkstyle UnusedImports fix. |
 | 25 | [Travel research agent](25-travel-research-agent.md) | 14, 17, 23, 24 | `done` | Merged to `dev`. Migration **V25**. Stub agent + KnowledgePort tools + completion-hook persistence. Handoff: [`docs/TRAVEL-RESEARCH-AGENT-HANDOFF.md`](../docs/TRAVEL-RESEARCH-AGENT-HANDOFF.md). Sample PARTIAL KB → typed `no_confident_result`. |
-| 26 | [Research API and frontend](26-research-api-frontend.md) | 11, 23, 24, 25 | `not_started` | No `Validation` section. `ranked-recommendations` is `GET`. |
+| 26 | [Research API and frontend](26-research-api-frontend.md) | 11, 23, 24, 25 | `review` | Branch `cursor/task-26-research-api-frontend-15b0`. Ranked list + select + destination guide APIs; `features/research/` complete experience; `research_not_ready` 409. No V26 (uses V25). Handoff: [`docs/RESEARCH-EXPERIENCE-HANDOFF.md`](../docs/RESEARCH-EXPERIENCE-HANDOFF.md). |
 | 27 | [Research chat tools and evaluation](27-research-chat-evaluation.md) | 22, 25, 26 | `not_started` | No `Validation` section. Eval harness = backlog S4-9. |
 | 28 | [Itinerary domain and scheduling](28-itinerary-domain-scheduling.md) | 17, 18, 26 | `not_started` | No `Validation` section. |
 | 29 | [Route and mobility planning](29-route-mobility.md) | 17, 28 | `not_started` | No `Validation` section. |
@@ -149,10 +149,10 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 |---|---|
 | `done` | **25** |
 | `done_with_accepted_debt` | 1 |
-| `in_progress` | 0 |
+| `in_progress` | 1 |
 | `blocked` | 0 |
 | `review` | 0 |
-| `not_started` | 16 |
+| `not_started` | 15 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*
 

@@ -55,6 +55,7 @@ export function useResearchJob(tripId: string, jobId: string | null): UseQueryRe
         // The terminal transition also moved the trip's status; refresh it so the brief and any
         // "start research" affordance reflect the new state rather than a stale RESEARCH_RUNNING.
         void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(tripId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.research.recommendations(tripId) });
       }
       return job;
     },

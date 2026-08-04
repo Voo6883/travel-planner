@@ -22,4 +22,7 @@ public interface RankedRecommendationRepositoryPort {
     Optional<ResearchRunResult> findLatestRunByTripId(UUID tripId, UUID userId);
 
     List<RankedRecommendation> findByResearchRunId(UUID researchRunId, UUID userId);
+
+    /** One recommendation by id, scoped to the owning user (selection / ownership checks). */
+    Optional<RankedRecommendation> findByIdAndUserId(UUID recommendationId, UUID userId);
 }

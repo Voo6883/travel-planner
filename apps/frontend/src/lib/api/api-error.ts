@@ -36,6 +36,7 @@ export const REGISTERED_ERROR_CODES = [
   'provider_link_required',
   'provider_unavailable',
   'rate_limited',
+  'research_not_ready',
   'unauthorized',
   'user_not_found',
   'validation_failed',

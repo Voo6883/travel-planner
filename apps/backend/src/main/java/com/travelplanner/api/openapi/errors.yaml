@@ -75,6 +75,7 @@ components:
         | `provider_link_required` | 409 | An account already holds this email but auto-linking is not permitted. Sign in to that account and confirm the link (ADR 009 §4 — the pre-hijack rule) |
         | `provider_unavailable` | 503 | The identity provider could not be reached or answered with a fault. Nothing was changed; the caller may retry |
         | `rate_limited` | 429 | Too many requests for this mail action from this address or for this email (ADR 009 §6). `details.retry_after_seconds` carries the wait |
+        | `research_not_ready` | 409 | Research results are not ready for this trip yet (UC-C2-03) |
         | `unauthorized` | 401 | No valid session; the caller must sign in |
         | `user_not_found` | 404 | No account with this id (PLAN §4.0.6). Only ever returned to an administrator, who is already entitled to know which accounts exist — every other surface uses `not_found` |
         | `validation_failed` | 400 | Request failed schema or constraint validation. `details.fields` maps field name → message |
@@ -103,6 +104,7 @@ components:
         - provider_link_required
         - provider_unavailable
         - rate_limited
+        - research_not_ready
         - unauthorized
         - user_not_found
         - validation_failed

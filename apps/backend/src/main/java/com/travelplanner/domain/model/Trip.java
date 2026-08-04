@@ -78,6 +78,21 @@ public record Trip(
         return new Trip(id, userId, newName, status, selectedRecommendationId, version, createdAt, now);
     }
 
+    /**
+     * Persists the chosen recommendation and status together (UC-C2-06).
+     *
+     * <p>Both fields change in one immutable copy so a caller cannot leave the trip in
+     * {@code DESTINATION_SELECTED} without a selection id, or the reverse.
+     */
+    public Trip withSelectedRecommendation(
+            UUID recommendationId, TripStatus newStatus, Instant now) {
+        requireMutable();
+        Objects.requireNonNull(recommendationId, "recommendationId");
+        Objects.requireNonNull(newStatus, "newStatus");
+        return new Trip(
+                id, userId, name, newStatus, recommendationId, version, createdAt, now);
+    }
+
     private void requireMutable() {
         if (status.isReadOnly()) {
             throw ValidationFailedException.field("status", "an archived trip cannot be modified");

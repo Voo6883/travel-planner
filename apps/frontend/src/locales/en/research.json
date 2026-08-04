@@ -11,8 +11,40 @@
     "running_help": "This can take up to a minute and a half. You can leave this page and come back — it keeps running.",
     "progress": "{percent}% complete",
     "ready_title": "Recommendations ready",
-    "ready_help": "Research finished for this trip.",
+    "ready_help": "Research finished for this trip. Review the options below and choose one to plan.",
     "in_progress_generic": "Research is in progress for this trip."
+  },
+  "results": {
+    "title": "Recommended destinations",
+    "loading": "Loading recommendations",
+    "load_failed": "Recommendations could not be loaded.",
+    "empty_title": "No confident recommendation",
+    "empty_help": "We could not find a destination that fits this brief with enough confidence. Adjust the brief and run research again.",
+    "plan_cta": "Plan this trip",
+    "selected": "Selected",
+    "selected_help": "This destination is confirmed for your trip. Itinerary planning unlocks next.",
+    "select_failed": "That destination could not be selected. Please try again.",
+    "fit_score": "Fit {score}",
+    "est_cost": "Est. {amount} {currency}",
+    "confidence": "Confidence {value}%",
+    "freshness": "Freshness {value}%",
+    "best_window": "Best window: {window}",
+    "risks": "Things to watch"
+  },
+  "guide": {
+    "overview": "Overview",
+    "why_now": "Why now",
+    "areas": "Best areas",
+    "food": "Food",
+    "highlights": "Highlights",
+    "practical": "Practical",
+    "mobility": "Getting around",
+    "apps": "Local apps to download",
+    "sources": "Sources"
+  },
+  "offline": {
+    "title": "You're offline",
+    "body": "Research and selection need a connection. You can still read what is already on this page."
   },
   "error": {
     "title": "Research could not be completed",
