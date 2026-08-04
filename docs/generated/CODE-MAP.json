@@ -1444,7 +1444,7 @@
     "26": {
       "title": "Research API and frontend",
       "file": "tasks/26-research-api-frontend.md",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "11",
         "23",
@@ -1472,9 +1472,7 @@
         "25",
         "26"
       ],
-      "blockedBy": [
-        "26"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1495,9 +1493,7 @@
         "18",
         "26"
       ],
-      "blockedBy": [
-        "26"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1542,7 +1538,6 @@
         "29"
       ],
       "blockedBy": [
-        "26",
         "28",
         "29"
       ],
@@ -1778,7 +1773,6 @@
         "41"
       ],
       "blockedBy": [
-        "26",
         "27",
         "28",
         "29",

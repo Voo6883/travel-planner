@@ -17,7 +17,7 @@
 |---|---|---|
 | 0A/0B — foundation + platform | 00–15 | `done` |
 | Phase 1 — knowledge, intake, chat | 16–24 `done` · 17 `done_with_accepted_debt` (F-34→41) · **25 done** | see §2
-| Phase 1 — research, itinerary | 25 `review` · 26–31 not started — **26 next** |
+| Phase 1 — research, itinerary | 25–26 `done` · 27–31 | not started — **27 next**
 | Phase 2 — booking, runtime | 32–37 | not started |
 | Knowledge ops | 40, 41 | not started |
 | Integration | 38, 39 | not started |
