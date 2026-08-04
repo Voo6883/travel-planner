@@ -1,6 +1,7 @@
 package com.travelplanner.domain.model;
 
 import com.travelplanner.domain.enums.GuideFieldGroup;
+import com.travelplanner.domain.enums.KnowledgeDataClass;
 import com.travelplanner.domain.valueobject.KnowledgeProvenance;
 import java.util.Objects;
 import java.util.Optional;
@@ -79,5 +80,10 @@ public record DestinationGuide(
 
     public Optional<String> practicalIfPresent() {
         return Optional.ofNullable(practical);
+    }
+
+    /** ADR 010 §6 — narrative prose, reviewed rather than refreshed, so the longest TTL. */
+    public KnowledgeDataClass dataClass() {
+        return KnowledgeDataClass.GUIDE_NARRATIVE;
     }
 }

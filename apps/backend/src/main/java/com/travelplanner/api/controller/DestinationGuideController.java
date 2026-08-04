@@ -3,6 +3,7 @@ package com.travelplanner.api.controller;
 import com.travelplanner.api.dto.destination.DestinationGuideDetailResponse;
 import com.travelplanner.application.knowledge.DestinationGuideService;
 import com.travelplanner.config.RequiresDatabase;
+import java.time.Clock;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,13 @@ public class DestinationGuideController {
 
     private final DestinationGuideService guides;
 
+    /**
+     * Read once per request and passed down, so every {@code stale} flag on one response is decided
+     * against the same instant. Sampling the clock per row would let two refs from one source
+     * disagree about their own freshness across a TTL boundary.
+     */
+    private final Clock clock = Clock.systemUTC();
+
     public DestinationGuideController(DestinationGuideService guides) {
         this.guides = guides;
     }
@@ -31,6 +39,7 @@ public class DestinationGuideController {
     public DestinationGuideDetailResponse guide(
             @PathVariable UUID destinationId,
             @RequestParam(defaultValue = "en") String locale) {
-        return DestinationGuideDetailResponse.from(guides.get(destinationId, locale), locale);
+        return DestinationGuideDetailResponse.from(
+                guides.get(destinationId, locale), locale, clock.instant());
     }
 }

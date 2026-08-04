@@ -1,5 +1,6 @@
 package com.travelplanner.domain.model;
 
+import com.travelplanner.domain.enums.KnowledgeDataClass;
 import com.travelplanner.domain.valueobject.KnowledgeProvenance;
 import java.util.Objects;
 import java.util.Optional;
@@ -74,5 +75,14 @@ public record DestinationArea(
     /** Absent while the area is a placeholder the curator has not written up yet. */
     public Optional<String> descriptionIfPresent() {
         return Optional.ofNullable(description);
+    }
+
+    /**
+     * ADR 010 §6. An area is curated prose about a neighbourhood, so it ages like the guide
+     * narrative it reads as part of — not like the POIs inside it, whose opening hours move
+     * independently of anything written here.
+     */
+    public KnowledgeDataClass dataClass() {
+        return KnowledgeDataClass.GUIDE_NARRATIVE;
     }
 }

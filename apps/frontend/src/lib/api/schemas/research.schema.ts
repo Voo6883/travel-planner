@@ -33,6 +33,25 @@ const sourceRefSchema: z.ZodType<components['schemas']['RecommendationSourceRef'
   field_group: z.string(),
 });
 
+/**
+ * A citation read live from the knowledge base, as opposed to one replayed from the JSON frozen
+ * into a `ranked_recommendation` row.
+ *
+ * The extra fields are the ones a reader needs in order to weigh the claim: `sample_data` says the
+ * row backs no real-world fact (ADR 010 §3), `stale` says it has outlived its TTL (§6), and
+ * `attribution` is the licence obligation the UI has to discharge where the text is shown (§2).
+ * A recommendation's frozen refs cannot answer "is this stale *now*", so they do not carry these.
+ */
+const knowledgeSourceRefSchema: z.ZodType<components['schemas']['KnowledgeSourceRef']> = z.object({
+  source_ref: z.string(),
+  source_url: z.string().nullish(),
+  field_group: z.string(),
+  attribution: z.string().nullish(),
+  sample_data: z.boolean(),
+  stale: z.boolean(),
+  retrieved_at: z.string(),
+});
+
 const localAppPackEntrySchema: z.ZodType<components['schemas']['LocalAppPackEntry']> = z.object({
   usage: z.string(),
   name: z.string(),
@@ -127,5 +146,6 @@ export const destinationGuideDetailSchema: z.ZodType<components['schemas']['Dest
       description: z.string().nullish(),
     }),
   ),
-  source_refs: z.array(sourceRefSchema),
+  source_refs: z.array(knowledgeSourceRefSchema),
+  sample_data: z.boolean(),
 });

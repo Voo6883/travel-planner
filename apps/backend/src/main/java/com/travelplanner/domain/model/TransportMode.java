@@ -1,5 +1,6 @@
 package com.travelplanner.domain.model;
 
+import com.travelplanner.domain.enums.KnowledgeDataClass;
 import com.travelplanner.domain.enums.PriceBand;
 import com.travelplanner.domain.enums.TransportKind;
 import com.travelplanner.domain.valueobject.KnowledgeProvenance;
@@ -56,5 +57,15 @@ public record TransportMode(
     /** Absent when the curator recorded the mode but not what it costs. */
     public Optional<PriceBand> costBandIfKnown() {
         return Optional.ofNullable(costBand);
+    }
+
+    /**
+     * ADR 010 §6. A city's transport modes are structural — a metro does not close because a row
+     * aged — so this ages with the guide narrative rather than on the POI clock. The {@code costBand}
+     * is the part that drifts, and it is a band rather than a price precisely so that it does not
+     * need the shorter TTL.
+     */
+    public KnowledgeDataClass dataClass() {
+        return KnowledgeDataClass.GUIDE_NARRATIVE;
     }
 }

@@ -1,5 +1,6 @@
 package com.travelplanner.domain.model;
 
+import com.travelplanner.domain.enums.KnowledgeDataClass;
 import com.travelplanner.domain.enums.TravelAppCategory;
 import com.travelplanner.domain.valueobject.KnowledgeProvenance;
 import java.util.Objects;
@@ -70,5 +71,10 @@ public record TravelApp(
 
     public Optional<String> descriptionIfPresent() {
         return Optional.ofNullable(description);
+    }
+
+    /** ADR 010 §6 — store URLs and market availability; an app delisted in one market still 200s. */
+    public KnowledgeDataClass dataClass() {
+        return KnowledgeDataClass.TRAVEL_APP;
     }
 }

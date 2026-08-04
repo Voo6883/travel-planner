@@ -44,6 +44,27 @@ Each `RankedRecommendation`: `recommendation_id`, `destination_id` / `destinatio
 
 Typed empty: `no_confident_result: true` + empty `recommendations` (UC-C2-05).
 
+### Guide citations (amended 2026-08-04, F-50 / F-51)
+
+`GET .../guide` returns `source_refs[]` of **`KnowledgeSourceRef`**, not `RecommendationSourceRef`.
+Two schemas because they answer different questions:
+
+| | `KnowledgeSourceRef` | `RecommendationSourceRef` |
+|---|---|---|
+| Source | read live from the KB | replayed from `ranked_recommendation.source_refs` jsonb |
+| Fields | `+ attribution?`, `sample_data`, `stale`, `retrieved_at` | `source_ref`, `source_url?`, `field_group` |
+| Can answer "stale *now*?" | yes | no — it is a snapshot frozen at research time, and does not pretend otherwise |
+
+`source_refs` now covers **every** part of the guide payload — `overview`, `food`, `practical`,
+`areas`, `pois`, `transport`, `local_app_pack` — one entry per `(source_ref, field_group)` pair that
+actually backs something, deduplicated in render order. It previously emitted a single ref with
+`field_group` hardcoded to `"overview"`, so everything else on the page was uncited.
+
+`sample_data` is also a page-level boolean on `DestinationGuideDetail` and on
+`GET /destinations/supported`, so a client raises ADR 010 §3's persistent banner without walking the
+ref list. **No UI consumes the guide endpoint yet** — the banner is unbuilt, and whoever renders the
+guide drawer owns it.
+
 ## Frontend
 
 | Piece | Location |

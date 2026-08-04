@@ -28,6 +28,10 @@ persists ranked recommendations (or a typed no-confident-result) so a client tha
 | **Stub** (default / CI) | Always today — `StubTravelResearchAgent` bean | Deterministic tool calls over `KnowledgePort`; no LLM; golden fixture `ai/travel-research-stub-golden.json` |
 | **Live narrative** | Not wired yet | Future: stronger `@ConditionalOnProperty` on `travelplanner.ai.provider.default` ≠ `stub` |
 
+Registered as **F-52** (2026-08-04) so the ledger says it too. Task 25's DoD is met by the stub — a
+deterministic agent is an explicit scope item for CI — but **tasks 30 and 36 must not assume a live
+narrative path exists.** Building one needs a provider key, which is why it cannot land in CI.
+
 Budgets (env-overridable):
 
 - `travelplanner.research.max-tool-calls` (default **40**)

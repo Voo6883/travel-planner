@@ -1699,9 +1699,8 @@ export interface components {
          * @description The body of `GET /destinations/supported`.
          *
          *     An object rather than a bare array: a top-level array cannot gain a field, and this
-         *     response will want one — the `sample_data: true` flag ADR 010 §3 requires in development,
-         *     or a coverage timestamp. Wrapping now costs one key; wrapping later breaks every generated
-         *     client.
+         *     response wanted one — the `sample_data` flag ADR 010 §3 requires in development. That is now
+         *     the second key, which is the whole argument for having wrapped it.
          * @example {
          *       "destinations": [
          *         {
@@ -1724,7 +1723,8 @@ export interface components {
          *             "longitude": 100.5018
          *           }
          *         }
-         *       ]
+         *       ],
+         *       "sample_data": true
          *     }
          */
         SupportedDestinations: {
@@ -1733,6 +1733,12 @@ export interface components {
              *     means nothing has been curated yet — the picker says so rather than inventing options.
              */
             destinations: components["schemas"]["SupportedDestination"][];
+            /**
+             * @description True when this deployment's coverage is backed by the sample seed, so the picker can
+             *     raise a persistent banner (ADR 010 §3). Never true in production — the context refuses
+             *     to start with the sample seed under the `prod` profile.
+             */
+            sample_data: boolean;
         };
         /**
          * @description Wizard progress for a trip — the exact vocabulary of the "Trip status" table in
@@ -1942,6 +1948,43 @@ export interface components {
             source_url?: string | null;
             field_group: string;
         };
+        /**
+         * @description A citation read live from the knowledge base, carrying the two facts that decide how far it
+         *     may be trusted: whether it is sample data (ADR 010 §3) and whether it has outlived its
+         *     per-data-class TTL (ADR 010 §6).
+         *
+         *     Distinct from `RecommendationSourceRef`, which is replayed from the `source_refs` JSON frozen
+         *     into a `ranked_recommendation` row at research time. That snapshot cannot answer "is this
+         *     stale *now*" without re-reading the source, so it does not claim to.
+         */
+        KnowledgeSourceRef: {
+            /** @description Stable citation handle. `stub:sample` is the reserved sample-seed ref. */
+            source_ref: string;
+            /** @description Absent when the source is not a fetchable document. */
+            source_url?: string | null;
+            /**
+             * @description Which part of the answer this ref backs — `overview`, `food`, `practical`, `areas`,
+             *     `pois`, `transport`, `local_app_pack`.
+             */
+            field_group: string;
+            /**
+             * @description Required attribution text, null when the licence demands none. ADR 010 §2 makes this a
+             *     product obligation: a share-alike source must be credited where its text is shown.
+             */
+            attribution?: string | null;
+            /** @description This ref cites the sample seed and backs no real-world fact. */
+            sample_data: boolean;
+            /**
+             * @description The row has outlived its data class's TTL. It is still returned — the fact is hedged,
+             *     not hidden, because a hedged answer beats no answer.
+             */
+            stale: boolean;
+            /**
+             * Format: date-time
+             * @description When the source was fetched, so a client can say "as of" rather than "now".
+             */
+            retrieved_at: string;
+        };
         /** @description Knowledge-backed destination guide for drawers / chat context. */
         DestinationGuideDetail: {
             /** Format: uuid */
@@ -1957,7 +2000,17 @@ export interface components {
             top_pois: components["schemas"]["DestinationPoiSummary"][];
             transport_modes: components["schemas"]["DestinationTransportMode"][];
             local_app_pack: components["schemas"]["DestinationTravelApp"][];
-            source_refs: components["schemas"]["RecommendationSourceRef"][];
+            /**
+             * @description One entry per `(source_ref, field_group)` pair that actually backs something on this
+             *     page — narrative sections, areas, POIs, transport modes and the app pack all cite their
+             *     own provenance. Deduplicated, in the order the page renders.
+             */
+            source_refs: components["schemas"]["KnowledgeSourceRef"][];
+            /**
+             * @description True when any row on this page cites the sample seed, so a client can raise the
+             *     persistent banner ADR 010 §3 requires without walking `source_refs` first.
+             */
+            sample_data: boolean;
         };
         DestinationAreaSummary: {
             slug: string;

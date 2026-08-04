@@ -1,5 +1,6 @@
 package com.travelplanner.domain.model;
 
+import com.travelplanner.domain.enums.KnowledgeDataClass;
 import com.travelplanner.domain.enums.PoiCategory;
 import com.travelplanner.domain.enums.PriceBand;
 import com.travelplanner.domain.valueobject.KnowledgeProvenance;
@@ -117,5 +118,16 @@ public record Poi(
 
     public Optional<PriceBand> priceBandIfKnown() {
         return Optional.ofNullable(priceBand);
+    }
+
+    /**
+     * ADR 010 §6. The shortest TTL in the catalogue, because {@code openingHours} and
+     * {@code priceBand} are what go wrong fastest and hurt most when they do.
+     *
+     * <p>Declared on the record rather than in a mapping table at the boundary, so a caller asking
+     * "is this stale?" cannot pick the wrong TTL for a POI.
+     */
+    public KnowledgeDataClass dataClass() {
+        return KnowledgeDataClass.POI_DETAILS;
     }
 }

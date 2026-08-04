@@ -6,6 +6,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
@@ -42,9 +43,27 @@ public class SupportedDestinationService {
     private static final Logger log = LoggerFactory.getLogger(SupportedDestinationService.class);
 
     private final ObjectProvider<KnowledgePort> knowledge;
+    private final boolean sampleSeedEnabled;
 
-    public SupportedDestinationService(ObjectProvider<KnowledgePort> knowledge) {
+    public SupportedDestinationService(
+            ObjectProvider<KnowledgePort> knowledge,
+            @Value("${travelplanner.knowledge.sample-seed.enabled:false}") boolean sampleSeedEnabled) {
         this.knowledge = knowledge;
+        this.sampleSeedEnabled = sampleSeedEnabled;
+    }
+
+    /**
+     * ADR 010 §3 — whether this deployment's coverage list is backed by the sample seed.
+     *
+     * <p><strong>The deployment flag, not a per-row check.</strong> {@code Destination} carries no
+     * provenance: it is the catalogue entry, and the citations live on the guide, POI and app rows
+     * beneath it. Answering per-row here would mean a guide lookup per destination to compute one
+     * boolean. The same property is what {@code KnowledgeConfigValidator} refuses to let a
+     * production context start with, so both surfaces read one definition of "this corpus is
+     * fabricated" rather than two that can disagree.
+     */
+    public boolean isSampleData() {
+        return sampleSeedEnabled;
     }
 
     /** Every destination eligible for C2 ranking, in the port's stable order. Never null. */

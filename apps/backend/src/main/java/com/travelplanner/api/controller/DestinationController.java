@@ -38,6 +38,7 @@ public class DestinationController {
     /** ADR 010 §4 — every destination eligible for C2 ranking. */
     @GetMapping("/supported")
     public SupportedDestinationsResponse supported() {
-        return SupportedDestinationsResponse.from(destinations.listSupported());
+        return SupportedDestinationsResponse.from(
+                destinations.listSupported(), destinations.isSampleData());
     }
 }

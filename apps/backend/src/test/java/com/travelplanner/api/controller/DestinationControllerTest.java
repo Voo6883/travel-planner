@@ -97,4 +97,33 @@ class DestinationControllerTest {
                 .andExpect(jsonPath("$.destinations").isArray())
                 .andExpect(jsonPath("$.destinations").isEmpty());
     }
+
+    /**
+     * ADR 010 §3. The wrapper object exists for this key, and for two tasks it stayed empty: the
+     * sample seed was served as though it were curated fact and no client could tell.
+     */
+    @Test
+    void saysSoWhenTheCatalogueIsBackedByTheSampleSeed() throws Exception {
+        when(destinations.listSupported()).thenReturn(List.of(TOKYO));
+        when(destinations.isSampleData()).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/destinations/supported"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sample_data").value(true));
+    }
+
+    /**
+     * Present and false rather than absent, so a client reads a boolean instead of inferring one
+     * from a missing key — {@code undefined} is falsy and would silently drop the banner if the
+     * field were ever omitted by mistake.
+     */
+    @Test
+    void publishesTheSampleFlagAsFalseForACuratedCatalogue() throws Exception {
+        when(destinations.listSupported()).thenReturn(List.of(TOKYO));
+        when(destinations.isSampleData()).thenReturn(false);
+
+        mockMvc.perform(get("/api/v1/destinations/supported"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sample_data").value(false));
+    }
 }
