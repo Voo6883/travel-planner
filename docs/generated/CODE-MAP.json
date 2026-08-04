@@ -1193,7 +1193,7 @@
     "17": {
       "title": "Knowledge seed and retrieval",
       "file": "tasks/17-knowledge-seed-retrieval.md",
-      "status": "in_progress",
+      "status": "done_with_accepted_debt",
       "dependsOn": [
         "14",
         "16"
@@ -1348,7 +1348,7 @@
     "24": {
       "title": "Deterministic destination ranking",
       "file": "tasks/24-destination-ranking.md",
-      "status": "not_started",
+      "status": "in_progress",
       "dependsOn": [
         "17",
         "18",

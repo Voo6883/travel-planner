@@ -15,7 +15,7 @@
 | Phase | Tasks | State |
 |---|---|---|
 | 0A/0B — foundation + platform | 00–15 | `done` |
-| Phase 1 — knowledge, intake, chat | 16 `done` · 17 `in_progress` (17C only) · 18–21 `done` · **22 done** · **23 next** | see §2 |
+| Phase 1 — knowledge, intake, chat | 16 `done` · 17 `in_progress` (17C only) · 18–21 `done` · **22–23 done** · **17 done_with_accepted_debt (F-34→41)** · **24 next** | see §2 |
 | Phase 1 — research, itinerary | 23–31 | not started |
 | Phase 2 — booking, runtime | 32–37 | not started |
 | Knowledge ops | 40, 41 | not started |
@@ -40,7 +40,8 @@ open-question register (`F-nn`). Update it in the same commit as the work, never
 | Task | Needs | Notes |
 |---|---|---|
 | **22** Trip chat intake tools | 18–21 `done` | **done** — merged to `dev` |
-| **23** Research job platform | 07, 18, 22 `done` | Durable async research jobs; no agent yet |
+| **23** Research job platform | 07, 18, 22 `done` | **done** |
+| **24** Destination ranking | 17A/17B, 18, 23 | Pure DSA fitScore; no LLM scores |
 | **40** TKB refresh | 14–16 + gates **17A/17B** | Safe parallel with 22–26 while **17C** remains open |
 
 ### Still open on task 17
