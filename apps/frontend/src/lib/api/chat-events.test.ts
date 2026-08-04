@@ -118,9 +118,7 @@ describe('parseChatFrame — every event the contract defines', () => {
   });
 
   it('parses research_started with trip and job ids (task 27)', () => {
-    const parsed = parseChatFrame(
-      'event: research_started\ndata: {"trip_id":"trip-7","job_id":"job-1"}',
-    );
+    const parsed = parseChatFrame('event: research_started\ndata: {"trip_id":"trip-7","job_id":"job-1"}');
     expect(parsed.event).toEqual({
       type: 'research_started',
       tripId: 'trip-7',

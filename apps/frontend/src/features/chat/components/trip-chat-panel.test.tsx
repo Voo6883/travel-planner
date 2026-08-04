@@ -114,9 +114,7 @@ describe('TripChatPanel', () => {
     const invalidate = renderWithSpiedClient(<TripChatPanel tripId={TRIP_ID} />);
     await user.type(screen.getByLabelText(enChat.composer.label), 'Research now{Enter}');
 
-    await waitFor(() =>
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.trips.detail(TRIP_ID) }),
-    );
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.trips.detail(TRIP_ID) }));
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: queryKeys.research.job(TRIP_ID, jobId),
     });
@@ -132,9 +130,7 @@ describe('TripChatPanel', () => {
     const invalidate = renderWithSpiedClient(<TripChatPanel tripId={TRIP_ID} />);
     await user.type(screen.getByLabelText(enChat.composer.label), 'Pick Tokyo{Enter}');
 
-    await waitFor(() =>
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.trips.detail(TRIP_ID) }),
-    );
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.trips.detail(TRIP_ID) }));
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: queryKeys.research.recommendations(TRIP_ID),
     });

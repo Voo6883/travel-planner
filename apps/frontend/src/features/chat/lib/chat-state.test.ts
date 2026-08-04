@@ -230,10 +230,7 @@ describe('streaming an assistant turn', () => {
     ]);
     expect(started.researchStarted).toEqual({ tripId: 'trip-7', jobId: 'job-9' });
 
-    const selected = apply([
-      { type: 'stream_opened' },
-      frame({ type: 'destination_selected', tripId: 'trip-7' }),
-    ]);
+    const selected = apply([{ type: 'stream_opened' }, frame({ type: 'destination_selected', tripId: 'trip-7' })]);
     expect(selected.destinationSelectedTripId).toBe('trip-7');
   });
 

@@ -11,6 +11,8 @@ import com.travelplanner.domain.valueobject.Money;
 import com.travelplanner.domain.valueobject.RecommendationSourceRef;
 import com.travelplanner.infrastructure.persistence.entity.RankedRecommendationEntity;
 import com.travelplanner.infrastructure.persistence.entity.ResearchRunResultEntity;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Currency;
 import java.util.List;
@@ -67,13 +69,13 @@ public class ResearchRecommendationJsonMapper {
         entity.setDestinationSlug(domain.destinationSlug());
         entity.setCountryCode(domain.countryCode());
         entity.setRank(domain.rank());
-        entity.setFitScore(breakdown.fitScore());
-        entity.setInterestMatch(breakdown.interestMatch());
-        entity.setSeasonalityFit(breakdown.seasonalityFit());
-        entity.setPriceFit(breakdown.priceFit());
-        entity.setAreaCoverage(breakdown.areaCoverage());
-        entity.setFreshnessFactor(breakdown.freshnessFactor());
-        entity.setConfidence(breakdown.confidence());
+        entity.setFitScore(decimal(breakdown.fitScore(), 8));
+        entity.setInterestMatch(decimal(breakdown.interestMatch(), 6));
+        entity.setSeasonalityFit(decimal(breakdown.seasonalityFit(), 6));
+        entity.setPriceFit(decimal(breakdown.priceFit(), 6));
+        entity.setAreaCoverage(decimal(breakdown.areaCoverage(), 6));
+        entity.setFreshnessFactor(decimal(breakdown.freshnessFactor(), 6));
+        entity.setConfidence(decimal(breakdown.confidence(), 6));
         breakdown.estimatedCostIfPresent().ifPresentOrElse(cost -> {
             entity.setEstCostAmount(cost.amount());
             entity.setEstCostCurrency(cost.currency().getCurrencyCode());
@@ -97,13 +99,13 @@ public class ResearchRecommendationJsonMapper {
                     Currency.getInstance(entity.getEstCostCurrency()));
         }
         ScoreBreakdown breakdown = new ScoreBreakdown(
-                entity.getInterestMatch(),
-                entity.getSeasonalityFit(),
-                entity.getPriceFit(),
-                entity.getAreaCoverage(),
-                entity.getFreshnessFactor(),
-                entity.getConfidence(),
-                entity.getFitScore(),
+                asDouble(entity.getInterestMatch()),
+                asDouble(entity.getSeasonalityFit()),
+                asDouble(entity.getPriceFit()),
+                asDouble(entity.getAreaCoverage()),
+                asDouble(entity.getFreshnessFactor()),
+                asDouble(entity.getConfidence()),
+                asDouble(entity.getFitScore()),
                 estimated);
         return new RankedRecommendation(
                 entity.getId(),
@@ -177,5 +179,13 @@ public class ResearchRecommendationJsonMapper {
         } catch (Exception failure) {
             throw new IllegalStateException("failed to deserialise source_refs json", failure);
         }
+    }
+
+    private static BigDecimal decimal(double value, int scale) {
+        return BigDecimal.valueOf(value).setScale(scale, RoundingMode.HALF_UP);
+    }
+
+    private static double asDouble(BigDecimal value) {
+        return value.doubleValue();
     }
 }

@@ -344,15 +344,11 @@ const EVENT_PARSERS: Record<string, (data: unknown) => ChatStreamEvent | null> =
   },
   research_started: (data) => {
     const parsed = researchStartedSchema.safeParse(data);
-    return parsed.success
-      ? { type: 'research_started', tripId: parsed.data.trip_id, jobId: parsed.data.job_id }
-      : null;
+    return parsed.success ? { type: 'research_started', tripId: parsed.data.trip_id, jobId: parsed.data.job_id } : null;
   },
   destination_selected: (data) => {
     const parsed = destinationSelectedSchema.safeParse(data);
-    return parsed.success
-      ? { type: 'destination_selected', tripId: parsed.data.trip_id }
-      : null;
+    return parsed.success ? { type: 'destination_selected', tripId: parsed.data.trip_id } : null;
   },
   usage: (data) => {
     const parsed = usageSchema.safeParse(data);

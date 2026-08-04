@@ -41,26 +41,27 @@ public class RankedRecommendationEntity {
     @Column(name = "rank", nullable = false)
     private int rank;
 
-    @Column(name = "fit_score", nullable = false)
-    private double fitScore;
+    /** {@code numeric(12,8)} — scores stay decimal, never binary float (PLAN §4.0.2-A). */
+    @Column(name = "fit_score", nullable = false, precision = 12, scale = 8)
+    private BigDecimal fitScore;
 
-    @Column(name = "interest_match", nullable = false)
-    private double interestMatch;
+    @Column(name = "interest_match", nullable = false, precision = 8, scale = 6)
+    private BigDecimal interestMatch;
 
-    @Column(name = "seasonality_fit", nullable = false)
-    private double seasonalityFit;
+    @Column(name = "seasonality_fit", nullable = false, precision = 8, scale = 6)
+    private BigDecimal seasonalityFit;
 
-    @Column(name = "price_fit", nullable = false)
-    private double priceFit;
+    @Column(name = "price_fit", nullable = false, precision = 8, scale = 6)
+    private BigDecimal priceFit;
 
-    @Column(name = "area_coverage", nullable = false)
-    private double areaCoverage;
+    @Column(name = "area_coverage", nullable = false, precision = 8, scale = 6)
+    private BigDecimal areaCoverage;
 
-    @Column(name = "freshness_factor", nullable = false)
-    private double freshnessFactor;
+    @Column(name = "freshness_factor", nullable = false, precision = 8, scale = 6)
+    private BigDecimal freshnessFactor;
 
-    @Column(name = "confidence", nullable = false)
-    private double confidence;
+    @Column(name = "confidence", nullable = false, precision = 8, scale = 6)
+    private BigDecimal confidence;
 
     @Column(name = "est_cost_amount", precision = 19, scale = 4)
     private BigDecimal estCostAmount;
@@ -160,59 +161,59 @@ public class RankedRecommendationEntity {
         this.rank = rank;
     }
 
-    public double getFitScore() {
+    public BigDecimal getFitScore() {
         return fitScore;
     }
 
-    public void setFitScore(double fitScore) {
+    public void setFitScore(BigDecimal fitScore) {
         this.fitScore = fitScore;
     }
 
-    public double getInterestMatch() {
+    public BigDecimal getInterestMatch() {
         return interestMatch;
     }
 
-    public void setInterestMatch(double interestMatch) {
+    public void setInterestMatch(BigDecimal interestMatch) {
         this.interestMatch = interestMatch;
     }
 
-    public double getSeasonalityFit() {
+    public BigDecimal getSeasonalityFit() {
         return seasonalityFit;
     }
 
-    public void setSeasonalityFit(double seasonalityFit) {
+    public void setSeasonalityFit(BigDecimal seasonalityFit) {
         this.seasonalityFit = seasonalityFit;
     }
 
-    public double getPriceFit() {
+    public BigDecimal getPriceFit() {
         return priceFit;
     }
 
-    public void setPriceFit(double priceFit) {
+    public void setPriceFit(BigDecimal priceFit) {
         this.priceFit = priceFit;
     }
 
-    public double getAreaCoverage() {
+    public BigDecimal getAreaCoverage() {
         return areaCoverage;
     }
 
-    public void setAreaCoverage(double areaCoverage) {
+    public void setAreaCoverage(BigDecimal areaCoverage) {
         this.areaCoverage = areaCoverage;
     }
 
-    public double getFreshnessFactor() {
+    public BigDecimal getFreshnessFactor() {
         return freshnessFactor;
     }
 
-    public void setFreshnessFactor(double freshnessFactor) {
+    public void setFreshnessFactor(BigDecimal freshnessFactor) {
         this.freshnessFactor = freshnessFactor;
     }
 
-    public double getConfidence() {
+    public BigDecimal getConfidence() {
         return confidence;
     }
 
-    public void setConfidence(double confidence) {
+    public void setConfidence(BigDecimal confidence) {
         this.confidence = confidence;
     }
 
