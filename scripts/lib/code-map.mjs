@@ -228,9 +228,10 @@ function listQueryKeyNamespaces() {
 /**
  * Every task, its ledger status, and — the part a planner actually wants — what still blocks it.
  *
- * `blockedBy` is the dependency ids that are not yet `done`. The review's finding #8 was that tasks
- * were started with open dependencies and the violation was noticed in hindsight; computing the list
- * makes it a fact anyone can check in one command instead of a table anyone can misread.
+ * `blockedBy` is dependency ids that are neither `done` nor `done_with_accepted_debt`. The review's
+ * finding #8 was that tasks were started with open dependencies and the violation was noticed in
+ * hindsight; computing the list makes it a fact anyone can check in one command instead of a table
+ * anyone can misread.
  */
 function mapTasks() {
   const ledger = parseStatusLedger();
@@ -245,7 +246,10 @@ function mapTasks() {
       file: toPosix(file),
       status: row?.status ?? 'unknown',
       dependsOn: row?.dependsOn ?? [],
-      blockedBy: (row?.dependsOn ?? []).filter((dependency) => byId.get(dependency)?.status !== 'done'),
+      blockedBy: (row?.dependsOn ?? []).filter((dependency) => {
+        const status = byId.get(dependency)?.status;
+        return status !== 'done' && status !== 'done_with_accepted_debt';
+      }),
       hasSections: [...sections.keys()],
     };
   }

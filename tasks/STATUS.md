@@ -42,7 +42,7 @@ task depends on the **gate** rather than on the whole task:
 |---|---|---|---|
 | 17 | **17A** | Seed contract + loader + SAMPLE dataset + `GET /destinations/supported` | `done` |
 | 17 | **17B** | Hybrid retrieval — vector + `tsvector` fusion, shared adapter contract tests | `done` — fusion + **F-46**; adapter contract tests (**F-32**); seed validator (**F-44**) |
-| 17 | **17C** | Real curation for the first three destinations (needs a named owner — **F-34**) | `not_started` |
+| 17 | **17C** | Real curation for the first three destinations (**F-34**) | `deferred` — accepted debt on task 17; owned by **41** |
 | 18 | **18A** | Trip + brief backend: CRUD, clarification, `expected_version`, migration V20 | `done` |
 | 18 | **18B** | Frontend brief editor + `locales/*/trip_brief.json` + `surprise_me` persistence | `done` — `features/intake` (list, editor, clarification, autosave, 409 merge) + en/ms locales; `surprise_me` column via **V23** |
 | 19 | **19A** | Versioned prompt, repair retry, fallback, golden fixtures, injection separation | `done` |
@@ -100,14 +100,14 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 | ID | Task | Depends on | Status | Notes |
 |---|---|---|---|---|
 | 16 | [Knowledge domain and schema](16-knowledge-domain-schema.md) | 07, 14, 15 | `done` | Commits `c68ff6f` (schema), `bbdc065` (domain). Migrations **V13–V18** applied against real Postgres 16.6 + pgvector 0.8.1: 12 tables, 6 partial HNSW indexes, and each guard proven to reject a bad write. Pure domain + `KnowledgePort` + typed `destination_not_covered` (registered end to end). 212 domain tests; coverage LINE 88.87% / BRANCH 81.73%. Persistence `8db9029`: 10 entities, 10 repositories, 10 mappers, adapter, native pgvector search. Handoff: [`docs/KNOWLEDGE-SCHEMA.md`](../docs/KNOWLEDGE-SCHEMA.md). **Testcontainers waived by the owner**; entity/schema alignment proven instead by `ddl-auto: validate` booting against Postgres 16.6 — see F-32. **Next free migration: derive it with `npm run code-map`** — a figure written in prose goes stale the moment two branches read it on different days. **F-27, F-28 and F-29 closed** 2026-07-30: `DestinationArea` range-checks its coordinates, `KnowledgeQuery` has value equality over its `float[]` (task 37's cache would otherwise miss on every lookup), and `Destination.timezone` is validated against the JVM's tzdb. Open: **F-30**, **F-33**. |
-| 17 | [Knowledge seed and retrieval](17-knowledge-seed-retrieval.md) | 14, 16 | `in_progress` | Gates **17A** + **17B** `done` (hybrid RRF, V21/V22, seed validator **F-44**, adapter ITs **F-32**). Remaining: gate **17C** real curation for Tokyo/Bangkok/Shanghai (**F-34**). Task **40** may start against 17A/17B once this row stays `in_progress` only for 17C. |
+| 17 | [Knowledge seed and retrieval](17-knowledge-seed-retrieval.md) | 14, 16 | `done_with_accepted_debt` | Gates **17A** + **17B** closed with evidence (hybrid RRF, V21/V22, **F-44** seed validator, **F-32** adapter ITs, **F-46** fulltext). Gate **17C** deferred: SAMPLE dataset stays PARTIAL below ADR 010 §1 floor — real Tokyo/Bangkok/Shanghai curation is **F-34**, owned by task **41** (admin knowledge curation). Inventing FULL rows here would fabricate `source_refs` and violate ADR 010 §1/§3. |
 | 18 | [Trip and TripBrief core](18-trip-brief-core.md) | 06, 07, 11, 15, 17 | `done` | Gates **18A** + **18B**. Merged `0c6f343` (intake UI + **V23** `surprise_me`). CI green on `dev` push `30877086309`. **F-35** remains (plan docs still name PUT clarification). |
 | 19 | [LLM TripBrief extraction](19-llm-trip-brief-extraction.md) | 14, 18 | `done` | Gates **19A** + **19B**. `surprise_me` on details/entity/OpenAPI/extraction save path via merge `0c6f343`. CI green `30877086309`. |
 | 20 | [Conversation persistence and SSE](20-conversation-sse.md) | 06, 07, 11, 14, 15 | `done` | Gates **20A** + **20B** + **20C**. Replay + ADR 007 amend (**F-39**) landed `8f2890a`. **F-31**/**F-36**/**F-40** (wire roles) closed earlier. |
 | 21 | [Planner chat and trip creation](21-planner-chat-trip-creation.md) | 18, 19, 20 | `done` | Merged `0c6f343` — `PlannerTools`/`create_trip`/`CreateTripHandoffService`/`PlannerHomePanel`/`trip_created` navigation. Handoff: [`docs/PLANNER-CHAT-HANDOFF.md`](../docs/PLANNER-CHAT-HANDOFF.md). CI green `30877086309`. |
 | 22 | [Trip chat intake tools](22-trip-chat-intake-tools.md) | 18, 19, 20, 21 | `done` | Merged `1286ae1` (PR [#20](https://github.com/Voo6883/travel-planner/pull/20)). `TripChatOrchestrator` + status-gated `update_trip_brief` / `answer_clarification`; SSE `brief_updated` invalidates brief form query. Handoff: [`docs/TRIP-CHAT-HANDOFF.md`](../docs/TRIP-CHAT-HANDOFF.md). CI green run `30882022128` (+ follow-up code-map refresh). |
 | 23 | [Research job platform](23-research-job-platform.md) | 07, 18, 22 | `done` | Merged `4b0f6fa` (PR [#21](https://github.com/Voo6883/travel-planner/pull/21)). Migration **V24** `research_job`. Durable slice `application/research/` (202 start, poll, local executor, 90s timeout, stale reconciler, handler/completion hooks for task 25). On fail: job `FAILED`+`error_code`, trip → `BRIEF_COMPLETE`. Handoff: [`docs/RESEARCH-JOB-HANDOFF.md`](../docs/RESEARCH-JOB-HANDOFF.md). CI green on PR before merge. |
-| 24 | [Deterministic destination ranking](24-destination-ranking.md) | 17, 18, 23 | `not_started` | No `Validation` section. LLM must not overwrite numeric fit score. |
+| 24 | [Deterministic destination ranking](24-destination-ranking.md) | 17, 18, 23 | `review` | Branch `cursor/task-24-destination-ranking-15b0`. Deps via gates **17A/17B** (`done`) + 17 `done_with_accepted_debt` / 18+23 `done`. Pure `domain/algorithm/ranking/` (`DestinationRanker`, weights, exclusions, top-K). Handoff: [`docs/DESTINATION-RANKING-HANDOFF.md`](../docs/DESTINATION-RANKING-HANDOFF.md). |
 | 25 | [Travel research agent](25-travel-research-agent.md) | 14, 17, 23, 24 | `not_started` | No `Validation` section. |
 | 26 | [Research API and frontend](26-research-api-frontend.md) | 11, 23, 24, 25 | `not_started` | No `Validation` section. `ranked-recommendations` is `GET`. |
 | 27 | [Research chat tools and evaluation](27-research-chat-evaluation.md) | 22, 25, 26 | `not_started` | No `Validation` section. Eval harness = backlog S4-9. |
@@ -132,7 +132,7 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 | ID | Task | Depends on | Status | Notes |
 |---|---|---|---|---|
 | 40 | [TKB refresh and re-embedding](40-tkb-refresh-reembed.md) | 14, 15, 16, 17 | `not_started` | Added `3d8bac3`. Required by ADR 010 Consequences; absent from the original 00–39. |
-| 41 | [Admin knowledge curation](41-admin-knowledge-curation.md) | 12, 16, 17, 40 | `not_started` | Added `3ee39ab`. ADR 010 §7 — without it, fixing a closed restaurant needs a migration and redeploy. |
+| 41 | [Admin knowledge curation](41-admin-knowledge-curation.md) | 12, 16, 17, 40 | `not_started` | Added `3ee39ab`. ADR 010 §7. **Owns F-34 / gate 17C** — first real Tokyo/Bangkok/Shanghai curation (and ongoing KB edits). |
 
 ## Final integration
 
@@ -148,10 +148,11 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 | Status | Count |
 |---|---|
 | `done` | **23** |
-| `in_progress` | 1 |
+| `done_with_accepted_debt` | 1 |
+| `in_progress` | 0 |
 | `blocked` | 0 |
-| `review` | 0 |
-| `not_started` | 18 |
+| `review` | 1 |
+| `not_started` | 17 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*
 
@@ -199,7 +200,7 @@ before Task 15** writes the ArchUnit ruleset:
 | ~~**F-31**~~ | **Resolved (task 20).** Settled in the DTO layer: `api/dto/chat/ChatWireNames` is the one place a chat enum becomes a wire value, Java stays `UPPER_SNAKE` (they are the persisted values and two CHECK constraints), and the wire is lower-case snake. Scoped to chat only — `roles` and `linked_providers` stay upper-case. `ChatWireNamesTest` asserts it for every constant of both enums, so a constant added later is published correctly by default. Both client-side `toLowerCase()` normalisations are deleted; the four-statuses-onto-two collapse stays, because that is a decision and not a workaround |
 | **F-32** | ✅ **CLOSED** 2026-07-30. All three gaps. (1) The container suite runs without Docker (`npm run test:integration`) — 133 tests against PostgreSQL 16.6 + pgvector 0.8.1 — so entity/schema alignment no longer rests on `ddl-auto: validate` alone. (2) **Adapter round-trips:** `KnowledgePersistenceIT`, 19 tests over all ten knowledge mappers, writing rows as SQL and reading them back through `KnowledgePort`. The load-bearing one is provenance — `KnowledgeProvenanceMapper` assembles from two rows and its own javadoc says MapStruct "would still compile, having quietly picked one of the two", so the test puts the source's `retrieved_at` seven years from the row's. Also covered: the `tags text[]` array, `numeric(9,6)` coordinates, `Money` exactness, `duration_minutes` as minutes not seconds, absent optionals staying absent, every declared ordering, the POI category filter, V21's country join, and `search()`'s hand-written pgvector SQL — which had no test at all. (3) **HNSW planner usage:** measured, see `docs/KNOWLEDGE-SCHEMA.md` §5 — the index is chosen above ~1–2k rows and correctly refused below, so at ADR 010 §1's curated floor the six indexes are unused and cost write time for a corpus that does not exist yet. Gate **17B**'s "shared adapter contract tests" is satisfied by (2) |
 | **F-33** | `travel_app` cannot express that one app supersedes another in a market, so task 17's "China suppression of inactive global alternatives" is not representable. Needs a schema change — a gap in task 16's design, not something a seed can work around |
-| **F-34** | Real curation for Tokyo/Bangkok/Shanghai is still unstarted. The committed dataset is deliberately SAMPLE (`stub:sample`, `PARTIAL`, obviously-fake names/hours/prices) and is below ADR 010 §1's floor of 25 POIs. ADR 010 §1: "curation is a deliberate authoring task with a named owner" — that owner has not been named |
+| **F-34** | Real curation for Tokyo/Bangkok/Shanghai is still unstarted. SAMPLE (`stub:sample`, `PARTIAL`) stays below ADR 010 §1's floor. **Owner: task 41** (accepted debt closing task 17). Gate **17C** deferred rather than inventing FULL provenance. |
 | **F-35** | `PLAN.md` §4.1.3 and `BACKLOG.md` S3-1 still specify `PUT .../brief/clarification`; ADR 008 §3 supersedes it with a typed action endpoint, which is what task 18 implemented. The plan documents were not amended |
 | ~~**F-36**~~ | **Resolved (task 20).** All four routes exist and the three assumptions are now contract. History: the repo's own `PageQuery` envelope — `page` zero-based, `page_size` default **20** (the client had assumed 30 and now sends 30 explicitly, which is its own choice), rejected not clamped above 100 — returning `{page, page_size, total, conversation_id, items[]}`; page 0 is the newest page and items are `seq` ascending, both documented on the path. Body: `{client_message_id, content, conversation_id?}`, adopted unchanged. `message_start` carries `client_message_id` on the user echo — pinned by `ChatSseContractTest` and `ChatTurnServiceTest`. `chatPath()` is gone; `chat-api.ts` now uses the generated path union with the same cast `admin-api.ts` makes for a query string |
 | **F-37** | `DevAdminSeeder.run()` calls `seed()` by self-invocation, so its `@Transactional` proxy is bypassed and the annotation never applies. Harmless today (one insert) but it does not do what it reads as doing. Pre-existing, from task 12 |
