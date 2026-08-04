@@ -1367,7 +1367,7 @@
     "25": {
       "title": "Travel research agent",
       "file": "tasks/25-travel-research-agent.md",
-      "status": "not_started",
+      "status": "in_progress",
       "dependsOn": [
         "14",
         "17",
