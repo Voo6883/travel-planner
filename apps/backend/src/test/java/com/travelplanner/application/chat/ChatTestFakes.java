@@ -73,7 +73,7 @@ final class ChatTestFakes {
      * which is exactly what the pre-task-22 trip surface did.
      */
     static TripChatOrchestrator noopTripChat(LlmStreamPort llm) {
-        return new TripChatOrchestrator(llm, null, null, new ObjectMapper()) {
+        return new TripChatOrchestrator(llm, null, null, null, new ObjectMapper()) {
             @Override
             public Flux<LlmEvent> stream(ChatTurn turn) {
                 return llm.stream(turn.prompt(), LlmOptions.forFeature("chat"));

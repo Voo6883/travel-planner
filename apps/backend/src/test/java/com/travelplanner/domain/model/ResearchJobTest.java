@@ -32,7 +32,17 @@ class ResearchJobTest {
         assertThat(job.progressPct()).isZero();
         assertThat(job.startedAt()).isNull();
         assertThat(job.completedAt()).isNull();
+        assertThat(job.completionMailSentAt()).isNull();
         assertThat(job.errorCode()).isNull();
+    }
+
+    @Test
+    void completionMailCanBeClaimedOnceOnACompletedJob() {
+        ResearchJob completed = ResearchJob.queue(TRIP, USER, NOW).markRunning(NOW).complete(NOW);
+
+        ResearchJob claimed = completed.claimCompletionMail(NOW.plusSeconds(1)).orElseThrow();
+        assertThat(claimed.completionMailSentAt()).isEqualTo(NOW.plusSeconds(1));
+        assertThat(claimed.claimCompletionMail(NOW.plusSeconds(2))).isEmpty();
     }
 
     @Test
@@ -115,12 +125,16 @@ class ResearchJobTest {
         // progress out of range.
         assertThatThrownBy(() -> job(ResearchJobStatus.RUNNING, 101, null, NOW, null))
                 .isInstanceOf(ValidationFailedException.class);
+        // completion mail stamp only on COMPLETED.
+        assertThatThrownBy(() -> new ResearchJob(UUID.randomUUID(), TRIP, USER, UUID.randomUUID(),
+                ResearchJobStatus.RUNNING, 10, null, 1, NOW, null, NOW, 0, NOW, NOW))
+                .isInstanceOf(ValidationFailedException.class);
     }
 
     private static ResearchJob job(ResearchJobStatus status, int progress, String errorCode,
             Instant startedAt, Instant completedAt) {
         UUID id = UUID.randomUUID();
         return new ResearchJob(id, TRIP, USER, id, status, progress, errorCode, 0,
-                startedAt, completedAt, 0, NOW, NOW);
+                startedAt, completedAt, null, 0, NOW, NOW);
     }
 }

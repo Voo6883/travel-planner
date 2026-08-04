@@ -13,9 +13,8 @@ export interface TripChatPanelProps {
 /**
  * Persistent trip conversation after planner handoff (PLAN §3.2).
  *
- * When an intake tool commits a brief edit the server emits `brief_updated` (task 22, UC-C5-09);
- * this invalidates the cached brief and the trip detail so the editor beside the chat re-fetches
- * what the agent saved rather than showing the value the traveller last typed into the form.
+ * Domain SSE events keep the structured screens beside chat in sync (tasks 22 and 27):
+ * `brief_updated`, `research_started`, `destination_selected`.
  */
 export function TripChatPanel({ tripId }: TripChatPanelProps) {
   const queryClient = useQueryClient();
@@ -28,9 +27,34 @@ export function TripChatPanel({ tripId }: TripChatPanelProps) {
     [queryClient],
   );
 
+  const onResearchStarted = useCallback(
+    (payload: { tripId: string; jobId: string }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(payload.tripId) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.research.job(payload.tripId, payload.jobId),
+      });
+    },
+    [queryClient],
+  );
+
+  const onDestinationSelected = useCallback(
+    (selectedTripId: string) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(selectedTripId) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.research.recommendations(selectedTripId),
+      });
+    },
+    [queryClient],
+  );
+
   return (
     <div className="min-h-[24rem]">
-      <ChatPanel target={tripChatTarget(tripId)} onBriefUpdated={onBriefUpdated} />
+      <ChatPanel
+        target={tripChatTarget(tripId)}
+        onBriefUpdated={onBriefUpdated}
+        onResearchStarted={onResearchStarted}
+        onDestinationSelected={onDestinationSelected}
+      />
     </div>
   );
 }

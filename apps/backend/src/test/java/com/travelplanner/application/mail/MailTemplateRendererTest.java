@@ -34,7 +34,9 @@ class MailTemplateRendererTest {
             "forgot_url", "https://app.example.test/forgot-password",
             "sign_in_url", "https://app.example.test/sign-in",
             "sign_up_url", "https://app.example.test/sign-up",
-            "providers", "FIREBASE_GOOGLE");
+            "providers", "FIREBASE_GOOGLE",
+            "trip_name", "Japan spring trip",
+            "trip_url", "https://app.example.test/trips/11111111-1111-1111-1111-111111111111");
 
     private final MailTemplateRenderer renderer = new MailTemplateRenderer();
 

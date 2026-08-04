@@ -114,8 +114,19 @@ class TripChatOrchestratorTest {
     }
 
     @Test
-    void aTripThatLeftIntakeIsOfferedNoTools() {
+    void aBriefCompleteTripOffersStartResearch() {
         seedTrip(TripStatus.BRIEF_COMPLETE, complete());
+        ScriptedLlm llm = ScriptedLlm.emitting(new LlmEvent.Done(StopReason.END_TURN));
+
+        drain(orchestrator(llm).stream(turn()));
+
+        assertThat(llm.offeredTools().getFirst()).extracting(ToolSpec::name)
+                .containsExactly(TripChatTools.START_RESEARCH);
+    }
+
+    @Test
+    void anArchivedTripIsOfferedNoTools() {
+        seedTrip(TripStatus.ARCHIVED, complete());
         ScriptedLlm llm = ScriptedLlm.emitting(new LlmEvent.Done(StopReason.END_TURN));
 
         drain(orchestrator(llm).stream(turn()));
@@ -289,7 +300,8 @@ class TripChatOrchestratorTest {
     // ------------------------------------------------------------------------------------------
 
     private TripChatOrchestrator orchestrator(LlmStreamPort llm) {
-        return new TripChatOrchestrator(llm, toolService, briefService, objectMapper);
+        return new TripChatOrchestrator(llm, toolService, mock(TripChatResearchToolService.class),
+                briefService, objectMapper);
     }
 
     private ChatTurn turn() {

@@ -39,6 +39,9 @@ public enum MailTemplate {
      */
     RESET_CONFIRMATION("reset-confirmation", "Your Travel Planner password was changed"),
 
+    /** UC-N04 / UC-C2-08 — research finished; stamped once per job (task 27). */
+    RESEARCH_COMPLETE("research-complete", "Your travel research is ready"),
+
     /**
      * Someone tried to register an address that already has a local account. Tells the owner to sign
      * in or reset instead — the information the uniform {@code 202} deliberately withholds from the

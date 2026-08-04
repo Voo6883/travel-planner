@@ -55,6 +55,10 @@ public class ResearchJobEntity {
     @Column(name = "completed_at")
     private Instant completedAt;
 
+    /** Task 27 — when the research-complete mail was claimed; null until claimed. */
+    @Column(name = "completion_mail_sent_at")
+    private Instant completionMailSentAt;
+
     /** ADR 008 §1 — the lock the worker-versus-reconciler race depends on. */
     @Version
     @Column(name = "version", nullable = false)
@@ -148,6 +152,14 @@ public class ResearchJobEntity {
 
     public void setCompletedAt(Instant completedAt) {
         this.completedAt = completedAt;
+    }
+
+    public Instant getCompletionMailSentAt() {
+        return completionMailSentAt;
+    }
+
+    public void setCompletionMailSentAt(Instant completionMailSentAt) {
+        this.completionMailSentAt = completionMailSentAt;
     }
 
     public int getVersion() {

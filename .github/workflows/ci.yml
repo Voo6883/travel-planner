@@ -12,7 +12,9 @@ name: CI
 # appear as their own step. Thresholds, exclusions, and the architecture-exception process are
 # documented in docs/QUALITY-GATES.md.
 #
-# The AI eval harness remains out of scope — backlog S4-9 owns it.
+# The AI eval harness (BACKLOG S4-9 / task 27) runs inside `./gradlew test` as
+# `ResearchEvalHarnessTest` — deterministic fixtures under `src/test/resources/ai/eval/`.
+# Live provider evaluation remains separately approved and is not part of this workflow.
 #
 # The OpenAPI drift gate landed with tasks/06-openapi-error-platform.md: spec validation runs
 # inside the `backend` job, and the codegen drift check inside the `frontend` job.

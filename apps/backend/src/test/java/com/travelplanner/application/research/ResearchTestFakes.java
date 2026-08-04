@@ -102,8 +102,8 @@ final class ResearchTestFakes {
             }
             ResearchJob persisted = new ResearchJob(job.id(), job.tripId(), job.userId(),
                     job.researchRunId(), job.status(), job.progressPct(), job.errorCode(),
-                    job.attempts(), job.startedAt(), job.completedAt(), job.version() + 1,
-                    job.createdAt(), job.updatedAt());
+                    job.attempts(), job.startedAt(), job.completedAt(), job.completionMailSentAt(),
+                    job.version() + 1, job.createdAt(), job.updatedAt());
             rows.put(persisted.id(), persisted);
             return persisted;
         }
@@ -123,6 +123,13 @@ final class ResearchTestFakes {
             return rows.values().stream()
                     .filter(job -> job.tripId().equals(tripId))
                     .filter(job -> job.status().isActive())
+                    .max(Comparator.comparing(ResearchJob::createdAt));
+        }
+
+        @Override
+        public Optional<ResearchJob> findLatestByTripId(UUID tripId) {
+            return rows.values().stream()
+                    .filter(job -> job.tripId().equals(tripId))
                     .max(Comparator.comparing(ResearchJob::createdAt));
         }
 

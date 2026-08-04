@@ -16,6 +16,7 @@ import com.travelplanner.domain.exception.DomainException;
 import com.travelplanner.domain.exception.ValidationFailedException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,58 +26,46 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 /**
- * Runs a trip-thread turn: enriches the prompt with the trip's own state, offers the status-gated
- * intake tools, and executes the one the model chooses (task 22, UC-C5-09).
+ * Trip-thread turns with status-gated intake and research tools (tasks 22 and 27).
  *
- * <p><strong>The tool loop is why this is not {@code PlannerChatOrchestrator}.</strong> Creating a
- * trip is a single terminal act — the planner streams once, runs {@code create_trip}, and is done.
- * Editing a brief is a conversation: the model saves a field, reads back what the server stored,
- * and may then save another. So a provider turn that stops on {@link StopReason#TOOL_USE} after a
- * tool committed is <em>not</em> the end of the turn — it is a cue to feed the tool result back and
- * stream again. {@link #MAX_ROUNDS} caps that at a handful of rounds so a model that never settles
- * cannot bill an unbounded number of calls, and the intermediate {@code Done(TOOL_USE)} frames are
- * swallowed so the client sees one continuous turn ending in one terminal frame.
- *
- * <p>No mutation happens here. {@link TripChatToolService} owns the transaction, the status gate,
- * and the optimistic lock; this class parses arguments, calls it, and turns the outcome into
- * stream events — a committed edit becomes a {@link LlmEvent.ToolResult} plus a
- * {@link LlmEvent.DomainEvent} {@code brief_updated}, and any {@link DomainException} becomes a
- * terminal {@link LlmEvent.StreamError} carrying the registered code (PLAN: "no LLM/HTTP inside
- * {@code @Transactional}" — the model call is out here, the write is in the service).
+ * <p>Tool loops stay bounded by {@link #MAX_ROUNDS}. Mutations go through
+ * {@link TripChatToolService} / {@link TripChatResearchToolService}; domain events follow committed
+ * writes only (ADR 007).
  */
 @Service
 @RequiresDatabase
 public class TripChatOrchestrator {
 
-    /** One initial round plus at most three tool-driven follow-ups. */
     static final int MAX_ROUNDS = 4;
 
     private static final Logger log = LoggerFactory.getLogger(TripChatOrchestrator.class);
     private static final String FEATURE = "chat";
     private static final String BRIEF_UPDATED = "brief_updated";
+    private static final String RESEARCH_STARTED = "research_started";
+    private static final String DESTINATION_SELECTED = "destination_selected";
     private static final String TRIP_ID_KEY = "trip_id";
+    private static final String JOB_ID_KEY = "job_id";
     private static final LlmOptions OPTIONS = LlmOptions.forFeature(FEATURE);
 
     private final LlmStreamPort llm;
     private final TripChatToolService toolService;
+    private final TripChatResearchToolService researchTools;
     private final TripBriefService briefs;
     private final ObjectMapper objectMapper;
 
-    public TripChatOrchestrator(LlmStreamPort llm, TripChatToolService toolService,
-            TripBriefService briefs, ObjectMapper objectMapper) {
+    public TripChatOrchestrator(
+            LlmStreamPort llm,
+            TripChatToolService toolService,
+            TripChatResearchToolService researchTools,
+            TripBriefService briefs,
+            ObjectMapper objectMapper) {
         this.llm = llm;
         this.toolService = toolService;
+        this.researchTools = researchTools;
         this.briefs = briefs;
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * The trip turn as a cold stream of provider events, with the intake tools executed inline.
-     *
-     * <p>A planner target is a routing mistake — {@code ChatTurnService} sends those to
-     * {@code PlannerChatOrchestrator} — so it degrades to a plain, tool-free stream rather than
-     * offering trip tools on a surface that has no trip.
-     */
     public Flux<LlmEvent> stream(ChatTurn turn) {
         if (turn.target().isPlanner()) {
             return llm.stream(turn.prompt(), OPTIONS);
@@ -97,20 +86,15 @@ public class TripChatOrchestrator {
                 .concatWith(Flux.defer(buffer::continuation));
     }
 
-    /**
-     * Runs the tool the model asked for, in its own transaction.
-     *
-     * @return the tool result and {@code brief_updated} event on success, or a single terminal
-     *         {@link LlmEvent.StreamError} carrying the domain code on any refusal
-     */
     private Outcome execute(ToolCall call, Round round) {
         try {
-            TripChatToolService.Result result = run(call, round);
-            List<LlmEvent> events = List.of(
-                    new LlmEvent.ToolResult(call.id(), result.payloadJson()),
-                    new LlmEvent.DomainEvent(BRIEF_UPDATED,
-                            Map.of(TRIP_ID_KEY, round.tripId().toString())));
-            return Outcome.ok(events, result.payloadJson());
+            Executed executed = run(call, round);
+            List<LlmEvent> events = new ArrayList<>();
+            events.add(new LlmEvent.ToolResult(call.id(), executed.payloadJson()));
+            if (executed.domainEvent() != null) {
+                events.add(executed.domainEvent());
+            }
+            return Outcome.ok(List.copyOf(events), executed.payloadJson());
         } catch (DomainException failure) {
             log.warn("trip_tool_rejected tool={} code={} detail={}", call.name(), failure.code(),
                     failure.details());
@@ -119,22 +103,62 @@ public class TripChatOrchestrator {
         }
     }
 
-    private TripChatToolService.Result run(ToolCall call, Round round) {
+    private Executed run(ToolCall call, Round round) {
         TripChatToolService.Context context = new TripChatToolService.Context(
                 round.turn().conversationId(), round.tripId(), call.id(), call.name(),
                 round.turn().user());
         if (TripChatTools.UPDATE_TRIP_BRIEF.equals(call.name())) {
-            return toolService.applyUpdate(context,
+            TripChatToolService.Result result = toolService.applyUpdate(context,
                     UpdateTripBriefArgs.parse(call.name(), call.inputJson(), objectMapper));
+            return new Executed(result.payloadJson(), briefUpdated(round.tripId()));
         }
         if (TripChatTools.ANSWER_CLARIFICATION.equals(call.name())) {
-            return toolService.applyClarification(context,
+            TripChatToolService.Result result = toolService.applyClarification(context,
                     AnswerClarificationArgs.parse(call.name(), call.inputJson(), objectMapper));
+            return new Executed(result.payloadJson(), briefUpdated(round.tripId()));
         }
-        throw ValidationFailedException.field("tool_name", "unknown trip tool: " + call.name());
+        return runResearch(call, context, round.tripId());
     }
 
-    /** The prompt for the next round: this round's assistant turn, then each tool result. */
+    private Executed runResearch(ToolCall call, TripChatToolService.Context context, UUID tripId) {
+        TripChatResearchToolService.Result result = switch (call.name()) {
+            case TripChatTools.START_RESEARCH -> researchTools.startResearch(context,
+                    StartResearchArgs.parse(call.name(), call.inputJson(), objectMapper));
+            case TripChatTools.GET_RESEARCH_STATUS -> researchTools.researchStatus(context,
+                    EmptyToolArgs.parse(call.name(), call.inputJson(), objectMapper));
+            case TripChatTools.GET_RECOMMENDATIONS_SUMMARY -> researchTools.recommendationsSummary(
+                    context, EmptyToolArgs.parse(call.name(), call.inputJson(), objectMapper));
+            case TripChatTools.SELECT_RECOMMENDATION -> researchTools.selectRecommendation(context,
+                    SelectRecommendationArgs.parse(call.name(), call.inputJson(), objectMapper));
+            case TripChatTools.GET_DESTINATION_GUIDE -> researchTools.destinationGuide(context,
+                    GetDestinationGuideArgs.parse(call.name(), call.inputJson(), objectMapper));
+            case TripChatTools.GET_TRAVEL_APPS -> researchTools.travelApps(context,
+                    GetTravelAppsArgs.parse(call.name(), call.inputJson(), objectMapper));
+            default -> throw ValidationFailedException.field(
+                    "tool_name", "unknown trip tool: " + call.name());
+        };
+        return new Executed(result.payloadJson(), domainEventFor(result, tripId));
+    }
+
+    private static LlmEvent.DomainEvent briefUpdated(UUID tripId) {
+        return new LlmEvent.DomainEvent(BRIEF_UPDATED, Map.of(TRIP_ID_KEY, tripId.toString()));
+    }
+
+    private static LlmEvent.DomainEvent domainEventFor(
+            TripChatResearchToolService.Result result, UUID tripId) {
+        return switch (result.eventKind()) {
+            case NONE -> null;
+            case RESEARCH_STARTED -> {
+                Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put(TRIP_ID_KEY, tripId.toString());
+                payload.put(JOB_ID_KEY, result.jobId().toString());
+                yield new LlmEvent.DomainEvent(RESEARCH_STARTED, payload);
+            }
+            case DESTINATION_SELECTED -> new LlmEvent.DomainEvent(
+                    DESTINATION_SELECTED, Map.of(TRIP_ID_KEY, tripId.toString()));
+        };
+    }
+
     private static Prompt continuation(Round round, String assistantText,
             List<PromptMessage> toolResults) {
         List<PromptMessage> messages = new ArrayList<>(round.prompt().messages());
@@ -143,11 +167,6 @@ public class TripChatOrchestrator {
         return Prompt.adHoc(List.copyOf(messages));
     }
 
-    /**
-     * The mutable state of one provider round: the calls being assembled, the text that will become
-     * the assistant turn if the loop continues, the tool results to feed forward, and how the round
-     * ended. Not shared across rounds — a fresh one is created per {@link #round(Round)}.
-     */
     private final class ToolBuffer {
 
         private final Round round;
@@ -210,7 +229,6 @@ public class TripChatOrchestrator {
             return List.of(error);
         }
 
-        /** Recorded, not forwarded: {@link #continuation()} decides whether it ends the turn. */
         private List<LlmEvent> done(LlmEvent.Done done) {
             stopReason = done.stopReason();
             return List.of();
@@ -233,7 +251,6 @@ public class TripChatOrchestrator {
         }
     }
 
-    /** The immutable frame of one round: which trip, which prompt, which tools, and how deep. */
     private record Round(ChatTurn turn, UUID tripId, Prompt prompt, List<ToolSpec> tools, int number) {
 
         private Round next(Prompt nextPrompt) {
@@ -241,7 +258,6 @@ public class TripChatOrchestrator {
         }
     }
 
-    /** The result of executing one tool: the events to emit, and the payload to feed forward. */
     private record Outcome(List<LlmEvent> events, String toolResultPayload, boolean failed) {
 
         private static Outcome ok(List<LlmEvent> events, String toolResultPayload) {
@@ -253,7 +269,9 @@ public class TripChatOrchestrator {
         }
     }
 
-    /** One tool call, accumulated as its argument bytes stream in. */
+    private record Executed(String payloadJson, LlmEvent.DomainEvent domainEvent) {
+    }
+
     private static final class ToolCall {
 
         private final String id;

@@ -76,6 +76,11 @@ public class ResearchJobRepositoryAdapter implements ResearchJobRepositoryPort {
     }
 
     @Override
+    public Optional<ResearchJob> findLatestByTripId(UUID tripId) {
+        return repository.findFirstByTripIdOrderByCreatedAtDesc(tripId).map(mapper::toDomain);
+    }
+
+    @Override
     public List<ResearchJob> findByStatus(ResearchJobStatus status) {
         return repository.findByStatus(status).stream().map(mapper::toDomain).toList();
     }

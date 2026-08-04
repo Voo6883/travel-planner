@@ -27,6 +27,10 @@ export interface ChatPanelProps {
    * the query client.
    */
   readonly onBriefUpdated?: (tripId: string) => void;
+  /** Fired when chat starts research (task 27); invalidate trip detail and begin job poll. */
+  readonly onResearchStarted?: (payload: { tripId: string; jobId: string }) => void;
+  /** Fired when chat selects a destination (task 27). */
+  readonly onDestinationSelected?: (tripId: string) => void;
   /** Planner home only — 3–4 translated chips that send through the same composer path. */
   readonly showSuggestedPrompts?: boolean;
 }
@@ -47,12 +51,16 @@ export function ChatPanel({
   conversationId = null,
   onTripCreated,
   onBriefUpdated,
+  onResearchStarted,
+  onDestinationSelected,
   showSuggestedPrompts = false,
 }: ChatPanelProps) {
   const t = useTranslations('chat');
   const chat = useChatStream({ target, conversationId });
   const tripCreatedId = chat.state.tripCreatedId;
   const briefUpdatedTripId = chat.state.briefUpdatedTripId;
+  const researchStarted = chat.state.researchStarted;
+  const destinationSelectedTripId = chat.state.destinationSelectedTripId;
   const showPrompts = showSuggestedPrompts && target.scope === 'planner' && chat.messages.length === 0;
 
   useEffect(() => {
@@ -66,6 +74,18 @@ export function ChatPanel({
       onBriefUpdated(briefUpdatedTripId);
     }
   }, [onBriefUpdated, briefUpdatedTripId]);
+
+  useEffect(() => {
+    if (researchStarted !== null && onResearchStarted) {
+      onResearchStarted(researchStarted);
+    }
+  }, [onResearchStarted, researchStarted]);
+
+  useEffect(() => {
+    if (destinationSelectedTripId !== null && onDestinationSelected) {
+      onDestinationSelected(destinationSelectedTripId);
+    }
+  }, [onDestinationSelected, destinationSelectedTripId]);
 
   return (
     <section

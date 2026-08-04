@@ -102,4 +102,41 @@ describe('TripChatPanel', () => {
     expect(await screen.findByText('Where would you like to go?')).toBeInTheDocument();
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: queryKeys.trips.brief(TRIP_ID) });
   });
+
+  it('invalidates trip detail and research job when research_started arrives (task 27)', async () => {
+    const jobId = 'job-27';
+    stubChat([
+      `event: research_started\ndata: {"trip_id":"${TRIP_ID}","job_id":"${jobId}"}\n\n`,
+      'event: done\ndata: {"stop_reason":"end_turn"}\n\n',
+    ]);
+    const user = userEvent.setup();
+
+    const invalidate = renderWithSpiedClient(<TripChatPanel tripId={TRIP_ID} />);
+    await user.type(screen.getByLabelText(enChat.composer.label), 'Research now{Enter}');
+
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.trips.detail(TRIP_ID) }),
+    );
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: queryKeys.research.job(TRIP_ID, jobId),
+    });
+  });
+
+  it('invalidates trip detail and recommendations when destination_selected arrives', async () => {
+    stubChat([
+      `event: destination_selected\ndata: {"trip_id":"${TRIP_ID}"}\n\n`,
+      'event: done\ndata: {"stop_reason":"end_turn"}\n\n',
+    ]);
+    const user = userEvent.setup();
+
+    const invalidate = renderWithSpiedClient(<TripChatPanel tripId={TRIP_ID} />);
+    await user.type(screen.getByLabelText(enChat.composer.label), 'Pick Tokyo{Enter}');
+
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.trips.detail(TRIP_ID) }),
+    );
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: queryKeys.research.recommendations(TRIP_ID),
+    });
+  });
 });

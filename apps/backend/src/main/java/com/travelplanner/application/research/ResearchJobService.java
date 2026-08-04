@@ -158,6 +158,7 @@ public class ResearchJobService {
                 .ifPresent(trip -> {
                     completionHook.onResearchCompleted(job.id(), trip.id());
                     trips.save(trip.withStatus(TripStatus.RESEARCH_READY, now));
+                    events.publishEvent(new ResearchReadyEvent(job.id(), trip.id(), job.userId()));
                 });
         log.info("research_job_completed job={} trip={} user={}", jobId, job.tripId(), job.userId());
     }

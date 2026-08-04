@@ -23,5 +23,7 @@ public interface ResearchJobJpaRepository extends JpaRepository<ResearchJobEntit
     Optional<ResearchJobEntity> findFirstByTripIdAndStatusInOrderByCreatedAtDesc(
             UUID tripId, Collection<ResearchJobStatus> statuses);
 
+    Optional<ResearchJobEntity> findFirstByTripIdOrderByCreatedAtDesc(UUID tripId);
+
     List<ResearchJobEntity> findByStatus(ResearchJobStatus status);
 }

@@ -38,6 +38,12 @@ public interface ResearchJobRepositoryPort {
      */
     Optional<ResearchJob> findActiveByTripId(UUID tripId);
 
+    /**
+     * The trip's newest job of any status — chat progress after the active window closes
+     * (task 27 {@code get_research_status}).
+     */
+    Optional<ResearchJob> findLatestByTripId(UUID tripId);
+
     /** Every job in a status, for the startup reconciler. */
     List<ResearchJob> findByStatus(ResearchJobStatus status);
 }

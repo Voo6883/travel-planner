@@ -38,17 +38,16 @@ property names matching the OpenAPI wire style. The gate is enforced twice: the 
 
 ### Extension procedure for Task 23 (`start_research`) / Task 27
 
+Task 27 landed the research tools. See [`docs/RESEARCH-CHAT-EVAL-HANDOFF.md`](RESEARCH-CHAT-EVAL-HANDOFF.md)
+for gates, confirmation policy, SSE events, mail, and the eval harness.
+
+Historical procedure (still valid for later tools):
+
 1. Add a `NAME` constant and a JSON Schema string constant in `TripChatTools`.
-2. Add the tool to `specsFor` under the statuses where it is legal (e.g. `start_research` under
-   `BRIEF_COMPLETE`), and extend `isAllowed` accordingly.
-3. Add an `Args` record with a `parse(toolName, inputJson, ObjectMapper)` that rejects unknown tool
-   names / non-objects / unknown fields / bad types — follow `UpdateTripBriefArgs`. Reuse
-   `ToolArgsJson` helpers; throw `ValidationFailedException`, never `IllegalArgumentException`.
-4. Add an `@TransactionalWrite` method to `TripChatToolService` (or a sibling service) that gates on
-   status, delegates to the deterministic C-service, appends `tool_call` + `tool_result` rows, and
-   returns a `Result(payloadJson, view)`. No LLM/HTTP inside the transaction.
-5. Dispatch the new tool name in `TripChatOrchestrator.run`, and — if it needs a new client signal —
-   add an `LlmEvent.DomainEvent` type plus a `ChatStreamEvent` mirror (see `brief_updated` below).
+2. Add the tool to `specsFor` under the statuses where it is legal, and extend `isAllowed`.
+3. Add an `Args` record with schema-validated `parse` — throw `ValidationFailedException`.
+4. Add a write/read method on `TripChatToolService` or `TripChatResearchToolService`.
+5. Dispatch in `TripChatOrchestrator.run`, emit domain events for client invalidation.
 
 ## Approved statuses
 
