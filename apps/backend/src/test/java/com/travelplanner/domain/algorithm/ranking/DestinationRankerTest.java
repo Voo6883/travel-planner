@@ -1,7 +1,6 @@
 package com.travelplanner.domain.algorithm.ranking;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 import com.travelplanner.domain.enums.CoverageLevel;
@@ -9,10 +8,8 @@ import com.travelplanner.domain.enums.PoiCategory;
 import com.travelplanner.domain.enums.TravelInterest;
 import com.travelplanner.domain.enums.TravelPace;
 import com.travelplanner.domain.model.TripBriefDetails;
-import com.travelplanner.domain.valueobject.DateRange;
 import com.travelplanner.domain.valueobject.Money;
 import com.travelplanner.domain.valueobject.PartySize;
-import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
