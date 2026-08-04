@@ -885,6 +885,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{tripId}/research/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a research run for a trip (UC-C2-01)
+         * @description Starts the C2 research agent for the trip and returns **immediately** with the queued job
+         *     (PLAN §3.1, USE-CASES UC-C2-01). The run is long — up to the §14 90-second budget — so it
+         *     happens on a background worker; the client polls `GET .../research/jobs/{jobId}` for
+         *     progress rather than holding this connection open.
+         *
+         *     **`202 Accepted`, not `200`.** The response says the work was accepted, not finished:
+         *     `status` is `queued`, and the trip moves to `RESEARCH_QUEUED` in the same transaction that
+         *     persists the job — before any worker is handed it, so a run is never dispatched against a
+         *     row that did not commit.
+         *
+         *     **The gate is `BRIEF_COMPLETE`.** Research may begin only from a complete brief (the C2
+         *     unlock rule); any other trip status is `400 validation_failed` on `status`. A trip that
+         *     already has an active (queued or running) job is refused the same way — one run at a time.
+         *     Re-running after a previous run finished creates a **new** job and keeps the old one as
+         *     history (UC-C2-07).
+         */
+        post: operations["startResearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}/research/jobs/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Poll a research job (UC-C2-02)
+         * @description The current state of a research run: `status` (`queued|running|completed|failed`),
+         *     `progress_pct` while running, and `error_code` when it failed (USE-CASES UC-C2-02).
+         *
+         *     The frontend polls this while the job is `queued` or `running` and stops once it is
+         *     terminal. A failed job carries a typed `error_code` (for example `research_timeout`) and
+         *     leaves the trip recoverable — the trip returns to `BRIEF_COMPLETE`, never a trip-level
+         *     "failed" state, so a re-run is always possible.
+         *
+         *     A job id that is not this trip's, or a trip that is not the caller's, is `404 not_found` —
+         *     indistinguishable, so this cannot be used to probe for another user's data.
+         */
+        get: operations["getResearchJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/planner/chat/messages": {
         parameters: {
             query?: never;
@@ -1661,6 +1724,64 @@ export interface components {
         };
         ArchiveTripRequest: components["schemas"]["ExpectedVersion"] & Record<string, never>;
         /**
+         * @description The lifecycle of one research run (UC-C2-02). Lower-case on the wire; the backend stores
+         *     the UPPER_SNAKE form and maps it here.
+         *
+         *     - `queued` — persisted, waiting for a worker
+         *     - `running` — the agent is executing
+         *     - `completed` — a result exists; the trip is `RESEARCH_READY`
+         *     - `failed` — the run ended without a result; `error_code` says why, and the trip is back at
+         *       `BRIEF_COMPLETE` so it can be re-run
+         * @example queued
+         * @enum {string}
+         */
+        ResearchJobStatus: "queued" | "running" | "completed" | "failed";
+        /**
+         * @description One research run, as `startResearch` (202) and `getResearchJob` (200) both return it
+         *     (UC-C2-01/02).
+         *
+         *     The start response carries `job_id` and `status: queued`; the poll adds `progress_pct` while
+         *     running and `error_code` on failure. `started_at` and `completed_at` are absent until the run
+         *     reaches them. There is no trip-level failed status — a failed job leaves the trip
+         *     recoverable.
+         */
+        ResearchJob: {
+            /** Format: uuid */
+            job_id: string;
+            /** Format: uuid */
+            trip_id: string;
+            status: components["schemas"]["ResearchJobStatus"];
+            /**
+             * Format: int32
+             * @description Coarse progress for the poll UI. Advisory; never orders anything.
+             * @example 0
+             */
+            progress_pct: number;
+            /**
+             * @description A registered-style `snake_case` reason present only when `status` is `failed`, e.g.
+             *     `research_timeout`. Distinct from the API error catalog: it describes why a run ended,
+             *     not an HTTP response.
+             * @example research_timeout
+             */
+            error_code?: string | null;
+            /**
+             * Format: int32
+             * @description How many times this job entered `running`. A re-run is a new job, not a bump.
+             * @example 1
+             */
+            attempts: number;
+            /**
+             * Format: date-time
+             * @description When the run entered `running`; absent while `queued`.
+             */
+            started_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the run reached a terminal state; absent while active.
+             */
+            completed_at?: string | null;
+        };
+        /**
          * @description An amount and its currency (PLAN §4.0.2-A).
          *
          *     **`amount` is a decimal string, not a JSON number.** Money is `BigDecimal` in Java and
@@ -2298,6 +2419,30 @@ export interface components {
             };
         };
         /**
+         * @description The research run was accepted and queued (UC-C2-01). `status` is `queued` and the trip has
+         *     moved to `RESEARCH_QUEUED`; the run executes on a background worker and the client polls
+         *     `getResearchJob`.
+         */
+        ResearchJobAccepted: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ResearchJob"];
+            };
+        };
+        /** @description The current state of a research job (UC-C2-02). */
+        ResearchJobState: {
+            headers: {
+                "X-Request-Id": components["headers"]["XRequestId"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ResearchJob"];
+            };
+        };
+        /**
          * @description Nothing to write, for one of two reasons that share `404`.
          *
          *     - `not_found` — no trip with this id, **or** one that is not the caller's. Deliberately
@@ -2672,6 +2817,12 @@ export interface components {
          *     `403`, so this parameter cannot be used to probe for another user's trips.
          */
         TripIdParam: string;
+        /**
+         * @description A research job's surrogate key, as returned by `startResearch`. Ownership is not carried
+         *     here — it comes from the session and the trip on the path; a job that is not the addressed
+         *     trip's is `404 not_found`.
+         */
+        JobIdParam: string;
         /** @description Zero-based page index (PLAN §6.1). */
         PageParam: number;
         /** @description Items per page. Values above the maximum are rejected, never clamped. */
@@ -3612,6 +3763,57 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    startResearch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: components["responses"]["ResearchJobAccepted"];
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getResearchJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
+                 *     every request, and an id that is not the caller's is answered `404 not_found` rather than
+                 *     `403`, so this parameter cannot be used to probe for another user's trips.
+                 */
+                tripId: components["parameters"]["TripIdParam"];
+                /**
+                 * @description A research job's surrogate key, as returned by `startResearch`. Ownership is not carried
+                 *     here — it comes from the session and the trip on the path; a job that is not the addressed
+                 *     trip's is `404 not_found`.
+                 */
+                jobId: components["parameters"]["JobIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ResearchJobState"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
         };
     };

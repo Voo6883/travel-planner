@@ -64,6 +64,15 @@ travelplanner:
     # which is dependable for @ConfigurationProperties and not for a plain injected value.
     heartbeat-interval-ms: ${CHAT_HEARTBEAT_INTERVAL_MS:15000}
 
+  # Durable research jobs (C2 §3.1, PLAN §14, task 23). The job timeout is the §14 p95 agent
+  # budget; a run that overruns it is interrupted and marked `research_timeout`. Milliseconds
+  # rather than a Duration for the same reason chat.heartbeat is — a plain value is dependable
+  # without Boot's conversion service reaching the bean.
+  research:
+    job-timeout-ms: ${RESEARCH_JOB_TIMEOUT_MS:90000}
+    worker-pool-size: ${RESEARCH_WORKER_POOL_SIZE:2}
+    worker-queue-capacity: ${RESEARCH_WORKER_QUEUE_CAPACITY:100}
+
   # External identity providers (§4.0.5, ADR 004). Every credential defaults to empty and the
   # development stand-ins take over, so a fresh checkout and CI both work with no Firebase project
   # and no GitHub OAuth app — task 10 forbids relying on a live provider in CI. Both stand-ins

@@ -35,6 +35,14 @@ export const queryKeys = {
     detail: (tripId: string) => ['trips', 'detail', tripId] as const,
     brief: (tripId: string) => ['trips', 'detail', tripId, 'brief'] as const,
   },
+  /**
+   * C2 research jobs (UC-C2-01/02). Keyed by trip then job so a completing poll can invalidate the
+   * trip detail — whose status the job just moved — without touching unrelated caches.
+   */
+  research: {
+    all: ['research'] as const,
+    job: (tripId: string, jobId: string) => ['research', 'job', tripId, jobId] as const,
+  },
   platform: {
     all: ['platform'] as const,
     health: () => ['platform', 'health'] as const,

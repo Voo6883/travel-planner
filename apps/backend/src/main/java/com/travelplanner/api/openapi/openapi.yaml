@@ -1416,6 +1416,74 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /trips/{tripId}/research/run:
+    post:
+      tags: [trips]
+      operationId: startResearch
+      summary: Start a research run for a trip (UC-C2-01)
+      description: |
+        Starts the C2 research agent for the trip and returns **immediately** with the queued job
+        (PLAN §3.1, USE-CASES UC-C2-01). The run is long — up to the §14 90-second budget — so it
+        happens on a background worker; the client polls `GET .../research/jobs/{jobId}` for
+        progress rather than holding this connection open.
+
+        **`202 Accepted`, not `200`.** The response says the work was accepted, not finished:
+        `status` is `queued`, and the trip moves to `RESEARCH_QUEUED` in the same transaction that
+        persists the job — before any worker is handed it, so a run is never dispatched against a
+        row that did not commit.
+
+        **The gate is `BRIEF_COMPLETE`.** Research may begin only from a complete brief (the C2
+        unlock rule); any other trip status is `400 validation_failed` on `status`. A trip that
+        already has an active (queued or running) job is refused the same way — one run at a time.
+        Re-running after a previous run finished creates a **new** job and keeps the old one as
+        history (UC-C2-07).
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TripIdParam'
+      responses:
+        '202':
+          $ref: '#/components/responses/ResearchJobAccepted'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /trips/{tripId}/research/jobs/{jobId}:
+    get:
+      tags: [trips]
+      operationId: getResearchJob
+      summary: Poll a research job (UC-C2-02)
+      description: |
+        The current state of a research run: `status` (`queued|running|completed|failed`),
+        `progress_pct` while running, and `error_code` when it failed (USE-CASES UC-C2-02).
+
+        The frontend polls this while the job is `queued` or `running` and stops once it is
+        terminal. A failed job carries a typed `error_code` (for example `research_timeout`) and
+        leaves the trip recoverable — the trip returns to `BRIEF_COMPLETE`, never a trip-level
+        "failed" state, so a re-run is always possible.
+
+        A job id that is not this trip's, or a trip that is not the caller's, is `404 not_found` —
+        indistinguishable, so this cannot be used to probe for another user's data.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TripIdParam'
+        - $ref: '#/components/parameters/JobIdParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/ResearchJobState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /planner/chat/messages:
     post:
       tags: [chat]
@@ -1674,6 +1742,18 @@ components:
         The trip's surrogate key. Ownership is *not* carried here — it comes from the session on
         every request, and an id that is not the caller's is answered `404 not_found` rather than
         `403`, so this parameter cannot be used to probe for another user's trips.
+      schema:
+        type: string
+        format: uuid
+
+    JobIdParam:
+      name: jobId
+      in: path
+      required: true
+      description: |
+        A research job's surrogate key, as returned by `startResearch`. Ownership is not carried
+        here — it comes from the session and the trip on the path; a job that is not the addressed
+        trip's is `404 not_found`.
       schema:
         type: string
         format: uuid
@@ -2410,6 +2490,76 @@ components:
             A body with one field rather than an empty `POST`: archiving is a mutation of a
             versioned aggregate like any other, and making a trip read-only while the agent is
             mid-edit loses that edit.
+
+    ResearchJobStatus:
+      type: string
+      description: |
+        The lifecycle of one research run (UC-C2-02). Lower-case on the wire; the backend stores
+        the UPPER_SNAKE form and maps it here.
+
+        - `queued` — persisted, waiting for a worker
+        - `running` — the agent is executing
+        - `completed` — a result exists; the trip is `RESEARCH_READY`
+        - `failed` — the run ended without a result; `error_code` says why, and the trip is back at
+          `BRIEF_COMPLETE` so it can be re-run
+      enum:
+        - queued
+        - running
+        - completed
+        - failed
+      example: queued
+
+    ResearchJob:
+      type: object
+      description: |
+        One research run, as `startResearch` (202) and `getResearchJob` (200) both return it
+        (UC-C2-01/02).
+
+        The start response carries `job_id` and `status: queued`; the poll adds `progress_pct` while
+        running and `error_code` on failure. `started_at` and `completed_at` are absent until the run
+        reaches them. There is no trip-level failed status — a failed job leaves the trip
+        recoverable.
+      required: [job_id, trip_id, status, progress_pct, attempts]
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ResearchJobStatus'
+        progress_pct:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100
+          description: Coarse progress for the poll UI. Advisory; never orders anything.
+          example: 0
+        error_code:
+          type: string
+          nullable: true
+          description: |
+            A registered-style `snake_case` reason present only when `status` is `failed`, e.g.
+            `research_timeout`. Distinct from the API error catalog: it describes why a run ended,
+            not an HTTP response.
+          example: research_timeout
+        attempts:
+          type: integer
+          format: int32
+          minimum: 0
+          description: How many times this job entered `running`. A re-run is a new job, not a bump.
+          example: 1
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the run entered `running`; absent while `queued`.
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the run reached a terminal state; absent while active.
 
     Money:
       type: object
@@ -3175,6 +3325,29 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/TripBrief'
+
+    ResearchJobAccepted:
+      description: |
+        The research run was accepted and queued (UC-C2-01). `status` is `queued` and the trip has
+        moved to `RESEARCH_QUEUED`; the run executes on a background worker and the client polls
+        `getResearchJob`.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResearchJob'
+
+    ResearchJobState:
+      description: The current state of a research job (UC-C2-02).
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResearchJob'
 
     TripBriefNotFound:
       description: |

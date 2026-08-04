@@ -6,11 +6,13 @@ import enAdmin from '@/locales/en/admin.json';
 import enAuth from '@/locales/en/auth.json';
 import enChat from '@/locales/en/chat.json';
 import enCommon from '@/locales/en/common.json';
+import enResearch from '@/locales/en/research.json';
 import enTripBrief from '@/locales/en/trip_brief.json';
 import msAdmin from '@/locales/ms/admin.json';
 import msAuth from '@/locales/ms/auth.json';
 import msChat from '@/locales/ms/chat.json';
 import msCommon from '@/locales/ms/common.json';
+import msResearch from '@/locales/ms/research.json';
 import msTripBrief from '@/locales/ms/trip_brief.json';
 
 export type TestLocale = 'en' | 'ms';
@@ -38,8 +40,22 @@ export function renderWithProviders(ui: ReactElement, options: RenderOptions = {
 
 export function messagesFor(locale: TestLocale) {
   return locale === 'en'
-    ? { common: enCommon, auth: enAuth, admin: enAdmin, chat: enChat, trip_brief: enTripBrief }
-    : { common: msCommon, auth: msAuth, admin: msAdmin, chat: msChat, trip_brief: msTripBrief };
+    ? {
+        common: enCommon,
+        auth: enAuth,
+        admin: enAdmin,
+        chat: enChat,
+        trip_brief: enTripBrief,
+        research: enResearch,
+      }
+    : {
+        common: msCommon,
+        auth: msAuth,
+        admin: msAdmin,
+        chat: msChat,
+        trip_brief: msTripBrief,
+        research: msResearch,
+      };
 }
 
 function wrap(children: ReactNode, locale: TestLocale) {

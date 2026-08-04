@@ -1,0 +1,25 @@
+{
+  "panel": {
+    "title": "Research",
+    "intro": "Find recommended destinations and options for this trip. The research runs in the background and can take up to a minute and a half.",
+    "start": "Start research",
+    "rerun": "Run research again",
+    "locked": "Complete the brief before starting research.",
+    "queued_title": "Research queued",
+    "queued_help": "Your research run is waiting to be picked up.",
+    "running_title": "Researching your trip",
+    "running_help": "This can take up to a minute and a half. You can leave this page and come back — it keeps running.",
+    "progress": "{percent}% complete",
+    "ready_title": "Recommendations ready",
+    "ready_help": "Research finished for this trip.",
+    "in_progress_generic": "Research is in progress for this trip."
+  },
+  "error": {
+    "title": "Research could not be completed",
+    "research_timeout": "The research run took too long and was stopped. You can try again.",
+    "research_failed": "The research run failed. You can try again.",
+    "research_interrupted": "The research run was interrupted. You can try again.",
+    "generic": "Something went wrong during research. You can try again.",
+    "start_failed": "Research could not be started. Please try again."
+  }
+}

@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { TripChatPanel } from '@/features/chat';
 import { TripBriefEditor } from '@/features/intake';
+import { ResearchJobPanel } from '@/features/research';
 
 interface TripDetailPageProps {
   params: Promise<{ tripId: string }>;
@@ -16,7 +17,10 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
   return (
     <PageHeader title={t('detail.page_title')} description={t('detail.page_description')}>
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
-        <TripBriefEditor tripId={tripId} />
+        <div className="flex flex-col gap-8">
+          <TripBriefEditor tripId={tripId} />
+          <ResearchJobPanel tripId={tripId} />
+        </div>
         <TripChatPanel tripId={tripId} />
       </div>
     </PageHeader>

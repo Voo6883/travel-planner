@@ -9,6 +9,7 @@ import com.travelplanner.domain.enums.ConversationScope;
 import com.travelplanner.domain.enums.ConversationState;
 import com.travelplanner.domain.enums.ChatMessageRole;
 import com.travelplanner.domain.enums.ChatMessageStatus;
+import com.travelplanner.domain.enums.ResearchJobStatus;
 import com.travelplanner.domain.enums.TripStatus;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -63,6 +64,34 @@ class MigrationContractTest {
 
         assertThat(inSql).containsExactlyInAnyOrderElementsOf(
                 Stream.of(TripStatus.values()).map(Enum::name).toList());
+    }
+
+    @Test
+    void theResearchJobStatusCheckConstraintListsExactlyTheDomainEnumConstants() {
+        assertThat(constantsIn(read("V24__create_research_job.sql"),
+                "CONSTRAINT ck_research_job_status CHECK (status IN ("))
+                .containsExactlyInAnyOrderElementsOf(
+                        Stream.of(ResearchJobStatus.values()).map(Enum::name).toList());
+    }
+
+    @Test
+    void theResearchJobTableGuardsProgressVersionAndAllowsOneActiveJobPerTrip() {
+        String migration = read("V24__create_research_job.sql");
+
+        // The column invariants the domain record also enforces, kept as schema rules so no code path
+        // can persist a job the ResearchJob constructor would reject.
+        assertThat(migration)
+                .contains("ck_research_job_progress_pct_range CHECK (progress_pct BETWEEN 0 AND 100)")
+                .contains("ck_research_job_error_code_only_when_failed")
+                .contains("ck_research_job_started_at_matches")
+                .contains("ck_research_job_completed_at_matches_terminal");
+        // ADR 008 optimistic lock column.
+        assertThat(migration).contains("version");
+        // The poll/history read and the "at most one active job per trip" guarantee.
+        assertThat(migration)
+                .contains("ON research_job (trip_id, created_at DESC)")
+                .contains("CREATE UNIQUE INDEX uq_research_job_active_per_trip ON research_job (trip_id)")
+                .contains("WHERE status IN ('QUEUED', 'RUNNING')");
     }
 
     @Test
