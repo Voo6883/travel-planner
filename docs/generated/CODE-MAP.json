@@ -1425,7 +1425,7 @@
     "26": {
       "title": "Research API and frontend",
       "file": "tasks/26-research-api-frontend.md",
-      "status": "not_started",
+      "status": "in_progress",
       "dependsOn": [
         "11",
         "23",
