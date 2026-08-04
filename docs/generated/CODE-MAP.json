@@ -1466,7 +1466,7 @@
     "27": {
       "title": "Research chat tools and evaluation",
       "file": "tasks/27-research-chat-evaluation.md",
-      "status": "not_started",
+      "status": "in_progress",
       "dependsOn": [
         "22",
         "25",
