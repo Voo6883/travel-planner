@@ -8,6 +8,7 @@ import { chatStreamApiError } from '@/lib/api/chat-events';
 import { ChatComposer } from './chat-composer';
 import { ChatMessageList } from './chat-message-list';
 import { ChatStreamingIndicator } from './chat-streaming-indicator';
+import { SuggestedPrompts } from './suggested-prompts';
 import { useChatStream } from '../hooks/use-chat-stream';
 
 export interface ChatPanelProps {
@@ -19,6 +20,8 @@ export interface ChatPanelProps {
    * isolation and impossible to reuse inside the trip shell where the trip already exists.
    */
   readonly onTripCreated?: (tripId: string) => void;
+  /** Planner home only — 3–4 translated chips that send through the same composer path. */
+  readonly showSuggestedPrompts?: boolean;
 }
 
 /**
@@ -32,10 +35,16 @@ export interface ChatPanelProps {
  * failure is a system event, not something the assistant said, and putting `code`/`request_id` in
  * the transcript would make a support detail look like part of the conversation.
  */
-export function ChatPanel({ target, conversationId = null, onTripCreated }: ChatPanelProps) {
+export function ChatPanel({
+  target,
+  conversationId = null,
+  onTripCreated,
+  showSuggestedPrompts = false,
+}: ChatPanelProps) {
   const t = useTranslations('chat');
   const chat = useChatStream({ target, conversationId });
   const tripCreatedId = chat.state.tripCreatedId;
+  const showPrompts = showSuggestedPrompts && target.scope === 'planner' && chat.messages.length === 0;
 
   useEffect(() => {
     if (tripCreatedId !== null && onTripCreated) {
@@ -55,6 +64,15 @@ export function ChatPanel({ target, conversationId = null, onTripCreated }: Chat
         onLoadOlder={chat.loadOlderMessages}
         onRetry={chat.retry}
       />
+
+      {showPrompts ? (
+        <SuggestedPrompts
+          disabled={chat.isStreaming}
+          onSelect={(text) => {
+            void chat.send(text);
+          }}
+        />
+      ) : null}
 
       {tripCreatedId === null ? null : (
         // §7.4: "preserve the conversation and show a brief transition".

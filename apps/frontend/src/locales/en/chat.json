@@ -8,6 +8,19 @@
     "empty_title": "Start planning",
     "empty_body": "Tell me where you would like to go, roughly when, and what you want to spend."
   },
+  "home": {
+    "heading": "Where to next?",
+    "intro": "Chat to start. A trip is created when there is enough detail to plan."
+  },
+  "suggestions": {
+    "label": "Suggested prompts",
+    "prompts": {
+      "plan_trip": "Help me plan a trip",
+      "weekend_getaway": "Surprise me with a weekend getaway",
+      "surprise_me": "I want somewhere unexpected",
+      "family_trip": "Plan a family trip"
+    }
+  },
   "sender": {
     "user": "You",
     "assistant": "Assistant",

@@ -84,6 +84,7 @@ function brief(overrides: Partial<TripBrief> = {}): TripBrief {
     trip_id: tripId,
     status: 'DRAFT',
     destinations: ['kyoto'],
+    surprise_me: false,
     dates: null,
     date_flexibility: null,
     departure_city: null,
