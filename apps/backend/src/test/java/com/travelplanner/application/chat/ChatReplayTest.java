@@ -61,7 +61,8 @@ class ChatReplayTest {
         conversations = new ChatConversationService(repository, trips);
         llm = ScriptedLlm.emitting(new LlmEvent.TextDelta("Kyoto in spring."),
                 new LlmEvent.Done(StopReason.END_TURN));
-        service = new ChatTurnService(conversations, llm, QUIET_HEARTBEAT_MILLIS);
+        service = new ChatTurnService(conversations,
+                ChatTestFakes.plannerChat(llm, repository, trips), QUIET_HEARTBEAT_MILLIS);
         caller = ChatTestFakes.user(UUID.randomUUID());
     }
 
@@ -269,10 +270,10 @@ class ChatReplayTest {
 
     /** Runs a turn whose subscriber walks away mid-answer, leaving the row {@code INTERRUPTED}. */
     private UUID interruptATurn() {
+        ScriptedLlm neverFinishes = new ScriptedLlm(
+                () -> Flux.<LlmEvent>just(new LlmEvent.TextDelta("Kyoto ")).concatWith(Flux.never()));
         ChatTurnService interruptible = new ChatTurnService(conversations,
-                new ScriptedLlm(() -> Flux.<LlmEvent>just(new LlmEvent.TextDelta("Kyoto "))
-                        .concatWith(Flux.never())),
-                QUIET_HEARTBEAT_MILLIS);
+                ChatTestFakes.plannerChat(neverFinishes, repository, trips), QUIET_HEARTBEAT_MILLIS);
         ChatTurn turn = interruptible.openTurn(freshQuestion(), caller);
         interruptible.stream(turn).take(3).collectList().block(Duration.ofSeconds(10));
         return turn.conversationId();

@@ -1,20 +1,30 @@
 package com.travelplanner.application.chat;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.application.chat.ChatTestFakes.ConversationRepositoryFake;
 import com.travelplanner.application.chat.ChatTestFakes.ScriptedLlm;
+import com.travelplanner.application.chat.ChatTestFakes.TripBriefRepositoryFake;
 import com.travelplanner.application.chat.ChatTestFakes.TripRepositoryFake;
+import com.travelplanner.application.planner.CreateTripHandoffService;
+import com.travelplanner.application.planner.PlannerChatOrchestrator;
+import com.travelplanner.application.planner.PlannerTools;
 import com.travelplanner.domain.ai.LlmEvent;
 import com.travelplanner.domain.ai.MessageRole;
 import com.travelplanner.domain.ai.PromptMessage;
 import com.travelplanner.domain.ai.StopReason;
+import com.travelplanner.domain.enums.ConversationScope;
 import com.travelplanner.domain.enums.ChatMessageRole;
 import com.travelplanner.domain.enums.ChatMessageStatus;
 import com.travelplanner.domain.exception.AiProviderException;
+import com.travelplanner.domain.exception.ConversationNotFoundException;
 import com.travelplanner.domain.model.Message;
+import com.travelplanner.domain.model.Trip;
 import com.travelplanner.domain.valueobject.UserContext;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,6 +48,8 @@ class ChatTurnServiceTest {
 
     private final ConversationRepositoryFake repository = new ConversationRepositoryFake();
     private final TripRepositoryFake trips = new TripRepositoryFake();
+    private final TripBriefRepositoryFake briefs = new TripBriefRepositoryFake();
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private ChatConversationService conversations;
     private UserContext caller;
 
@@ -334,10 +346,124 @@ class ChatTurnServiceTest {
                 new LlmEvent.ToolUseEnd("call-1"),
                 new LlmEvent.ToolResult("call-1", "{}"),
                 new LlmEvent.Done(StopReason.END_TURN));
+        Trip trip = trips.add(Trip.create(caller.userId(), "Existing trip", Instant.now()));
+        var command = new SendChatMessageCommand(ChatTarget.trip(trip.id()), null, "cmid-1",
+                "Kyoto in spring?");
 
-        assertThat(collect(service)).extracting(ChatStreamEvent::eventName)
+        assertThat(drain(service.stream(service.openTurn(command, caller))))
+                .extracting(ChatStreamEvent::eventName)
                 .containsExactly("message_start", "message_start", "tool_use_start", "tool_input_delta",
                         "tool_use_end", "tool_result", "message_end", "done");
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // Planner handoff.
+    // ------------------------------------------------------------------------------------------
+
+    @Test
+    void aVaguePlannerOpenerOffersCreateTripButDoesNotRunAHandoffWithoutAToolCall() {
+        ScriptedLlm llm = ScriptedLlm.emitting(
+                new LlmEvent.TextDelta("Where are you thinking of going?"),
+                new LlmEvent.Done(StopReason.END_TURN));
+        ChatTurnService service = serviceWith(llm, QUIET_HEARTBEAT_MILLIS);
+
+        List<ChatStreamEvent> frames = collect(service);
+
+        assertThat(frames).noneMatch(event -> event instanceof ChatStreamEvent.TripCreated);
+        assertThat(trips.count()).isZero();
+        assertThat(llm.offeredTools().getFirst()).extracting("name").containsExactly(PlannerTools.CREATE_TRIP);
+    }
+
+    @Test
+    void aSufficientPlannerTurnCreatesATripLinksTheConversationAndEndsTheSession() {
+        ScriptedLlm llm = ScriptedLlm.emitting(
+                new LlmEvent.ToolUseStart("call-1", PlannerTools.CREATE_TRIP),
+                new LlmEvent.ToolInputDelta("call-1", "{\"name\":\"April Osaka food trip\"}"),
+                new LlmEvent.ToolUseEnd("call-1"),
+                new LlmEvent.Done(StopReason.END_TURN));
+        ChatTurnService service = serviceWith(llm, QUIET_HEARTBEAT_MILLIS);
+        ChatTurn turn = service.openTurn(command(), caller);
+        UUID sessionId = repository.conversation(turn.conversationId(), caller.userId())
+                .orElseThrow().plannerSessionIfPresent().orElseThrow();
+
+        List<ChatStreamEvent> frames = drain(service.stream(turn));
+
+        UUID tripId = tripCreated(frames).tripId();
+        assertThat(trips.findByIdAndUserId(tripId, caller.userId())).hasValueSatisfying(trip ->
+                assertThat(trip.name()).isEqualTo("April Osaka food trip"));
+        assertThat(briefs.findByTripId(tripId)).isPresent();
+        assertThat(repository.conversation(turn.conversationId(), caller.userId()).orElseThrow().scope())
+                .isEqualTo(ConversationScope.TRIP);
+        assertThat(repository.session(sessionId).orElseThrow().isOpen()).isFalse();
+        assertThat(repository.messagesOf(turn.conversationId())).extracting(Message::role)
+                .contains(ChatMessageRole.TOOL_CALL, ChatMessageRole.TOOL_RESULT,
+                        ChatMessageRole.LIFECYCLE_EVENT);
+    }
+
+    @Test
+    void aDuplicateCreateTripToolCallReturnsTheSameTripWithoutCreatingAnother() {
+        ScriptedLlm llm = ScriptedLlm.emitting(
+                createTripStart("call-1"),
+                new LlmEvent.ToolInputDelta("call-1", "{\"name\":\"First trip\"}"),
+                new LlmEvent.ToolUseEnd("call-1"),
+                createTripStart("call-2"),
+                new LlmEvent.ToolInputDelta("call-2", "{\"name\":\"Second trip\"}"),
+                new LlmEvent.ToolUseEnd("call-2"),
+                new LlmEvent.Done(StopReason.END_TURN));
+        ChatTurnService service = serviceWith(llm, QUIET_HEARTBEAT_MILLIS);
+
+        List<ChatStreamEvent> frames = collect(service);
+
+        UUID tripId = tripCreated(frames).tripId();
+        assertThat(trips.count()).isEqualTo(1);
+        assertThat(toolResults(frames)).allSatisfy(result ->
+                assertThat(result.payload()).contains(tripId.toString()));
+        assertThat(tripCreatedFrames(frames)).extracting(ChatStreamEvent.TripCreated::tripId)
+                .containsOnly(tripId);
+    }
+
+    @Test
+    void invalidCreateTripToolArgsFailTypedValidationWithoutCreatingATrip() {
+        ChatTurnService service = serviceEmitting(
+                createTripStart("call-1"),
+                new LlmEvent.ToolInputDelta("call-1", "{\"name\":42}"),
+                new LlmEvent.ToolUseEnd("call-1"),
+                new LlmEvent.Done(StopReason.END_TURN));
+
+        List<ChatStreamEvent> frames = collect(service);
+
+        assertThat(last(frames)).isEqualTo(new ChatStreamEvent.StreamError(
+                "validation_failed", "The conversation could not be completed."));
+        assertThat(frames).noneMatch(event -> event instanceof ChatStreamEvent.TripCreated);
+        assertThat(trips.count()).isZero();
+    }
+
+    @Test
+    void aPlannerConversationIdOwnedByAnotherUserIsNotFound() {
+        ChatTurnService service = serviceEmitting(new LlmEvent.Done(StopReason.END_TURN));
+        UserContext other = ChatTestFakes.user(UUID.randomUUID());
+        ChatTurn otherTurn = service.openTurn(command(), other);
+        var command = new SendChatMessageCommand(
+                ChatTarget.planner(), otherTurn.conversationId(), "cmid-x", "use this");
+
+        assertThatThrownBy(() -> service.openTurn(command, caller))
+                .isInstanceOf(ConversationNotFoundException.class);
+        assertThat(trips.count()).isZero();
+    }
+
+    @Test
+    void anUnknownPlannerToolNameIsRejectedWithoutExecution() {
+        ChatTurnService service = serviceEmitting(
+                new LlmEvent.ToolUseStart("call-1", "delete_trip"),
+                new LlmEvent.ToolInputDelta("call-1", "{}"),
+                new LlmEvent.ToolUseEnd("call-1"),
+                new LlmEvent.Done(StopReason.END_TURN));
+
+        List<ChatStreamEvent> frames = collect(service);
+
+        assertThat(last(frames)).isInstanceOf(ChatStreamEvent.StreamError.class);
+        assertThat(frames).noneMatch(event -> event instanceof ChatStreamEvent.TripCreated);
+        assertThat(trips.count()).isZero();
     }
 
     // ------------------------------------------------------------------------------------------
@@ -347,7 +473,7 @@ class ChatTurnServiceTest {
     @Test
     void anIdleStreamStillTicksSoAProxyDoesNotReapIt() {
         ScriptedLlm llm = new ScriptedLlm(Flux::never);
-        ChatTurnService service = new ChatTurnService(conversations, llm, 20L);
+        ChatTurnService service = serviceWith(llm, 20L);
         ChatTurn turn = service.openTurn(command(), caller);
 
         StepVerifier.create(service.stream(turn))
@@ -360,7 +486,7 @@ class ChatTurnServiceTest {
     @Test
     void thePromptCarriesTheStoredHistoryAsProseAndNothingElse() {
         ScriptedLlm llm = ScriptedLlm.emitting(new LlmEvent.Done(StopReason.END_TURN));
-        ChatTurnService service = new ChatTurnService(conversations, llm, QUIET_HEARTBEAT_MILLIS);
+        ChatTurnService service = serviceWith(llm, QUIET_HEARTBEAT_MILLIS);
         ChatTurn first = service.openTurn(command(), caller);
         drain(service.stream(first));
 
@@ -379,11 +505,17 @@ class ChatTurnServiceTest {
     // ------------------------------------------------------------------------------------------
 
     private ChatTurnService serviceEmitting(LlmEvent... events) {
-        return new ChatTurnService(conversations, ScriptedLlm.emitting(events), QUIET_HEARTBEAT_MILLIS);
+        return serviceWith(ScriptedLlm.emitting(events), QUIET_HEARTBEAT_MILLIS);
     }
 
     private ChatTurnService serviceStreaming(java.util.function.Supplier<Flux<LlmEvent>> script) {
-        return new ChatTurnService(conversations, new ScriptedLlm(script), QUIET_HEARTBEAT_MILLIS);
+        return serviceWith(new ScriptedLlm(script), QUIET_HEARTBEAT_MILLIS);
+    }
+
+    private ChatTurnService serviceWith(ScriptedLlm llm, long heartbeatMillis) {
+        CreateTripHandoffService handoff = new CreateTripHandoffService(repository, trips, briefs);
+        PlannerChatOrchestrator orchestrator = new PlannerChatOrchestrator(llm, handoff, objectMapper);
+        return new ChatTurnService(conversations, orchestrator, heartbeatMillis);
     }
 
     private List<ChatStreamEvent> collect(ChatTurnService service) {
@@ -396,6 +528,32 @@ class ChatTurnServiceTest {
 
     private static ChatStreamEvent last(List<ChatStreamEvent> frames) {
         return frames.get(frames.size() - 1);
+    }
+
+    private static LlmEvent.ToolUseStart createTripStart(String toolCallId) {
+        return new LlmEvent.ToolUseStart(toolCallId, PlannerTools.CREATE_TRIP);
+    }
+
+    private static ChatStreamEvent.TripCreated tripCreated(List<ChatStreamEvent> frames) {
+        return frames.stream()
+                .filter(ChatStreamEvent.TripCreated.class::isInstance)
+                .map(ChatStreamEvent.TripCreated.class::cast)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private static List<ChatStreamEvent.TripCreated> tripCreatedFrames(List<ChatStreamEvent> frames) {
+        return frames.stream()
+                .filter(ChatStreamEvent.TripCreated.class::isInstance)
+                .map(ChatStreamEvent.TripCreated.class::cast)
+                .toList();
+    }
+
+    private static List<ChatStreamEvent.ToolResult> toolResults(List<ChatStreamEvent> frames) {
+        return frames.stream()
+                .filter(ChatStreamEvent.ToolResult.class::isInstance)
+                .map(ChatStreamEvent.ToolResult.class::cast)
+                .toList();
     }
 
     private SendChatMessageCommand command() {

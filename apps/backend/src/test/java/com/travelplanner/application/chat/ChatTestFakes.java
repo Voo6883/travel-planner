@@ -10,8 +10,13 @@ import com.travelplanner.domain.model.Conversation;
 import com.travelplanner.domain.model.Message;
 import com.travelplanner.domain.model.PlannerSession;
 import com.travelplanner.domain.model.Trip;
-import com.travelplanner.domain.port.ConversationRepositoryPort;
+import com.travelplanner.domain.model.TripBrief;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.application.ai.LlmStreamPort;
+import com.travelplanner.application.planner.CreateTripHandoffService;
+import com.travelplanner.application.planner.PlannerChatOrchestrator;
+import com.travelplanner.domain.port.ConversationRepositoryPort;
+import com.travelplanner.domain.port.TripBriefRepositoryPort;
 import com.travelplanner.domain.port.TripRepositoryPort;
 import com.travelplanner.domain.valueobject.UserContext;
 import java.time.Instant;
@@ -45,6 +50,20 @@ final class ChatTestFakes {
     }
 
     /**
+     * The planner orchestrator over a scripted model, with its own brief store.
+     *
+     * <p>Every chat turn goes through the orchestrator since task 21, so a test that only cares
+     * about streaming still needs one. The brief fake is created here rather than passed in because
+     * a caller with no interest in the handoff has no reason to hold it.
+     */
+    static PlannerChatOrchestrator plannerChat(LlmStreamPort llm,
+            ConversationRepositoryPort conversations, TripRepositoryPort trips) {
+        CreateTripHandoffService handoff =
+                new CreateTripHandoffService(conversations, trips, new TripBriefRepositoryFake());
+        return new PlannerChatOrchestrator(llm, handoff, new ObjectMapper());
+    }
+
+    /**
      * The chat port, backed by maps.
      *
      * <p>Reproduces the three constraints the service actually depends on: {@code seq} is allocated
@@ -72,6 +91,14 @@ final class ChatTestFakes {
                     .filter(message -> message.conversationId().equals(conversationId))
                     .sorted(Comparator.comparingLong(Message::seq))
                     .toList();
+        }
+
+        Optional<Conversation> conversation(UUID conversationId, UUID userId) {
+            return findConversationByIdAndUserId(conversationId, userId);
+        }
+
+        Optional<PlannerSession> session(UUID sessionId) {
+            return Optional.ofNullable(sessions.get(sessionId));
         }
 
         @Override
@@ -210,6 +237,10 @@ final class ChatTestFakes {
 
         private final Map<UUID, Trip> trips = new LinkedHashMap<>();
 
+        int count() {
+            return trips.size();
+        }
+
         Trip add(Trip trip) {
             trips.put(trip.id(), trip);
             return trip;
@@ -236,6 +267,22 @@ final class ChatTestFakes {
         }
     }
 
+    static final class TripBriefRepositoryFake implements TripBriefRepositoryPort {
+
+        private final Map<UUID, TripBrief> briefs = new LinkedHashMap<>();
+
+        @Override
+        public TripBrief save(TripBrief brief) {
+            briefs.put(brief.tripId(), brief);
+            return brief;
+        }
+
+        @Override
+        public Optional<TripBrief> findByTripId(UUID tripId) {
+            return Optional.ofNullable(briefs.get(tripId));
+        }
+    }
+
     /**
      * A scriptable {@link LlmPort}.
      *
@@ -247,6 +294,7 @@ final class ChatTestFakes {
 
         private final Supplier<Flux<LlmEvent>> script;
         private final List<Prompt> prompts = new ArrayList<>();
+        private final List<List<ToolSpec>> offeredTools = new ArrayList<>();
 
         ScriptedLlm(Supplier<Flux<LlmEvent>> script) {
             this.script = script;
@@ -260,10 +308,12 @@ final class ChatTestFakes {
             return List.copyOf(prompts);
         }
 
-        // No providerName, modelName, complete or completeWithTools. They used to be here as four
-        // `throw new UnsupportedOperationException()` bodies, which is what a fake looks like when the
-        // interface is wider than any caller needs. LlmStreamPort is exactly the streaming half, so
-        // the fake is now the whole contract rather than a quarter of it.
+        // No providerName, complete or completeWithTools. LlmStreamPort is exactly the streaming half,
+        // so the fake is the whole contract rather than a quarter of it.
+        List<List<ToolSpec>> offeredTools() {
+            return List.copyOf(offeredTools);
+        }
+
         @Override
         public Flux<LlmEvent> stream(Prompt prompt, LlmOptions options) {
             return stream(prompt, List.of(), options);
@@ -272,6 +322,7 @@ final class ChatTestFakes {
         @Override
         public Flux<LlmEvent> stream(Prompt prompt, List<ToolSpec> tools, LlmOptions options) {
             prompts.add(prompt);
+            offeredTools.add(List.copyOf(tools));
             return Flux.defer(script::get);
         }
     }
