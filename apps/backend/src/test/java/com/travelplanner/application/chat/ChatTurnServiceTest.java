@@ -515,7 +515,8 @@ class ChatTurnServiceTest {
     private ChatTurnService serviceWith(ScriptedLlm llm, long heartbeatMillis) {
         CreateTripHandoffService handoff = new CreateTripHandoffService(repository, trips, briefs);
         PlannerChatOrchestrator orchestrator = new PlannerChatOrchestrator(llm, handoff, objectMapper);
-        return new ChatTurnService(conversations, orchestrator, heartbeatMillis);
+        return new ChatTurnService(conversations, orchestrator,
+                ChatTestFakes.noopTripChat(llm), heartbeatMillis);
     }
 
     private List<ChatStreamEvent> collect(ChatTurnService service) {

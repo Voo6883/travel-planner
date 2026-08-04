@@ -46,3 +46,7 @@ LLM/HTTP stay outside this transaction. After commit the orchestrator emits
 - Trip-level tools (`update_trip_brief`, research, …) belong in Task 22’s registry
 - Empty brief is intentional; applying a validated brief from conversation text is Task 22
   (`update_trip_brief`) rather than a silent post-create extract
+
+Task 22 is implemented — see [`TRIP-CHAT-HANDOFF.md`](TRIP-CHAT-HANDOFF.md) for the trip intake
+tool registry, the status gate, the `brief_updated` event, and the extension procedure for
+Tasks 23/27.

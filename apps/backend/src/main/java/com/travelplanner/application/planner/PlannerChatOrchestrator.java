@@ -38,9 +38,8 @@ public class PlannerChatOrchestrator {
     }
 
     public Flux<LlmEvent> stream(ChatTurn turn) {
-        if (!turn.target().isPlanner()) {
-            return llm.stream(turn.prompt(), LlmOptions.forFeature(FEATURE));
-        }
+        // Trip turns are routed to TripChatOrchestrator by ChatTurnService, so this surface only
+        // ever sees planner turns and always offers the planner tools (task 22).
         PlannerToolBuffer tools = new PlannerToolBuffer(turn);
         return llm.stream(turn.prompt(), PlannerTools.specs(), LlmOptions.forFeature(FEATURE))
                 .concatMap(event -> Flux.fromIterable(tools.handle(event)));

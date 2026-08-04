@@ -134,14 +134,15 @@ class ChatSseContractTest {
                 new ChatStreamEvent.ToolUseEnd("call-1"),
                 new ChatStreamEvent.ToolResult("call-1", "{}"),
                 new ChatStreamEvent.TripCreated(UUID.randomUUID()),
+                new ChatStreamEvent.BriefUpdated(UUID.randomUUID()),
                 new ChatStreamEvent.Usage(1, 2, 3),
                 new ChatStreamEvent.Done("end_turn"),
                 new ChatStreamEvent.StreamError("internal_error", "no"));
 
         assertThat(events.stream().map(this::render).map(Frame::event).toList())
                 .containsExactly("message_start", "text_delta", "message_end", "tool_use_start",
-                        "tool_input_delta", "tool_use_end", "tool_result", "trip_created", "usage",
-                        "done", "error");
+                        "tool_input_delta", "tool_use_end", "tool_result", "trip_created",
+                        "brief_updated", "usage", "done", "error");
     }
 
     @Test
@@ -151,6 +152,7 @@ class ChatSseContractTest {
         assertThat(render(new ChatStreamEvent.ToolInputDelta("call-1", "{")).data().has("json_chunk"))
                 .isTrue();
         assertThat(render(new ChatStreamEvent.TripCreated(USER_MESSAGE)).data().has("trip_id")).isTrue();
+        assertThat(render(new ChatStreamEvent.BriefUpdated(USER_MESSAGE)).data().has("trip_id")).isTrue();
         JsonNode usage = render(new ChatStreamEvent.Usage(1, 2, 3)).data();
         assertThat(usage.has("input_tokens")).isTrue();
         assertThat(usage.has("output_tokens")).isTrue();
@@ -172,6 +174,7 @@ class ChatSseContractTest {
                 new ChatStreamEvent.ToolUseEnd("call-1"),
                 new ChatStreamEvent.ToolResult("call-1", "{}"),
                 new ChatStreamEvent.TripCreated(UUID.randomUUID()),
+                new ChatStreamEvent.BriefUpdated(UUID.randomUUID()),
                 new ChatStreamEvent.Usage(1, 2, 3),
                 new ChatStreamEvent.Done("end_turn"),
                 new ChatStreamEvent.StreamError("internal_error", "no"),

@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.application.ai.LlmStreamPort;
 import com.travelplanner.application.planner.CreateTripHandoffService;
 import com.travelplanner.application.planner.PlannerChatOrchestrator;
+import com.travelplanner.application.tripchat.TripChatOrchestrator;
 import com.travelplanner.domain.port.ConversationRepositoryPort;
 import com.travelplanner.domain.port.TripBriefRepositoryPort;
 import com.travelplanner.domain.port.TripRepositoryPort;
@@ -61,6 +62,23 @@ final class ChatTestFakes {
         CreateTripHandoffService handoff =
                 new CreateTripHandoffService(conversations, trips, new TripBriefRepositoryFake());
         return new PlannerChatOrchestrator(llm, handoff, new ObjectMapper());
+    }
+
+    /**
+     * A trip orchestrator that only streams — no brief load, no tools, no execution.
+     *
+     * <p>ChatTurnService routes trip turns here since task 22, so a planner-focused or
+     * passthrough-focused test needs one, but not a real one: the tool behaviour has its own suite
+     * ({@code TripChatOrchestratorTest}). This stub forwards the scripted provider events untouched,
+     * which is exactly what the pre-task-22 trip surface did.
+     */
+    static TripChatOrchestrator noopTripChat(LlmStreamPort llm) {
+        return new TripChatOrchestrator(llm, null, null, new ObjectMapper()) {
+            @Override
+            public Flux<LlmEvent> stream(ChatTurn turn) {
+                return llm.stream(turn.prompt(), LlmOptions.forFeature("chat"));
+            }
+        };
     }
 
     /**

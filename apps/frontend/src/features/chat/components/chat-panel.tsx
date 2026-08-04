@@ -20,6 +20,13 @@ export interface ChatPanelProps {
    * isolation and impossible to reuse inside the trip shell where the trip already exists.
    */
   readonly onTripCreated?: (tripId: string) => void;
+  /**
+   * Fired each turn an intake tool commits a brief edit (task 22, UC-C5-09). The trip shell uses it
+   * to invalidate the cached brief and detail so the form beside the chat reflects what the agent
+   * just saved. Like {@link onTripCreated} the panel does not fetch itself — the route layer owns
+   * the query client.
+   */
+  readonly onBriefUpdated?: (tripId: string) => void;
   /** Planner home only — 3–4 translated chips that send through the same composer path. */
   readonly showSuggestedPrompts?: boolean;
 }
@@ -39,11 +46,13 @@ export function ChatPanel({
   target,
   conversationId = null,
   onTripCreated,
+  onBriefUpdated,
   showSuggestedPrompts = false,
 }: ChatPanelProps) {
   const t = useTranslations('chat');
   const chat = useChatStream({ target, conversationId });
   const tripCreatedId = chat.state.tripCreatedId;
+  const briefUpdatedTripId = chat.state.briefUpdatedTripId;
   const showPrompts = showSuggestedPrompts && target.scope === 'planner' && chat.messages.length === 0;
 
   useEffect(() => {
@@ -51,6 +60,12 @@ export function ChatPanel({
       onTripCreated(tripCreatedId);
     }
   }, [onTripCreated, tripCreatedId]);
+
+  useEffect(() => {
+    if (briefUpdatedTripId !== null && onBriefUpdated) {
+      onBriefUpdated(briefUpdatedTripId);
+    }
+  }, [onBriefUpdated, briefUpdatedTripId]);
 
   return (
     <section

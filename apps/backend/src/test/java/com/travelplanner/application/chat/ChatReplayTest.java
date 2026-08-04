@@ -62,7 +62,8 @@ class ChatReplayTest {
         llm = ScriptedLlm.emitting(new LlmEvent.TextDelta("Kyoto in spring."),
                 new LlmEvent.Done(StopReason.END_TURN));
         service = new ChatTurnService(conversations,
-                ChatTestFakes.plannerChat(llm, repository, trips), QUIET_HEARTBEAT_MILLIS);
+                ChatTestFakes.plannerChat(llm, repository, trips),
+                ChatTestFakes.noopTripChat(llm), QUIET_HEARTBEAT_MILLIS);
         caller = ChatTestFakes.user(UUID.randomUUID());
     }
 
@@ -273,7 +274,8 @@ class ChatReplayTest {
         ScriptedLlm neverFinishes = new ScriptedLlm(
                 () -> Flux.<LlmEvent>just(new LlmEvent.TextDelta("Kyoto ")).concatWith(Flux.never()));
         ChatTurnService interruptible = new ChatTurnService(conversations,
-                ChatTestFakes.plannerChat(neverFinishes, repository, trips), QUIET_HEARTBEAT_MILLIS);
+                ChatTestFakes.plannerChat(neverFinishes, repository, trips),
+                ChatTestFakes.noopTripChat(neverFinishes), QUIET_HEARTBEAT_MILLIS);
         ChatTurn turn = interruptible.openTurn(freshQuestion(), caller);
         interruptible.stream(turn).take(3).collectList().block(Duration.ofSeconds(10));
         return turn.conversationId();
