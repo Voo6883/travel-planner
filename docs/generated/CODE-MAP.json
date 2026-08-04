@@ -116,6 +116,7 @@
       "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/TripBriefRepositoryPort.java",
       "implementations": [
         "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/TripBriefRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/application/chat/ChatTestFakes.java",
         "apps/backend/src/test/java/com/travelplanner/application/trip/TripTestFakes.java"
       ]
     },
@@ -364,7 +365,7 @@
     }
   },
   "migrations": {
-    "nextFreeVersion": "V23",
+    "nextFreeVersion": "V24",
     "gaps": [],
     "applied": [
       {
@@ -546,6 +547,14 @@
         "file": "apps/backend/src/main/resources/db/migration/V22__poi_fulltext_english_config.sql",
         "createsTables": [],
         "altersTables": []
+      },
+      {
+        "version": 23,
+        "file": "apps/backend/src/main/resources/db/migration/V23__add_trip_brief_surprise_me.sql",
+        "createsTables": [],
+        "altersTables": [
+          "trip_brief"
+        ]
       }
     ]
   },
@@ -733,6 +742,17 @@
         ],
         "adapters": []
       },
+      "planner": {
+        "controllers": [],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/planner/CreateTripArgs.java",
+          "apps/backend/src/main/java/com/travelplanner/application/planner/CreateTripHandoffService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/planner/PlannerChatOrchestrator.java",
+          "apps/backend/src/main/java/com/travelplanner/application/planner/PlannerTools.java",
+          "apps/backend/src/main/java/com/travelplanner/application/planner/TripNamer.java"
+        ],
+        "adapters": []
+      },
       "support": {
         "controllers": [],
         "application": [
@@ -903,10 +923,26 @@
         "apps/frontend/src/features/chat/components/chat-message-list.tsx",
         "apps/frontend/src/features/chat/components/chat-panel.tsx",
         "apps/frontend/src/features/chat/components/chat-streaming-indicator.tsx",
+        "apps/frontend/src/features/chat/components/planner-home-panel.tsx",
+        "apps/frontend/src/features/chat/components/suggested-prompts.tsx",
+        "apps/frontend/src/features/chat/components/trip-chat-panel.tsx",
         "apps/frontend/src/features/chat/hooks/use-chat-stream.ts",
         "apps/frontend/src/features/chat/index.ts",
         "apps/frontend/src/features/chat/lib/chat-state.ts",
         "apps/frontend/src/features/chat/lib/client-message-id.ts"
+      ],
+      "intake": [
+        "apps/frontend/src/features/intake/components/clarification-panel.tsx",
+        "apps/frontend/src/features/intake/components/conflict-notice.tsx",
+        "apps/frontend/src/features/intake/components/save-status.tsx",
+        "apps/frontend/src/features/intake/components/trip-brief-editor.tsx",
+        "apps/frontend/src/features/intake/components/trip-list-panel.tsx",
+        "apps/frontend/src/features/intake/hooks/use-trip-brief.ts",
+        "apps/frontend/src/features/intake/hooks/use-trips.ts",
+        "apps/frontend/src/features/intake/index.ts",
+        "apps/frontend/src/features/intake/lib/brief-form.ts",
+        "apps/frontend/src/features/intake/lib/clarification.ts",
+        "apps/frontend/src/features/intake/types.ts"
       ],
       "marketing": [
         "apps/frontend/src/features/marketing/components/landing-footer.tsx",
@@ -924,6 +960,7 @@
       "namespaces": [
         "auth",
         "admin",
+        "trips",
         "platform"
       ]
     }
@@ -1114,7 +1151,7 @@
     "18": {
       "title": "Trip and TripBrief core",
       "file": "tasks/18-trip-brief-core.md",
-      "status": "in_progress",
+      "status": "review",
       "dependsOn": [
         "06",
         "07",
@@ -1139,7 +1176,7 @@
     "19": {
       "title": "LLM TripBrief extraction",
       "file": "tasks/19-llm-trip-brief-extraction.md",
-      "status": "in_progress",
+      "status": "review",
       "dependsOn": [
         "14",
         "18"
@@ -1185,7 +1222,7 @@
     "21": {
       "title": "Planner chat and trip creation",
       "file": "tasks/21-planner-chat-trip-creation.md",
-      "status": "not_started",
+      "status": "review",
       "dependsOn": [
         "18",
         "19",
