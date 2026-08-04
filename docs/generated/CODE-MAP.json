@@ -1326,7 +1326,7 @@
     "23": {
       "title": "Research job platform",
       "file": "tasks/23-research-job-platform.md",
-      "status": "review",
+      "status": "done",
       "dependsOn": [
         "07",
         "18",
@@ -1355,8 +1355,7 @@
         "23"
       ],
       "blockedBy": [
-        "17",
-        "23"
+        "17"
       ],
       "hasSections": [
         "Objective",
@@ -1381,7 +1380,6 @@
       ],
       "blockedBy": [
         "17",
-        "23",
         "24"
       ],
       "hasSections": [
@@ -1406,7 +1404,6 @@
         "25"
       ],
       "blockedBy": [
-        "23",
         "24",
         "25"
       ],
@@ -1742,7 +1739,6 @@
       ],
       "blockedBy": [
         "17",
-        "23",
         "24",
         "25",
         "26",
