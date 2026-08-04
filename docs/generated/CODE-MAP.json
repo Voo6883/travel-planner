@@ -1326,7 +1326,7 @@
     "23": {
       "title": "Research job platform",
       "file": "tasks/23-research-job-platform.md",
-      "status": "in_progress",
+      "status": "review",
       "dependsOn": [
         "07",
         "18",

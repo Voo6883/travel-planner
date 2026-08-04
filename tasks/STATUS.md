@@ -106,7 +106,7 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 | 20 | [Conversation persistence and SSE](20-conversation-sse.md) | 06, 07, 11, 14, 15 | `done` | Gates **20A** + **20B** + **20C**. Replay + ADR 007 amend (**F-39**) landed `8f2890a`. **F-31**/**F-36**/**F-40** (wire roles) closed earlier. |
 | 21 | [Planner chat and trip creation](21-planner-chat-trip-creation.md) | 18, 19, 20 | `done` | Merged `0c6f343` — `PlannerTools`/`create_trip`/`CreateTripHandoffService`/`PlannerHomePanel`/`trip_created` navigation. Handoff: [`docs/PLANNER-CHAT-HANDOFF.md`](../docs/PLANNER-CHAT-HANDOFF.md). CI green `30877086309`. |
 | 22 | [Trip chat intake tools](22-trip-chat-intake-tools.md) | 18, 19, 20, 21 | `done` | Merged `1286ae1` (PR [#20](https://github.com/Voo6883/travel-planner/pull/20)). `TripChatOrchestrator` + status-gated `update_trip_brief` / `answer_clarification`; SSE `brief_updated` invalidates brief form query. Handoff: [`docs/TRIP-CHAT-HANDOFF.md`](../docs/TRIP-CHAT-HANDOFF.md). CI green run `30882022128` (+ follow-up code-map refresh). |
-| 23 | [Research job platform](23-research-job-platform.md) | 07, 18, 22 | `in_progress` | Branch `cursor/task-23-research-job-15b0`. Implementation complete locally; awaiting parent PR. Migration **V24** `research_job` (status/progress/error/attempts/run-id + partial unique active-per-trip index). Durable slice in `application/research/`: `ResearchJobService` (persist-then-dispatch, 202), `LocalResearchJobExecutor` (in-process pool via `AFTER_COMMIT` event — **no Redis/queue**), `ResearchJobRunner` (90 s budget, interrupt-on-overrun), `ResearchStaleJobReconciler` (boot recovery), and the two task-25 seams `ResearchJobHandler`/`ResearchCompletionHook` (`@ConditionalOnMissingBean` no-ops). On fail: job `FAILED`+`error_code`, trip recovered to `BRIEF_COMPLETE` (no trip-level failed status). API `POST .../research/run` (202) + `GET .../research/jobs/{jobId}`; FE `features/research/` hook + `ResearchJobPanel` + `research` locales. Backend `./gradlew test` green (Docker-free); FE typecheck/lint/362 tests green. Handoff: [`docs/RESEARCH-JOB-HANDOFF.md`](../docs/RESEARCH-JOB-HANDOFF.md). |
+| 23 | [Research job platform](23-research-job-platform.md) | 07, 18, 22 | `review` | PR [#21](https://github.com/Voo6883/travel-planner/pull/21). Migration **V24** `research_job`. Durable slice `application/research/` (202 start, poll, local executor, 90s timeout, stale reconciler, handler/completion hooks for task 25). On fail: job `FAILED`+`error_code`, trip → `BRIEF_COMPLETE`. Handoff: [`docs/RESEARCH-JOB-HANDOFF.md`](../docs/RESEARCH-JOB-HANDOFF.md). Backend research unit tests green; FE research panel 5/5. Mark `done` once merged. |
 | 24 | [Deterministic destination ranking](24-destination-ranking.md) | 17, 18, 23 | `not_started` | No `Validation` section. LLM must not overwrite numeric fit score. |
 | 25 | [Travel research agent](25-travel-research-agent.md) | 14, 17, 23, 24 | `not_started` | No `Validation` section. |
 | 26 | [Research API and frontend](26-research-api-frontend.md) | 11, 23, 24, 25 | `not_started` | No `Validation` section. `ranked-recommendations` is `GET`. |
@@ -148,9 +148,9 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 | Status | Count |
 |---|---|
 | `done` | **22** |
-| `in_progress` | 2 |
+| `in_progress` | 1 |
 | `blocked` | 0 |
-| `review` | 0 |
+| `review` | 1 |
 | `not_started` | 18 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*
