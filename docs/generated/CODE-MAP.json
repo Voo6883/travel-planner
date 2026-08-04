@@ -49,6 +49,12 @@
         "apps/backend/src/main/java/com/travelplanner/infrastructure/auth/local/LocalPasswordIdentityAdapter.java"
       ]
     },
+    "ItineraryLegRepositoryPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/ItineraryLegRepositoryPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/ItineraryLegRepositoryAdapter.java"
+      ]
+    },
     "ItineraryRepositoryPort": {
       "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/ItineraryRepositoryPort.java",
       "implementations": [
@@ -406,7 +412,7 @@
     }
   },
   "migrations": {
-    "nextFreeVersion": "V28",
+    "nextFreeVersion": "V29",
     "gaps": [],
     "applied": [
       {
@@ -633,6 +639,14 @@
           "itinerary_item"
         ],
         "altersTables": []
+      },
+      {
+        "version": 28,
+        "file": "apps/backend/src/main/resources/db/migration/V28__create_itinerary_leg.sql",
+        "createsTables": [
+          "itinerary_leg"
+        ],
+        "altersTables": []
       }
     ]
   },
@@ -854,6 +868,13 @@
         ],
         "adapters": []
       },
+      "mobility": {
+        "controllers": [],
+        "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/mobility/RouteResolutionService.java"
+        ],
+        "adapters": []
+      },
       "page": {
         "controllers": [],
         "application": [
@@ -907,6 +928,7 @@
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/AiCallLogRepositoryAdapter.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/AuditEventRepositoryAdapter.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/ConversationRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/ItineraryLegRepositoryAdapter.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/ItineraryRepositoryAdapter.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeFullTextSearch.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeHybridSearch.java",
@@ -937,6 +959,7 @@
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/ItineraryDayEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/ItineraryEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/ItineraryItemEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/ItineraryLegEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/KnowledgeSourceEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/LoginAttemptEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/MailRateLimitEntity.java",
@@ -1002,6 +1025,7 @@
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/DestinationGuideJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/DestinationJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/ItineraryJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/ItineraryLegJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/KnowledgeSourceJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/LoginAttemptJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/MailRateLimitJpaRepository.java",
@@ -1533,7 +1557,7 @@
     "28": {
       "title": "Itinerary domain and scheduling",
       "file": "tasks/28-itinerary-domain-scheduling.md",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "17",
         "18",
@@ -1554,14 +1578,12 @@
     "29": {
       "title": "Route and mobility planning",
       "file": "tasks/29-route-mobility.md",
-      "status": "not_started",
+      "status": "in_progress",
       "dependsOn": [
         "17",
         "28"
       ],
-      "blockedBy": [
-        "28"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1584,7 +1606,6 @@
         "29"
       ],
       "blockedBy": [
-        "28",
         "29"
       ],
       "hasSections": [
@@ -1816,7 +1837,6 @@
         "41"
       ],
       "blockedBy": [
-        "28",
         "29",
         "30",
         "31",

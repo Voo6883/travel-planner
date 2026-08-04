@@ -61,15 +61,15 @@ class FlywayMigrationIntegrationTest extends AbstractPostgresIntegrationTest {
         assertThat(tables).contains(
                 "refresh_token", "trip", "trip_brief", "user", "user_identity", "research_job",
                 "research_run_result", "ranked_recommendation",
-                "itinerary", "itinerary_day", "itinerary_item");
+                "itinerary", "itinerary_day", "itinerary_item", "itinerary_leg");
         // The brief forbids creating a schema before its own task. This list has SHRUNK each time
         // a later task legitimately landed its tables: task 16 knowledge (V13–V18), task 20 chat
         // (V19), task 23 research_job (V24), task 25 ranked recommendations (V25), task 28
-        // itinerary (V27) — which moved its three tables to the line above in the same change.
+        // itinerary (V27), task 29 itinerary_leg (V28) — each moved to the line above in the same
+        // change that created the table.
         //
-        // `itinerary_leg` stays out: task 29 owns routing, and a leg without a route lookup is
-        // either empty or invented. When task 32 lands booking, do the same to `booking`.
-        assertThat(tables).doesNotContain("booking", "itinerary_leg");
+        // When task 32 lands booking, do the same to `booking` rather than discovering this again.
+        assertThat(tables).doesNotContain("booking");
     }
 
     @Test
