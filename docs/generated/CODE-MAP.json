@@ -1257,7 +1257,7 @@
     "22": {
       "title": "Trip chat intake tools",
       "file": "tasks/22-trip-chat-intake-tools.md",
-      "status": "in_progress",
+      "status": "review",
       "dependsOn": [
         "18",
         "19",
