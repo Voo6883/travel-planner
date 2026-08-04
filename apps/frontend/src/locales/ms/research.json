@@ -1,0 +1,25 @@
+{
+  "panel": {
+    "title": "Penyelidikan",
+    "intro": "Cari destinasi dan pilihan yang disyorkan untuk perjalanan ini. Penyelidikan berjalan di latar belakang dan boleh mengambil masa sehingga seminit setengah.",
+    "start": "Mulakan penyelidikan",
+    "rerun": "Jalankan penyelidikan semula",
+    "locked": "Lengkapkan taklimat sebelum memulakan penyelidikan.",
+    "queued_title": "Penyelidikan dalam giliran",
+    "queued_help": "Larian penyelidikan anda sedang menunggu untuk diambil.",
+    "running_title": "Menyelidik perjalanan anda",
+    "running_help": "Ini boleh mengambil masa sehingga seminit setengah. Anda boleh meninggalkan halaman ini dan kembali — ia terus berjalan.",
+    "progress": "{percent}% selesai",
+    "ready_title": "Cadangan sedia",
+    "ready_help": "Penyelidikan selesai untuk perjalanan ini.",
+    "in_progress_generic": "Penyelidikan sedang dijalankan untuk perjalanan ini."
+  },
+  "error": {
+    "title": "Penyelidikan tidak dapat diselesaikan",
+    "research_timeout": "Larian penyelidikan mengambil masa terlalu lama dan telah dihentikan. Anda boleh cuba lagi.",
+    "research_failed": "Larian penyelidikan gagal. Anda boleh cuba lagi.",
+    "research_interrupted": "Larian penyelidikan terganggu. Anda boleh cuba lagi.",
+    "generic": "Sesuatu tidak kena semasa penyelidikan. Anda boleh cuba lagi.",
+    "start_failed": "Penyelidikan tidak dapat dimulakan. Sila cuba lagi."
+  }
+}

@@ -59,19 +59,16 @@ class FlywayMigrationIntegrationTest extends AbstractPostgresIntegrationTest {
                         + "order by table_name");
 
         assertThat(tables).contains(
-                "refresh_token", "trip", "trip_brief", "user", "user_identity");
-        // The brief forbids creating a schema before its own task. This list has SHRUNK twice, and
-        // both times legitimately: task 16 landed the knowledge tables (V13–V18) and task 20 the chat
-        // ones (V19), so `destination`, `poi`, `conversation` and `message` moved from "must not
-        // exist" to "exists, owned by that task".
+                "refresh_token", "trip", "trip_brief", "user", "user_identity", "research_job");
+        // The brief forbids creating a schema before its own task. This list has SHRUNK three times,
+        // each legitimately: task 16 landed the knowledge tables (V13–V18), task 20 the chat ones
+        // (V19), and task 23 the `research_job` table (V24), so each moved from "must not exist" to
+        // "exists, owned by that task".
         //
-        // It was not shrunk at the time, so this assertion had been failing since task 16 — invisibly,
-        // because the Testcontainers suite needs Docker and this project's machine has none. What is
-        // left is what genuinely has no migration yet; when task 23 or 28 lands, remove its entry
-        // here in the same change rather than discovering this again.
+        // When task 28 lands the itinerary/booking schema, remove its entries here in the same change
+        // rather than discovering this again.
         assertThat(tables).doesNotContain(
-                "booking", "itinerary_day", "itinerary_item", "ranked_recommendation",
-                "research_job");
+                "booking", "itinerary_day", "itinerary_item", "ranked_recommendation");
     }
 
     @Test
