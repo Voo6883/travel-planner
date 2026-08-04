@@ -75,9 +75,9 @@ Open agent PRs (still open when this was written): **#13, #14, #15, #16, #17, #1
 | 20C Last-Event-ID | `done` (replay + ADR amend) |
 | **21 planner chat** | **`not_started`** |
 
-Note: `tasks/STATUS.md` still contains some **stale open F-39/F-40/F-41/F-42 rows** alongside later ✅ CLOSED rows for the same IDs. Trust the gate table and the ✅ CLOSED entries dated 2026-07-30; clean the duplicate open rows in a docs PR.
+~~Note: `tasks/STATUS.md` still contains some **stale open F-39/F-40/F-41/F-42 rows** alongside later ✅ CLOSED rows for the same IDs.~~ **Done 2026-08-04.** The register is deduplicated: one row per ID, stale open duplicates of F-39/F-40 deleted, and the three colliding open items renumbered **F-47** (history sort), **F-48** (`surprise_me`), **F-49** (`total_tokens`). All three turned out to be already fixed in code and are now CLOSED with the evidence recorded. Next free: **F-50**.
 
-Also: `dev` reused **F-42** for the mail auto-verify IT bug (now closed). Agent PRs used **F-42** for `surprise_me`. The surprise_me work remains open under gates **18B/19B** even if the F-number is overloaded in the ledger.
+~~Also: `dev` reused **F-42** for the mail auto-verify IT bug (now closed). Agent PRs used **F-42** for `surprise_me`.~~ Resolved by the renumber above — `surprise_me` is **F-48**, and it is `done` (migration **V23** + `TripBriefDetails.surpriseMe`, gates **18B/19B**).
 
 ---
 
@@ -190,7 +190,7 @@ dev@32c8997
 - Do **not** merge #18’s current tip into `dev` — Flyway will reject duplicate/conflicting V21/V22 checksums/names.
 - Do **not** re-introduce agent hybrid V21 over `travel_app_replacement`.
 - Do **not** replace `dev`’s `ChatReplay` with the “amend ADR, never replay” approach from #16.
-- Do **not** assume F-42 in the ledger uniquely means `surprise_me` anymore — check gate **18B/19B**.
+- ~~Do **not** assume F-42 in the ledger uniquely means `surprise_me` anymore.~~ Fixed 2026-08-04: F-42 is the mail auto-verify bug and nothing else; `surprise_me` is **F-48**.
 
 ---
 
