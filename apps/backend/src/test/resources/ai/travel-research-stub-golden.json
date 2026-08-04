@@ -1,0 +1,8 @@
+{
+  "prompt_template_id": "travel-research-stub",
+  "prompt_version": 1,
+  "model_name": "stub",
+  "overview_contains": "Tokyo",
+  "source_ref": "stub:sample",
+  "rationale_contains": "destination-ranker-v1"
+}

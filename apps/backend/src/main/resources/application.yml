@@ -72,6 +72,8 @@ travelplanner:
     job-timeout-ms: ${RESEARCH_JOB_TIMEOUT_MS:90000}
     worker-pool-size: ${RESEARCH_WORKER_POOL_SIZE:2}
     worker-queue-capacity: ${RESEARCH_WORKER_QUEUE_CAPACITY:100}
+    max-tool-calls: ${RESEARCH_MAX_TOOL_CALLS:40}
+    max-tokens: ${RESEARCH_MAX_TOKENS:24000}
 
   # External identity providers (§4.0.5, ADR 004). Every credential defaults to empty and the
   # development stand-ins take over, so a fresh checkout and CI both work with no Firebase project

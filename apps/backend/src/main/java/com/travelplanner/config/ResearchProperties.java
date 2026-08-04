@@ -25,6 +25,12 @@ public class ResearchProperties {
     private int workerPoolSize = 2;
     private int workerQueueCapacity = 100;
 
+    /** Max KnowledgePort / stub-web tool invocations per research run (AI-AGENT-WORKFLOW A5). */
+    private int maxToolCalls = 40;
+
+    /** Approximate token budget across tool payloads + narrative for one run. */
+    private int maxTokens = 24_000;
+
     /** Bound from {@code travelplanner.research.job-timeout-ms}. */
     public long getJobTimeoutMs() {
         return jobTimeoutMs;
@@ -50,5 +56,21 @@ public class ResearchProperties {
 
     public void setWorkerQueueCapacity(int workerQueueCapacity) {
         this.workerQueueCapacity = workerQueueCapacity;
+    }
+
+    public int getMaxToolCalls() {
+        return maxToolCalls;
+    }
+
+    public void setMaxToolCalls(int maxToolCalls) {
+        this.maxToolCalls = maxToolCalls;
+    }
+
+    public int getMaxTokens() {
+        return maxTokens;
+    }
+
+    public void setMaxTokens(int maxTokens) {
+        this.maxTokens = maxTokens;
     }
 }

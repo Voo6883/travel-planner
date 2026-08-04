@@ -52,7 +52,9 @@
     "KnowledgePort": {
       "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/KnowledgePort.java",
       "implementations": [
-        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeRepositoryAdapter.java"
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeRepositoryAdapter.java",
+        "apps/backend/src/test/java/com/travelplanner/ai/agent/StubTravelResearchAgentTest.java",
+        "apps/backend/src/test/java/com/travelplanner/application/research/TravelResearchJobHandlerTest.java"
       ]
     },
     "LlmPort": {
@@ -99,6 +101,12 @@
         "apps/backend/src/test/java/com/travelplanner/application/auth/PasswordPolicyTest.java"
       ]
     },
+    "RankedRecommendationRepositoryPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/RankedRecommendationRepositoryPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/RankedRecommendationRepositoryAdapter.java"
+      ]
+    },
     "RefreshTokenPort": {
       "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/RefreshTokenPort.java",
       "implementations": [
@@ -113,6 +121,12 @@
         "apps/backend/src/test/java/com/travelplanner/application/research/ResearchTestFakes.java"
       ]
     },
+    "TravelResearchAgentPort": {
+      "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/TravelResearchAgentPort.java",
+      "implementations": [
+        "apps/backend/src/main/java/com/travelplanner/ai/agent/StubTravelResearchAgent.java"
+      ]
+    },
     "TripBriefExtractionPort": {
       "declaredIn": "apps/backend/src/main/java/com/travelplanner/domain/port/TripBriefExtractionPort.java",
       "implementations": [
@@ -125,6 +139,7 @@
       "implementations": [
         "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/TripBriefRepositoryAdapter.java",
         "apps/backend/src/test/java/com/travelplanner/application/chat/ChatTestFakes.java",
+        "apps/backend/src/test/java/com/travelplanner/application/research/TravelResearchJobHandlerTest.java",
         "apps/backend/src/test/java/com/travelplanner/application/trip/TripTestFakes.java",
         "apps/backend/src/test/java/com/travelplanner/application/tripchat/TripChatOrchestratorTest.java"
       ]
@@ -376,7 +391,7 @@
     }
   },
   "migrations": {
-    "nextFreeVersion": "V25",
+    "nextFreeVersion": "V26",
     "gaps": [],
     "applied": [
       {
@@ -574,6 +589,17 @@
           "research_job"
         ],
         "altersTables": []
+      },
+      {
+        "version": 25,
+        "file": "apps/backend/src/main/resources/db/migration/V25__create_ranked_recommendation.sql",
+        "createsTables": [
+          "research_run_result",
+          "ranked_recommendation"
+        ],
+        "altersTables": [
+          "trip"
+        ]
       }
     ]
   },
@@ -714,9 +740,11 @@
           "apps/backend/src/main/java/com/travelplanner/api/controller/ResearchController.java"
         ],
         "application": [
+          "apps/backend/src/main/java/com/travelplanner/application/research/DestinationCandidateBuilder.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/LocalResearchJobExecutor.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/NoOpResearchCompletionHook.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/NoOpResearchJobHandler.java",
+          "apps/backend/src/main/java/com/travelplanner/application/research/PendingResearchOutcomeStore.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchCompletionHook.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobContext.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobExecutor.java",
@@ -725,8 +753,10 @@
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobRunner.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobService.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobView.java",
+          "apps/backend/src/main/java/com/travelplanner/application/research/ResearchRecommendationCompletionHook.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchStaleJobReconciler.java",
-          "apps/backend/src/main/java/com/travelplanner/application/research/StartResearchCommand.java"
+          "apps/backend/src/main/java/com/travelplanner/application/research/StartResearchCommand.java",
+          "apps/backend/src/main/java/com/travelplanner/application/research/TravelResearchJobHandler.java"
         ],
         "adapters": []
       },
@@ -828,6 +858,7 @@
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/KnowledgeVectorSearch.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/LoginAttemptRepositoryAdapter.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/MailRateLimitRepositoryAdapter.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/RankedRecommendationRepositoryAdapter.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/RefreshTokenRepositoryAdapter.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/ResearchJobRepositoryAdapter.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/TripBriefRepositoryAdapter.java",
@@ -854,8 +885,10 @@
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/PlannerSessionEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/PoiEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/PriceHistoryEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/RankedRecommendationEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/RefreshTokenEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/ResearchJobEntity.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/ResearchRunResultEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/RouteSegmentEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/SeasonalityEntity.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/entity/SourcedEntity.java",
@@ -885,6 +918,7 @@
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/PriceObservationPersistenceMapper.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/RefreshTokenPersistenceMapper.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/ResearchJobPersistenceMapper.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/ResearchRecommendationJsonMapper.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/RouteSegmentPersistenceMapper.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/SeasonalityMonthPersistenceMapper.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/mapper/TransportModePersistenceMapper.java",
@@ -914,8 +948,10 @@
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/PlannerSessionJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/PoiJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/PriceHistoryJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/RankedRecommendationJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/RefreshTokenJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/ResearchJobJpaRepository.java",
+          "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/ResearchRunResultJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/RouteSegmentJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/SeasonalityJpaRepository.java",
           "apps/backend/src/main/java/com/travelplanner/infrastructure/persistence/repository/TransportModeJpaRepository.java",
@@ -1367,7 +1403,7 @@
     "25": {
       "title": "Travel research agent",
       "file": "tasks/25-travel-research-agent.md",
-      "status": "not_started",
+      "status": "review",
       "dependsOn": [
         "14",
         "17",

@@ -59,16 +59,16 @@ class FlywayMigrationIntegrationTest extends AbstractPostgresIntegrationTest {
                         + "order by table_name");
 
         assertThat(tables).contains(
-                "refresh_token", "trip", "trip_brief", "user", "user_identity", "research_job");
-        // The brief forbids creating a schema before its own task. This list has SHRUNK three times,
-        // each legitimately: task 16 landed the knowledge tables (V13–V18), task 20 the chat ones
-        // (V19), and task 23 the `research_job` table (V24), so each moved from "must not exist" to
-        // "exists, owned by that task".
+                "refresh_token", "trip", "trip_brief", "user", "user_identity", "research_job",
+                "research_run_result", "ranked_recommendation");
+        // The brief forbids creating a schema before its own task. This list has SHRUNK each time
+        // a later task legitimately landed its tables: task 16 knowledge (V13–V18), task 20 chat
+        // (V19), task 23 research_job (V24), task 25 ranked recommendations (V25).
         //
         // When task 28 lands the itinerary/booking schema, remove its entries here in the same change
         // rather than discovering this again.
         assertThat(tables).doesNotContain(
-                "booking", "itinerary_day", "itinerary_item", "ranked_recommendation");
+                "booking", "itinerary_day", "itinerary_item");
     }
 
     @Test

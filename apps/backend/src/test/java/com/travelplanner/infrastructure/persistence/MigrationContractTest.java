@@ -95,6 +95,22 @@ class MigrationContractTest {
     }
 
     @Test
+    void theRankedRecommendationTablesAttributeRunsAndRequireProvenance() {
+        String migration = read("V25__create_ranked_recommendation.sql");
+
+        assertThat(migration).contains("CREATE TABLE research_run_result");
+        assertThat(migration).contains("CREATE TABLE ranked_recommendation");
+        assertThat(migration).contains("no_confident_result");
+        assertThat(migration).contains("algorithm_version");
+        assertThat(migration).contains("prompt_template_id");
+        assertThat(migration).contains("source_refs");
+        assertThat(migration).contains("traveler_guide");
+        assertThat(migration).contains("uq_research_job_research_run_id");
+        assertThat(migration).contains("fk_trip_selected_recommendation");
+        assertThat(migration).contains("uq_ranked_recommendation_run_rank");
+    }
+
+    @Test
     void moneyIsNeverStoredAsAFloatingPointType() {
         // PLAN §4.0.2-A. `real`, `double precision`, and `float` are all binary floating point and
         // cannot represent 4000.10 exactly.
