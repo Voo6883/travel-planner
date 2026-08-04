@@ -319,8 +319,11 @@ jobs:
         run: npm run code-map:check
 
       # PR-only: flags dependencies introduced with known vulnerabilities.
+      # Soft-fail until Dependency graph is enabled on the repo (settings →
+      # Code security). Without it the action exits non-zero and blocks every PR.
       - name: Dependency review
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
