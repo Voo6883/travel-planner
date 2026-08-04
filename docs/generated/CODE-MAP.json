@@ -766,6 +766,7 @@
           "apps/backend/src/main/java/com/travelplanner/application/research/PendingResearchOutcomeStore.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchCompletionHook.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchCompletionMailService.java",
+          "apps/backend/src/main/java/com/travelplanner/application/research/ResearchCompletionMailWriter.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobContext.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobExecutor.java",
           "apps/backend/src/main/java/com/travelplanner/application/research/ResearchJobHandler.java",
