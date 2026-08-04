@@ -1403,7 +1403,7 @@
     "25": {
       "title": "Travel research agent",
       "file": "tasks/25-travel-research-agent.md",
-      "status": "review",
+      "status": "done",
       "dependsOn": [
         "14",
         "17",
@@ -1432,9 +1432,7 @@
         "24",
         "25"
       ],
-      "blockedBy": [
-        "25"
-      ],
+      "blockedBy": [],
       "hasSections": [
         "Objective",
         "Dependencies",
@@ -1456,7 +1454,6 @@
         "26"
       ],
       "blockedBy": [
-        "25",
         "26"
       ],
       "hasSections": [
@@ -1701,7 +1698,6 @@
         "36"
       ],
       "blockedBy": [
-        "25",
         "30",
         "35",
         "36"
@@ -1763,7 +1759,6 @@
         "41"
       ],
       "blockedBy": [
-        "25",
         "26",
         "27",
         "28",
