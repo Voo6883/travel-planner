@@ -1503,7 +1503,7 @@
     "28": {
       "title": "Itinerary domain and scheduling",
       "file": "tasks/28-itinerary-domain-scheduling.md",
-      "status": "not_started",
+      "status": "in_progress",
       "dependsOn": [
         "17",
         "18",
