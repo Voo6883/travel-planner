@@ -34,9 +34,10 @@ class ResearchCompletionMailServiceTest {
         trips = new ResearchTestFakes.InMemoryTrips();
         users = new FakeUsers();
         mailer = new CapturingMailer();
-        service = new ResearchCompletionMailService(
+        ResearchCompletionMailWriter writer = new ResearchCompletionMailWriter(
                 jobs, trips, users, new MailTemplateRenderer(), new MailDispatcher(mailer),
                 AccountTestFakes.mailProperties());
+        service = new ResearchCompletionMailService(writer);
     }
 
     @Test
