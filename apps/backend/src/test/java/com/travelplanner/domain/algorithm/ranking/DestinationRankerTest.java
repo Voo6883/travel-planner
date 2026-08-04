@@ -320,6 +320,12 @@ class DestinationRankerTest {
         assertThat(result.excluded().getFirst().partialBreakdownIfPresent()).isPresent();
     }
 
+    @Test
+    void rejectsNonPositiveTopK() {
+        assertThatThrownBy(() -> new RankingInput(List.of(), TripBriefDetails.empty(),
+                ScoringWeights.defaults(), 0, RankingFixtures.AS_OF))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 
     @Test
     void defaultWeightsArePositiveAndDocumented() {
