@@ -84,9 +84,7 @@ describe('TripChatPanel', () => {
     const invalidate = renderWithSpiedClient(<TripChatPanel tripId={TRIP_ID} />);
     await user.type(screen.getByLabelText(enChat.composer.label), 'Two adults{Enter}');
 
-    await waitFor(() =>
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.trips.brief(TRIP_ID) }),
-    );
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.trips.brief(TRIP_ID) }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.trips.detail(TRIP_ID) });
   });
 
