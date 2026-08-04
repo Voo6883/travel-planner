@@ -1,5 +1,9 @@
 package com.travelplanner.config;
 
+import com.travelplanner.application.research.NoOpResearchCompletionHook;
+import com.travelplanner.application.research.NoOpResearchJobHandler;
+import com.travelplanner.application.research.ResearchCompletionHook;
+import com.travelplanner.application.research.ResearchJobHandler;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
@@ -7,6 +11,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -61,6 +66,24 @@ public class ResearchExecutionConfig {
         // worker pool already bounds how many jobs run at once, so this cannot grow past it.
         return new ThreadPoolExecutor(0, Integer.MAX_VALUE, 30L, TimeUnit.SECONDS,
                 new SynchronousQueue<>(), factory);
+    }
+
+    /**
+     * Stand-in handler until task 25. Declared as a {@code @Bean} (not a scanned
+     * {@code @Component}) so {@code @ConditionalOnMissingBean} actually evaluates — Boot only
+     * honours that condition reliably on configuration methods.
+     */
+    @Bean
+    @ConditionalOnMissingBean(ResearchJobHandler.class)
+    public ResearchJobHandler researchJobHandler() {
+        return new NoOpResearchJobHandler();
+    }
+
+    /** Stand-in completion hook until task 25 persists recommendations. Same registration rule. */
+    @Bean
+    @ConditionalOnMissingBean(ResearchCompletionHook.class)
+    public ResearchCompletionHook researchCompletionHook() {
+        return new NoOpResearchCompletionHook();
     }
 
     private static ThreadFactory daemonThreadFactory(String prefix) {
