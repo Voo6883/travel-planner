@@ -111,7 +111,7 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 | 25 | [Travel research agent](25-travel-research-agent.md) | 14, 17, 23, 24 | `done` | Merged to `dev`. Migration **V25**. Stub agent + KnowledgePort tools + completion-hook persistence. Handoff: [`docs/TRAVEL-RESEARCH-AGENT-HANDOFF.md`](../docs/TRAVEL-RESEARCH-AGENT-HANDOFF.md). Sample PARTIAL KB → typed `no_confident_result`. |
 | 26 | [Research API and frontend](26-research-api-frontend.md) | 11, 23, 24, 25 | `done` | Merged to `dev`. Ranked list + select + guide APIs; research UI; handoff [`docs/RESEARCH-EXPERIENCE-HANDOFF.md`](../docs/RESEARCH-EXPERIENCE-HANDOFF.md). |
 | 27 | [Research chat tools and evaluation](27-research-chat-evaluation.md) | 22, 25, 26 | `done` | Merged to `dev`. C2 chat tools + SSE invalidation; V26 completion mail; eval harness. Handoff: [`docs/RESEARCH-CHAT-EVAL-HANDOFF.md`](../docs/RESEARCH-CHAT-EVAL-HANDOFF.md). |
-| 28 | [Itinerary domain and scheduling](28-itinerary-domain-scheduling.md) | 17, 18, 26 | `not_started` | No `Validation` section. |
+| 28 | [Itinerary domain and scheduling](28-itinerary-domain-scheduling.md) | 17, 18, 26 | `in_progress` | Branch `cursor/task-28-itinerary-scheduling-15b0`. |
 | 29 | [Route and mobility planning](29-route-mobility.md) | 17, 28 | `not_started` | No `Validation` section. |
 | 30 | [Itinerary generation agent](30-itinerary-agent.md) | 14, 26, 28, 29 | `not_started` | No `Validation` section. |
 | 31 | [Itinerary UI and chat editing](31-itinerary-ui-chat-editing.md) | 22, 27, 30 | `not_started` | No `Validation` section. `patch_itinerary` = tool name; HTTP `PATCH` forbidden. |
@@ -149,10 +149,10 @@ is checkable, where "18 is close enough" is a judgement call made by whoever is 
 |---|---|
 | `done` | **27** |
 | `done_with_accepted_debt` | 1 |
-| `in_progress` | 0 |
+| `in_progress` | 1 |
 | `blocked` | 0 |
 | `review` | 0 |
-| `not_started` | 14 |
+| `not_started` | 13 |
 
 *42 tasks total — 40 original plus 40/41 added by ADR 010.*
 

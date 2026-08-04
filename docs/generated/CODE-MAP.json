@@ -400,7 +400,7 @@
     }
   },
   "migrations": {
-    "nextFreeVersion": "V27",
+    "nextFreeVersion": "V28",
     "gaps": [],
     "applied": [
       {
@@ -617,6 +617,17 @@
         "altersTables": [
           "research_job"
         ]
+      },
+      {
+        "version": 27,
+        "file": "apps/backend/src/main/resources/db/migration/V27__create_itinerary_tables.sql",
+        "createsTables": [
+          "itinerary",
+          "itinerary_day",
+          "itinerary_item",
+          "itinerary_leg"
+        ],
+        "altersTables": []
       }
     ]
   },
@@ -1504,7 +1515,7 @@
     "28": {
       "title": "Itinerary domain and scheduling",
       "file": "tasks/28-itinerary-domain-scheduling.md",
-      "status": "not_started",
+      "status": "in_progress",
       "dependsOn": [
         "17",
         "18",
